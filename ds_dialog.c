@@ -1,4 +1,13 @@
 /*
+	Copyright (C) 2020 Christopher J Kitrick
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+/*
 	This group of functions is designed to handle all dialog boxes except for Object control.
 	All of these dialogs are defined in the ds_menu.rc file.
 */
@@ -361,6 +370,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			sprintf(buffer, "index: %05d", ctx->png.curFrame);     
 			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);		
 			SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->png.stateSaveFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+			SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_SETCHECK, (ctx->png.bwFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 
 //			SetDlgItemText(hWndDlg, IDC_EDIT18, ctx->svg.basename);
 //			sprintf(buffer, "index: %05d", ctx->svg.curFrame);
@@ -454,6 +464,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_CHECK9:  ctx->drawAdj.stereoCrossEyeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_GETCHECK, 0, 0) ? 1 : 0; ctx->drawAdj.stereoFlag ? InvalidateRect(pWnd, 0, 0) : 0; break;
 
 		case IDC_CHECK10:  ctx->png.stateSaveFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+		case IDC_CHECK76:  ctx->png.bwFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_GETCHECK, 0, 0) ? 1 : 0; break;
 
 		case IDC_CHECK12: ctx->inputTrans.replicateFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK12, BM_GETCHECK, 0, 0) ? 1 : 0; break;
 		case IDC_CHECK21: ctx->inputTrans.transformFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK21, BM_GETCHECK, 0, 0) ? 1 : 0; break;

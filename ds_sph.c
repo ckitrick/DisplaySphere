@@ -1,4 +1,13 @@
 /*
+	Copyright (C) 2020 Christopher J Kitrick
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+/*
 	File handles the program main functionality and control.
 */
 
@@ -1043,7 +1052,9 @@ BOOL write_png(char *fn, IMAGE *img);
 int ds_capture_image(HWND hWnd)
 //-----------------------------------------------------------------------------
 {
-	//	Captures a screenshot into a window and then saves it in a .bmp file.
+//	ds_capture_image_black_and_white(hWnd); 
+//	return 0;
+		//	Captures a screenshot into a window and then saves it in a .bmp file.
 	HDC			hdcWindow;
 	HDC			hdcMemDC = NULL;
 	HBITMAP		hbmWindow = NULL;
@@ -1126,6 +1137,27 @@ int ds_capture_image(HWND hWnd)
 				lpbitmap,
 				(BITMAPINFO *)&bi, DIB_RGB_COLORS);
 
+	if (ctx->png.bwFlag) 
+	{ // image conversion 
+		int		w, h, i, n;
+		unsigned char *r, *g, *b, gray;
+
+		r = (unsigned char*)&lpbitmap[0];
+		g = (unsigned char*)&lpbitmap[1];
+		b = (unsigned char*)&lpbitmap[2];
+		w = bi.biWidth; // = bmpWindow.bmWidth;
+		h = bi.biHeight; // = bmpWindow.bmHeight;
+		n = w * h;
+		for (i = 0; i < n; ++i)
+		{
+			gray = (int)(*r * 0.3 + *g * 0.58 + *b * 0.11);
+			*r = *b = *g = gray;
+			r += 4;
+			g += 4;
+			b += 4;
+		}
+	}
+
 	// Add the size of the headers to the size of the bitmap to get the total file size
 	DWORD dwSizeofDIB = dwBmpSize + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
 
@@ -1141,13 +1173,14 @@ int ds_capture_image(HWND hWnd)
 	DWORD dwBytesWritten = 0;
 	{ // Call BMP to PNG library
 		IMAGE	image;
-		image.width = bi.biWidth; // = bmpWindow.bmWidth;
+		image.width  = bi.biWidth; // = bmpWindow.bmWidth;
 		image.height = bi.biHeight; // = bmpWindow.bmHeight;
+
 		image.pixdepth = 32;
-		image.palnum = 0;
-		image.topdown = 0;
-		image.alpha = 0;
-		image.palette = 0;
+		image.palnum   = 0;
+		image.topdown  = 0;
+		image.alpha    = 0;
+		image.palette  = 0;
 		//		image.rowbytes = ((bi.biWidth * bi.biBitCount + 31) / 32) * 4;
 		//		image.imgbytes = ((bi.biWidth * bi.biBitCount + 31) / 32) * 4 * bi.biHeight; // lpbitmap;
 		image.sigbit.red = image.sigbit.green = image.sigbit.blue = 8;
@@ -1156,6 +1189,7 @@ int ds_capture_image(HWND hWnd)
 		image.imgbytes = image.rowbytes * image.height;
 		image.rowptr = malloc((size_t)image.height * sizeof(BYTE *));
 		image.bmpbits = lpbitmap; // malloc((size_t)image.imgbytes);
+
 		// fill the row pointers
 		BYTE *bp, **rp;
 		LONG n;
@@ -1197,7 +1231,9 @@ int ds_capture_image(HWND hWnd)
 
 	//Unlock and Free the DIB from the heap
 	GlobalUnlock(hDIB);
+//	GlobalUnlock(hDIB_BW);
 	GlobalFree(hDIB);
+//	GlobalFree(hDIB_BW);
 
 	done: //Clean up
 	DeleteObject(hbmWindow);
@@ -1215,3 +1251,201 @@ int dbg_output(DS_CTX *ctx, char *string)
 	return 0;
 }
 #endif
+
+//-----------------------------------------------------------------------------
+int ds_capture_image_black_and_white(HWND hWnd)
+//-----------------------------------------------------------------------------
+{
+	//	Captures a screenshot into a window and then saves it in a .bmp file.
+	HDC			hdcWindow;
+	HDC			hdcMemDC = NULL;
+	HBITMAP		hbmWindow = NULL;
+	BITMAP		bmpWindow;
+	DS_CTX		*ctx;
+	char		outputFilename[256];
+
+	ctx = (DS_CTX*)GetWindowLong(hWnd, GWL_USERDATA);
+
+	// Retrieve the handle to a display device context for the client area of the window. 
+	hdcWindow = GetDC(hWnd);
+
+	// Create a compatible DC which is used in a BitBlt from the window DC
+	hdcMemDC = CreateCompatibleDC(hdcWindow);
+
+	if (!hdcMemDC)
+	{
+		MessageBox(hWnd, (LPCSTR)L"CreateCompatibleDC has failed", (LPCSTR)L"Failed", MB_OK);
+		goto done;
+	}
+
+	// Get the client area for size calculation
+	RECT rcClient;
+	GetClientRect(hWnd, &rcClient);
+
+	// Create a compatible bitmap from the Window DC
+	hbmWindow = CreateCompatibleBitmap(hdcWindow, rcClient.right - rcClient.left, rcClient.bottom - rcClient.top);
+
+	if (!hbmWindow)
+	{
+		MessageBox(hWnd, (LPCSTR)L"CreateCompatibleBitmap Failed", (LPCSTR)L"Failed", MB_OK);
+		goto done;
+	}
+
+	// Select the compatible bitmap into the compatible memory DC.
+	SelectObject(hdcMemDC, hbmWindow);
+
+	// Bit block transfer into our compatible memory DC.
+	if (!BitBlt(hdcMemDC,
+		0, 0,
+		rcClient.right - rcClient.left, rcClient.bottom - rcClient.top,
+		hdcWindow,
+		0, 0,
+		SRCCOPY))
+	{
+		MessageBox(hWnd, (LPCSTR)L"BitBlt has failed", (LPCSTR)L"Failed", MB_OK);
+		goto done;
+	}
+
+	// Get the BITMAP from the HBITMAP
+	GetObject(hbmWindow, sizeof(BITMAP), &bmpWindow);
+
+	BITMAPFILEHEADER   bmfHeader;
+	BITMAPINFOHEADER   bi;
+
+	bi.biSize			= sizeof(BITMAPINFOHEADER);
+	bi.biWidth			= bmpWindow.bmWidth;
+	bi.biHeight			= bmpWindow.bmHeight;
+	bi.biPlanes			= 1;
+	bi.biBitCount		= 32;
+	bi.biCompression	= BI_RGB;
+	bi.biSizeImage		= 0;
+	bi.biXPelsPerMeter	= 0;
+	bi.biYPelsPerMeter	= 0;
+	bi.biClrUsed		= 0;
+	bi.biClrImportant	= 0;
+
+	DWORD dwBmpSize   = ((bmpWindow.bmWidth * bi.biBitCount + 31) / 32) * 4 * bmpWindow.bmHeight;
+	DWORD dwBmpSizeBW = ((bmpWindow.bmWidth * bi.biBitCount +  7) /  8) * 4 * bmpWindow.bmHeight;
+
+	// Starting with 32-bit Windows, GlobalAlloc and LocalAlloc are implemented as wrapper functions that 
+	// call HeapAlloc using a handle to the process's default heap. Therefore, GlobalAlloc and LocalAlloc 
+	// have greater overhead than HeapAlloc.
+	HANDLE hDIB = GlobalAlloc(GHND, dwBmpSize);
+	HANDLE hDIB_BW = GlobalAlloc(GHND, dwBmpSizeBW);
+	char *lpbitmap = (char *)GlobalLock(hDIB);
+	char *lpbitmapBW = (char *)GlobalLock(hDIB_BW);
+
+	// Gets the "bits" from the bitmap and copies them into a buffer 
+	// which is pointed to by lpbitmap.
+	GetDIBits(hdcWindow, hbmWindow, 0,
+		(UINT)bmpWindow.bmHeight,
+		lpbitmap,
+		(BITMAPINFO *)&bi, DIB_RGB_COLORS);
+
+	if (1)
+	{ // image conversion 
+		int		w, h, i, n;
+		unsigned char *r, *g, *b, gray, *a;
+
+		a = (unsigned char*)&lpbitmapBW[0];
+		r = (unsigned char*)&lpbitmap[0];
+		g = (unsigned char*)&lpbitmap[1];
+		b = (unsigned char*)&lpbitmap[2];
+		w = bi.biWidth; // = bmpWindow.bmWidth;
+		h = bi.biHeight; // = bmpWindow.bmHeight;
+		n = w * h;
+		for (i = 0; i < n; ++i)
+		{
+			gray = (int)(*r * 0.3 + *g * 0.58 + *b * 0.11);
+			*a = gray;
+			r += 4;
+			g += 4;
+			b += 4;
+		}
+	}
+
+	// Add the size of the headers to the size of the bitmap to get the total file size
+	DWORD dwSizeofDIB = dwBmpSizeBW + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+	//Offset to where the actual bitmap bits start.
+	bmfHeader.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) + (DWORD)sizeof(BITMAPINFOHEADER);
+
+	//Size of the file
+	bmfHeader.bfSize = dwSizeofDIB;
+
+	//bfType must always be BM for Bitmaps
+	bmfHeader.bfType = 0x4D42; //BM   
+
+	DWORD dwBytesWritten = 0;
+	{ // Call BMP to PNG library
+		IMAGE	image;
+		image.width = bi.biWidth; // = bmpWindow.bmWidth;
+		image.height = bi.biHeight; // = bmpWindow.bmHeight;
+
+		image.pixdepth = 32;
+		image.palnum =  0;
+		image.topdown = 0;
+		image.alpha = 0;
+		image.palette = 0;
+		//		image.rowbytes = ((bi.biWidth * bi.biBitCount + 31) / 32) * 4;
+		//		image.imgbytes = ((bi.biWidth * bi.biBitCount + 31) / 32) * 4 * bi.biHeight; // lpbitmap;
+		image.sigbit.red = image.sigbit.green = image.sigbit.blue = 8;
+		image.sigbit.gray = 8;
+		image.sigbit.alpha = 8;
+		image.rowbytes = ((DWORD)image.width * image.pixdepth + 7) / 8 * 4;
+		image.imgbytes = image.rowbytes * image.height;
+		image.rowptr = malloc((size_t)image.height * sizeof(BYTE *));
+		image.bmpbits = lpbitmapBW; // malloc((size_t)image.imgbytes);
+
+								  // fill the row pointers
+		BYTE *bp, **rp;
+		LONG n;
+
+		n = image.height;
+		rp = image.rowptr;
+		bp = image.bmpbits;
+
+		bp += image.imgbytes;
+		while (--n >= 0) {
+			bp -= image.rowbytes;
+			*(rp++) = bp;
+		}
+
+		if (strlen(ctx->curWorkingDir))
+			SetCurrentDirectory(ctx->curWorkingDir);
+
+		if (ctx->png.singleFlag) //do not add index
+			sprintf(outputFilename, "%s_b.png", ctx->png.basename); // , ctx->png.curFrame++);
+		else
+			sprintf(outputFilename, "%s%05d_b.png", ctx->png.basename, ctx->png.curFrame);
+
+		write_png(outputFilename, &image);
+		free(image.rowptr);
+
+		if (ctx->png.stateSaveFlag) //dump a state file
+		{
+			if (ctx->png.singleFlag) //do not add index
+				sprintf(outputFilename, "%s.dss", ctx->png.basename); // , ctx->png.curFrame++);
+			else
+				sprintf(outputFilename, "%s%05d.dss", ctx->png.basename, ctx->png.curFrame);
+
+			ds_save_state(ctx, outputFilename);
+		}
+
+		if (!ctx->png.singleFlag) //do not add index
+			++ctx->png.curFrame;
+	}
+
+	//Unlock and Free the DIB from the heap
+	GlobalUnlock(hDIB);
+	GlobalFree(hDIB);
+	GlobalUnlock(hDIB_BW);
+	GlobalFree(hDIB_BW);
+
+done: //Clean up
+	DeleteObject(hbmWindow);
+	DeleteObject(hdcMemDC);
+	ReleaseDC(hWnd, hdcWindow);
+
+	return 0;
+}
