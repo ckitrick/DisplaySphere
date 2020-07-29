@@ -43,9 +43,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->errFile = 0;
 #endif
 
-	ctx->hDC  = 0;				/* d1.1.1.	Option: -in_mirror 
-The -in_mirror option enables X axis geometry duplication through mirroring during input processing. Disabled by default.
-evice context */
+	ctx->hDC  = 0;				
 	ctx->hPalette = 0;		/* custom palette (if needed) */
 	ctx->hInstance = 0;
 
@@ -117,10 +115,6 @@ evice context */
 		gio->rAttr.zRotationFlag	= 0;
 		gio->rAttr.xMirrorFlag		= 0;
 	}
-
-//	ctx->filename[0]		= 0;
-//	ctx->nInputFiles		= 0;
-//	ctx->curWorkingDir[0]	= 0;
 
 	// default window size & position 
 	ctx->window.start_x			= 0;
@@ -223,10 +217,6 @@ void ds_pre_init2(DS_CTX *ctx)
 	// initialize all variables that rely on some initial value other than zero
 	// clear memory
 
-//	ctx->hDC = 0;				/* d1.1.1.	Option: -in_mirror
-//	ctx->hPalette = 0;		/* custom palette (if needed) */
-//	ctx->hInstance = 0;
-
 // current directory 
 	GetCurrentDirectory(512, ctx->curWorkingDir);
 
@@ -312,10 +302,6 @@ void ds_pre_init2(DS_CTX *ctx)
 		gio->rAttr.zRotationFlag = 0;
 		gio->rAttr.xMirrorFlag   = 0;
 	}
-
-	//	ctx->filename[0]		= 0;
-	//	ctx->nInputFiles		= 0;
-	//ctx->curWorkingDir[0] = 0;
 
 	// default window size & position 
 	ctx->window.start_x = 0;
@@ -445,16 +431,6 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 		ctx->drawAdj.clipVisibleFlag = 0; // clip.visible = 0;
 		ctx->drawAdj.clipZValue = 0;
 	}
-//	glClearColor(0, 0, 0, 0);
-
-	//	ctx->display_text = 0;
-//	ctx->gobjectq = LL_Create();
-
-	// enable depth testing with z
-//	glEnable(GL_DEPTH_TEST);
-
-	//	if (!ctx->matrixFlag) //
-	//		mtx_set_unity(&ctx->matrix);
 
 	if (strlen(ctx->png.basename)) // -capture option specified
 	{
@@ -663,9 +639,6 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 	}
 
 	ds_set_render_quality(ctx);
-
-	// process color table if defined
-//	ctbl_process_color_table_file(&ctx->cts, ctx->clrCtl.user_color_table);
 
 	DS_GEO_INPUT_OBJECT	*gio;
 	DS_GEO_OBJECT			*gobj;

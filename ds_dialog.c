@@ -278,8 +278,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 	}
 	break;
 	case WM_INITDIALOG:
-//		lp = GetWindowLongPtr(hWndDlg, GWL_STYLE);
-//		SetWindowLongPtr(hWndDlg, GWL_STYLE, lp | WS_TABSTOP | WS_SIZEBOX);// DS_CONTROL);
 	case WM_PAINT:
 		{
 			// Geometry Adjustments
@@ -289,11 +287,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			CheckRadioButton(hWndDlg, IDC_RADIO7, IDC_RADIO10, (i == GEOMETRY_ICOSAHEDRON ? IDC_RADIO7 : (i == GEOMETRY_OCTAHEDRON ? IDC_RADIO8 : (i == GEOMETRY_TETRAHEDRON ? IDC_RADIO9 : IDC_RADIO10))));
 			i = ctx->geomAdj.orientation;
 			CheckRadioButton(hWndDlg, IDC_RADIO11, IDC_RADIO13, (i == GEOMETRY_ORIENTATION_FACE ? IDC_RADIO11 : (i == GEOMETRY_ORIENTATION_EDGE ? IDC_RADIO12 : IDC_RADIO13)));
-//			i = ctx->geomAdj.drawWhat;
-//			CheckRadioButton(hWndDlg, IDC_RADIO14, IDC_RADIO16, (i == GEOMETRY_DRAW_TRIANGLES ? IDC_RADIO14 : (i == GEOMETRY_DRAW_EDGES ? IDC_RADIO15 : IDC_RADIO16)));
-//			CheckRadioButton(hWndDlg, IDC_RADIO21, IDC_RADIO22, (ctx->eAttr.type == 0 ? IDC_RADIO21 : IDC_RADIO22));
-			//			i = ctx->base_geometry.n_transforms_override;
-//			CheckRadioButton(hWndDlg, IDC_RADIO19, IDC_RADIO20, i ? IDC_RADIO20 : IDC_RADIO19);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->base_geometry.oneFaceFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->base_geometry.zRotFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_SETCHECK, (ctx->base_geometry.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
@@ -335,9 +328,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			}
 
 			// Color Adjustments 
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK9,  BM_SETCHECK, (ctx->clrCtl.line.flag     ? BST_CHECKED : BST_UNCHECKED), 0);
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->clrCtl.triangle.flag ? BST_CHECKED : BST_UNCHECKED), 0);
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK11, BM_SETCHECK, (ctx->clrCtl.autoColor     ? BST_CHECKED : BST_UNCHECKED), 0);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
@@ -364,22 +354,13 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT16, buffer);
 
 			// Image Capture 
-//			GetCurrentDirectory((DWORD)256, buffer); //  ctx->imageCapture.directory);
 			SetDlgItemText(hWndDlg, IDC_STATIC49, ctx->curWorkingDir); // ctx->imageCapture.directory);
 			SetDlgItemText(hWndDlg, IDC_EDIT6, ctx->png.basename);
 			sprintf(buffer, "index: %05d", ctx->png.curFrame);     
 			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);		
 			SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->png.stateSaveFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_SETCHECK, (ctx->png.bwFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-
-//			SetDlgItemText(hWndDlg, IDC_EDIT18, ctx->svg.basename);
-//			sprintf(buffer, "index: %05d", ctx->svg.curFrame);
-//			SetDlgItemText(hWndDlg, IDC_STATIC95, buffer);		
-//			sprintf(buffer, "%.3f", ctx->svg.lineWidth);  SetDlgItemText(hWndDlg, IDC_EDIT19, buffer);
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_SETCHECK, (ctx->svg.backgroundFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
-//			return 0; 
 		}
-//		return TRUE;
 		break;
 
 	case WM_COMMAND:
@@ -405,8 +386,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 				case IDC_EDIT15: GetDlgItemText(hWndDlg, IDC_EDIT15, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.y); ds_geo_build_transform_matrix(ctx); break;
 				case IDC_EDIT16: GetDlgItemText(hWndDlg, IDC_EDIT16, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.z); ds_geo_build_transform_matrix(ctx); break;
 				case IDC_EDIT17: GetDlgItemText(hWndDlg, IDC_EDIT17, buffer, 256); ctx->drawAdj.clipZValue = atof(buffer); InvalidateRect(pWnd, 0, 0); break;
-//				case IDC_EDIT18: GetDlgItemText(hWndDlg, IDC_EDIT18, buffer, 256); strcpy(ctx->svg.basename, buffer); break;
-//				case IDC_EDIT19: GetDlgItemText(hWndDlg, IDC_EDIT19, buffer, 256); sscanf(buffer, "%lf", &ctx->svg.lineWidth); break;
 				case IDC_EDIT20: GetDlgItemText(hWndDlg, IDC_EDIT20, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.x);  InvalidateRect(pWnd, 0, 0); break;
 				case IDC_EDIT21: GetDlgItemText(hWndDlg, IDC_EDIT21, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.y);  InvalidateRect(pWnd, 0, 0); break;
 				case IDC_EDIT22: GetDlgItemText(hWndDlg, IDC_EDIT22, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.z);  InvalidateRect(pWnd, 0, 0); break;
@@ -414,7 +393,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 				case IDC_EDIT24: GetDlgItemText(hWndDlg, IDC_EDIT24, buffer, 256); sscanf(buffer, "%lf", &ctx->renderVertex.scale); InvalidateRect(pWnd, 0, 0); break;
 				case IDC_EDIT25: GetDlgItemText(hWndDlg, IDC_EDIT25, buffer, 256); sscanf(buffer, "%f", &ctx->drawAdj.eyeSeparation); InvalidateRect(pWnd, 0, 0); break;
 				}
-//				return TRUE;
 				break;
 			}
 		}
@@ -435,20 +413,11 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_RADIO12: ctx->geomAdj.orientation = SendDlgItemMessage(hWndDlg, IDC_RADIO12, BM_GETCHECK, 0, 0) ? GEOMETRY_ORIENTATION_EDGE : GEOMETRY_ORIENTATION_FACE; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO13: ctx->geomAdj.orientation = SendDlgItemMessage(hWndDlg, IDC_RADIO13, BM_GETCHECK, 0, 0) ? GEOMETRY_ORIENTATION_VERTEX : GEOMETRY_ORIENTATION_FACE; InvalidateRect(pWnd, 0, 0); break;
 
-//		case IDC_RADIO14: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO14, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_TRIANGLES : GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-//		case IDC_RADIO15: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO15, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_EDGES     : GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-//		case IDC_RADIO16: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO16, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_BOTH		: GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO21: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO21, BM_GETCHECK, 1, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO22: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO22, BM_GETCHECK, 1, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 
-//		case IDC_RADIO19: ctx->base_geometry.n_transforms_override = SendDlgItemMessage(hWndDlg, IDC_RADIO19, BM_GETCHECK, 0, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
-//		case IDC_RADIO20: ctx->base_geometry.n_transforms_override = SendDlgItemMessage(hWndDlg, IDC_RADIO20, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-
-//		case IDC_BUTTON2: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.line.override); break;
-//		case IDC_BUTTON3: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.triangle.override); break;
 		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.triangle.defaultColor); break;
 		case IDC_BUTTON5: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.bkgClear); break;
-//		case IDC_BUTTON12: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->renderVertex.clr); break;
 
 		case IDC_CHECK1: ctx->drawAdj.projection = SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_GETCHECK, 0, 0) ? GEOMETRY_PROJECTION_PERPSECTIVE : GEOMETRY_PROJECTION_ORTHOGRAPHIC; ds_reshape(pWnd, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK2: ctx->drawAdj.normalizeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK2, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
@@ -472,10 +441,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_CHECK16: ctx->inputTrans.guaResultsFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK16, BM_GETCHECK, 0, 0) ? 1 : 0; break;
 		case IDC_CHECK25: ctx->inputTrans.centerAndScaleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK25, BM_GETCHECK, 0, 0) ? 1 : 0; break;
 
-//		case IDC_CHECK9: ctx->clrCtl.line.flag = SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_GETCHECK, 0, 0); ++ctx->clrCtl.updateFlag; clrUpdate = 1; break;
-//		case IDC_CHECK10: ctx->clrCtl.triangle.flag = SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_GETCHECK, 0, 0); ++ctx->clrCtl.updateFlag; clrUpdate = 1; break;
-//		case IDC_CHECK11: ctx->clrCtl.autoColor = SendDlgItemMessage(hWndDlg, IDC_CHECK11, BM_GETCHECK, 0, 0); InvalidateRect(pWnd, 0, 0); break;
-			//		case IDC_CHECK14: ctx->svg.backgroundFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_GETCHECK, 0, 0) ? 1 : 0; break;
 		case IDC_CHECK14: ctx->drawAdj.stereoFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0);ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); break;
 		case IDC_CHECK15: ctx->clrCtl.useLightingFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK17: ctx->clrCtl.reverseColorFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
@@ -496,29 +461,17 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			}
 			InvalidateRect(pWnd, 0, 0); break;
 
-		case IDC_CHECK22: /*SendDlgItemMessage(hWndDlg, IDC_CHECK22, BM_GETCHECK, 0, 0) ? */ ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK23: /*SendDlgItemMessage(hWndDlg, IDC_CHECK23, BM_GETCHECK, 0, 0) ? */ ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_EDGES; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK24: /*SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_GETCHECK, 0, 0) ? */ ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_VERTICES; InvalidateRect(pWnd, 0, 0); break;
-			//		case IDC_RADIO14: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO14, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_TRIANGLES : GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-			//		case IDC_RADIO15: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO15, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_EDGES     : GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-			//		case IDC_RADIO16: ctx->geomAdj.drawWhat = SendDlgItemMessage(hWndDlg, IDC_RADIO16, BM_GETCHECK, 0, 0) ? GEOMETRY_DRAW_BOTH		: GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-
-			//		case IDOK:
-//			EndDialog(hWndDlg, 0);
-//			InvalidateRect(pWnd, 0, 0);
-//			return TRUE;
-//			break;
+		case IDC_CHECK22: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK23: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_EDGES; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK24: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_VERTICES; InvalidateRect(pWnd, 0, 0); break;
 
 		case IDCANCEL:
 			DestroyWindow(hWndDlg);
-//			return TRUE;
 			break;
 
 		case IDC_BUTTON1: ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0; ctx->rot[0] = ctx->rot[1] = ctx->rot[2] = 0; mtx_set_unity(&ctx->matrix);ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break; // reset rotation/translation
 		case IDC_BUTTON7: ds_capture_image(ctx->mainWindow); InvalidateRect(hWndDlg, 0, 0);
 			sprintf(buffer, "index: %05d", ctx->png.curFrame); SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);break;
-//		case IDC_BUTTON10: ds_svg_output(ctx);
-//			sprintf(buffer, "index: %05d", ctx->svg.curFrame); SetDlgItemText(hWndDlg, IDC_STATIC95, buffer); return 0; break;
 
 		case IDC_BUTTON6:
 			{
@@ -570,7 +523,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			InvalidateRect(ctx->mainWindow, 0, 0);
 			LPDRAWITEMSTRUCT lpdis = (DRAWITEMSTRUCT*)lParam;
 			InvalidateRect((HWND)lParam, 0, 0);
-//			return TRUE;
 		}
 		break;
 
@@ -655,12 +607,10 @@ int ds_set_object_state /*SetObjectState*/(DS_CTX *ctx, int index, int state)
 LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
 {
-//	char				buffer[256];
 	HWND				pWnd, lWnd;
 	DS_CTX					*ctx;
 	int					clrUpdate = 0;
 	int					i;
-//	RECT				window;
 	static LVCOLUMN		column[6];
 	static LVITEM		item;
 	char				temp[256];
@@ -672,10 +622,6 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 
 	switch (Msg) {
 	case WM_INITDIALOG:
-//		column[0].mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;    // Type of mask
-//		column[0].pszText = "Active";                            // First Header Text
-//		column[0].cx = 0x30;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
-//		SendMessage(lWnd, LVM_INSERTCOLUMN, 0, (LPARAM)&column[0]); // Insert/Show the coloum
 		column[0].mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;    // Type of mask
 		column[0].pszText = "Object";                            // First Header Text
 		column[0].cx = 0x72;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
@@ -705,8 +651,6 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 		SendMessage(lWnd, LVM_DELETEALLITEMS, 0, 0);
 		// Here we put the info on the Coulom headers
 		// this is not data, only name of each header we like
-//		Memset(&column, 0, sizeof(LVCOLUMN) * 3);                  // Zero Members
-//		SendMessage(lWnd, LVM_SETEXTENDEDLISTVIEWSTYLE,0, LVS_EX_FULLROWSELECT); // Set style		
 
 		i = 0;
 		LL_SetHead(ctx->gobjectq);
@@ -758,11 +702,9 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 			ctx->objInfo = 0;
 			DestroyWindow(hWndDlg);
 			InvalidateRect(pWnd, 0, 0);
-//			return TRUE;
 		case IDCANCEL:
 			ctx->objInfo = 0;
 			DestroyWindow(hWndDlg);
-//			return TRUE;
 		}
 		break;
 

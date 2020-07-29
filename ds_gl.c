@@ -109,7 +109,6 @@ void ds_reshape_stereo(DS_CTX *ctx, int eye)
 	{
 		MTX_MATRIX	mry, mm;
 		double		angle = ctx->drawAdj.stereoCrossEyeFlag ? ctx->drawAdj.eyeSeparation : -ctx->drawAdj.eyeSeparation;
-//		double		rotation = !eye ? -ctx->drawAdj.eyeSeparation : ctx->drawAdj.eyeSeparation;
 		double		rotation = !eye ? -angle : angle;
 
 		mtx_create_rotation_matrix(&mry, MTX_ROTATE_Y_AXIS, DTR(rotation));
@@ -160,7 +159,6 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 	static GUT_PLANE		pl;
 	static GUT_VECTOR		n;
 
-//	DEBUG("gl setup")	
 
 	glShadeModel(GL_SMOOTH);          // Use Smooth shading ( This is the Default so we dont actually have to set it) 
 	if (ctx->drawAdj.fogFlag)//global_fog)
@@ -350,7 +348,6 @@ int ds_draw_circle_segment(GUT_POINT *a, GUT_POINT *b, GUT_POINT *c, GUT_VECTOR 
 		angle = acos(angle);
 
 		t = angle / DTR(10.0);
-		//		nInc = angle / DTR( 10.0 );
 		if (t < 1.0)
 			nInc = 1;
 		else if (t < 2.0)
@@ -437,7 +434,6 @@ void ds_draw_geometry (DS_CTX *ctx)
 	static GUT_VECTOR	vab, vbc, normal;
 	static DS_POLYHEDRON	*poly;
 	static DS_GEO_OBJECT	*gobj;
-//	static DS_POLYGON	*tri;
 	static DS_FACE		*tri;
 	static DS_COLOR		*clr;
 	static DS_EDGE			*edge;
@@ -610,7 +606,6 @@ int ds_gl_render_vertex(DS_CTX *ctx, GUT_POINT *vtx, GUT_POINT *vs, GUT_POINT *v
 	}
 	// make OpenGL calls
 	glBegin(GL_TRIANGLES);
-//	for (j = 0, vt = ctx->renderVertex.vtxObj.tri; j < ctx->renderVertex.vtxObj.nTri; ++j, ++vt)
 	for (j = 0; j < nTri; ++j, ++vt)
 	{
 		glNormal3f((float)vs[vt->vtx[0]].x * 3, (float)vs[vt->vtx[0]].y * 3, (float)vs[vt->vtx[0]].z * 3);
@@ -649,7 +644,6 @@ int ds_gl_render_edge(DS_CTX *ctx, DS_GEO_OBJECT *gobj, GUT_POINT *va, GUT_POINT
 	if (gobj->eAttr.type == GEOMETRY_EDGE_SQUARE)
 	{
 		ds_geo_edge_to_triangles(ctx, &gobj->eAttr, &p[0], &p[1], out, ctx->drawAdj.normalizeFlag, origin);
-//		ds_geo_edge_to_triangles(ctx, &ctx->eAttr, &p[0], &p[1], out, ctx->drawAdj.normalizeFlag, origin);
 
 		ds_draw_triangle(ctx, &out[0], &out[1], &out[2], clr); //gobj->clrE, edge->id);
 		ds_draw_triangle(ctx, &out[2], &out[3], &out[0], clr); //gobj->clrE, edge->id);

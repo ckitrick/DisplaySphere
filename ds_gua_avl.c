@@ -204,26 +204,19 @@ static void *gua_edata_init  (int mnc);
 static void *gua_vdata_init  (int mnc);
 static void *gua_blk_init    (GUA_DB *db); 
 static void *gua_db_init     (GUA_DATA_INIT init, void *insert, int mnc, GUA_COMPARE); // mnc - max number of components per block
-//static double gua_vtx_dist(GUA_VDATA *a, GUA_VDATA *b);
 static double gua_vtx_dist(GUT_POINT *a, GUT_POINT *b);
-//static int gua_edata_insert(void *dbp, int *vid, int *elid); 
 static int gua_edata_insert(GUA_DB *db, int *vid, int elid);
 
 static int gua_tdata_insert(void *dbp, int *vid, int nv, int tid, float *rgb);
 static int gua_tedata_insert(void *dbp, int *eid, int ne );
-//static int gua_eldata_insert(void *dbp, GUA_VDATA *va, GUA_VDATA *vb, double *len);
-//static int gua_eldata_insert(GUA_DB *db, GUA_ELDATA *va, GUA_ELDATA *vb, double *len);
 static int gua_eldata_insert(GUA_DB *db, GUA_VDATA *va, GUA_VDATA *vb, double *len);
 static int gua_vdb_dump(void *dbp);
-//static int gua_vdata_insert(void *dbp, GUA_VDATA *vtx);
 static int gua_parse(char * buffer, int *n, GUA_WORD *word);
 static int gua_vdata_insert(GUA_DB *db, GUT_POINT *vtx);
 
 #include "ds_gua.h"
 static void gua_destroy_db(GUA_DB *db);
 static void gua_destroy(GUA_UNIQUE *gua);
-//static int gua_integer_blk_init(void **ihead, int mnc);
-//static int *gua_integer_array(void **ihead, int mnc, int *nci, int length);
 static int gua_integer_blk_init(GUA_DB *db);
 static int *gua_integer_array(GUA_DB *db, int length);
 
@@ -260,7 +253,6 @@ static int te_out(void *passThru, GUA_TEDATA *te)
 {
 	int				i;
 	GUA_PASS_THRU	*pt = (GUA_PASS_THRU*)passThru;
-//	fprintf(pt->fp, "te %6d %6d %6d %6d\n", te->id, te->elid[0], te->elid[1], te->elid[2]); 
 	fprintf(pt->fp, "te %6d ", te->id );
 	for (i = 0; i < te->ne; ++i)
 	{
@@ -281,7 +273,6 @@ static int t_out(void *passThru, GUA_TDATA *t)
 	{
 		fprintf(pt->fp, "%6d ", t->vid[i] );
 	}
-//	fprintf(pt->fp, "t  %6d %6d %6d %6d %6d\n", t->id, t->vid[0], t->vid[1], t->vid[2], t->teid);
 	fprintf(pt->fp, "\n" );
 	return 0;
 }
@@ -310,7 +301,6 @@ static int xyz_compare(GUA_DB *db, void *av, void *bv)
 }
 
 //--------------------------------------------------------------------------------
-//static int el_compare(GUA_DB *db, GUA_ELDATA *a, GUA_ELDATA *b)
 static int el_compare(GUA_DB *db, void *av, void *bv)
 //--------------------------------------------------------------------------------
 {
@@ -367,7 +357,6 @@ static int te_compare(GUA_DB *db, void *av, void *bv)
 		diff = a->elid[i] - b->elid[i];
 		if (diff)
 			break;
-//			return diff > 0 ? 1 : -1; // done - point will inserted into tree
 	}
 
 	for (i = 0; i < a->ne; ++i)
@@ -375,7 +364,6 @@ static int te_compare(GUA_DB *db, void *av, void *bv)
 		rdiff = a->elid[i] - b->relid[i];
 		if (rdiff)
 			break; 
-//		return diff > 0 ? 1 : -1; // done - point will inserted into tree
 	}
 
 	if (!diff || !rdiff) // check if either is a match
@@ -509,7 +497,6 @@ static int gua_vdata_insert(GUA_DB *db, GUT_POINT *vtx)
 }
 
 //--------------------------------------------------------------------------------
-//static int gua_eldata_insert(GUA_DB *db, GUA_ELDATA *va, GUA_ELDATA *vb, double *len)
 static int gua_eldata_insert(GUA_DB *db, GUA_VDATA *va, GUA_VDATA *vb, double *len)
 //--------------------------------------------------------------------------------
 {
@@ -664,13 +651,9 @@ static int gua_tedata_insert(GUA_DB *db, int *eid, int ne)
 
 	te->elid = gua_integer_array(db, ne); // get an array to hold info
 	te->relid = gua_integer_array(db, ne); // get an array to hold info
-//	te->elid  = gua_integer_array(&db->ihead, db->mnc, &db->nci, ne); // get an array to hold info
-//	te->relid = gua_integer_array(&db->ihead, db->mnc, &db->nci, ne); // get an array to hold info
-//	te->oelid = gua_integer_array(&db->ihead, db->mnc, &db->nci, ne); // get an array to hold info
-//
+
 	te->ne = ne;
 	for (i = 0; i < ne; ++i) // save original vertex id's
-		//te->oelid[i] = te->elid[i] = eid[i];
 		te->elid[i] = eid[i];
 
 	gua_integer_array_order(te->elid, ne); // put lowest id# first
@@ -712,9 +695,6 @@ static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgb)
 	t->vid = gua_integer_array(db, nv); // get an array to hold info
 	t->rvid = gua_integer_array(db, nv); // get an array to hold info
 	t->ovid = gua_integer_array(db, nv); // get an array to hold info
-//	t->vid = gua_integer_array(&db->ihead, db->mnc, &db->nci, nv); // get an array to hold info
-//	t->rvid = gua_integer_array(&db->ihead, db->mnc, &db->nci, nv); // get an array to hold info
-//	t->ovid = gua_integer_array(&db->ihead, db->mnc, &db->nci, nv); // get an array to hold info
 
 	t->nv = nv;
 	for (i = 0; i < nv; ++i) // save original vertex id's
@@ -1299,9 +1279,6 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				rgb[2] = (float)(atof(word[11].buffer) / 255.0);
 				break;
 			}
-//			rgb[0] = atof(word[9].buffer);
-//			rgb[1] = atof(word[10].buffer);
-//			rgb[2] = atof(word[11].buffer);
 		}
 		else
 		{
@@ -1506,7 +1483,6 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 	blk->nc			= 0;
 	blk->next		= 0;
 	blk->data = (DS_VTX_CLR*)MALLOC(sizeof(DS_VTX_CLR)*db->mnc);
-//	blk->data = (NGUA_FACE*)MALLOC(sizeof(NGUA_FACE)*db->mnc);
 	db->head		= (void*)blk;
 	db->tail		= (void*)blk;
 	db->max_length	= 0;
@@ -1561,9 +1537,6 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.g = (float)(atof(word[10].buffer) / 255.0);
 				vct.color.b = (float)(atof(word[11].buffer) / 255.0);
 			}
-//			vct.color.r = atof(word[9].buffer);
-//			vct.color.g = atof(word[10].buffer);
-//			vct.color.b = atof(word[11].buffer);
 		}
 		else
 		{
@@ -1607,18 +1580,13 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 					blk->nc = 0;
 					blk->next = 0;
 					blk->data = (DS_VTX_CLR*)MALLOC(sizeof(DS_VTX_CLR)*db->mnc);
-//					blk->data = (NGUA_FACE*)MALLOC(sizeof(NGUA_FACE)*db->mnc);
 					((NGUA_BLK*)db->tail)->next = blk;
 					db->tail = (void*)blk;
 				}
 				vc = (DS_VTX_CLR*)blk->data + blk->nc++;
-//				face = (NGUA_FACE*)blk->data + blk->nc++;
 				++db->nc;
 
 				vc->color = vct.color;
-//				face->color = vct.color;
-//				face->nVtx = 3;
-//				face->vtx = gua_integer_array(&db->ihead, db->mnc, &db->nci, 3);
 
 				if (ctx->inputTrans.replicateFlag && j < 2)
 				{	// perform rotation transformation on coordinate data
@@ -1648,10 +1616,8 @@ int ngua_convert_to_object(DS_CTX *ctx, void *nguap, DS_GEO_OBJECT *geo)
 	//
 	NGUA_BLK	*blk, *nblk;
 	NGUA_DB		*db;
-//	GUA_WORD	word[32];
 	int			n;
 	int			i, j;
-//	char		buffer[256];
 	int			count = 0;
 	DS_VTX_CLR		*vc;
 	int			*iptr;
@@ -1777,8 +1743,6 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	int				n, m; 			// number of words parsed
 	GUA_VDATA		v[32];			// vertex coordinate data for current triangle 
 	double			elen[32];		// length of three edges of current triangle
-//	float			rgb[3];			// color of triangle
-//	int				explicitColor;	// color flag 
 	int				maxVID = 0;
 	int				nDigits = 0;
 	int				decimal = 0;
@@ -1792,9 +1756,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	DS_POLYGON		*of;
 	int				*ocf; // off color flag
 	int				modulo;
-//	DS_COLOR		*clr;
 	int				nVIndx = 0; // sum of all vertex indices for all faces
-//	int				*vindx;
 	int				colorFormat = 0;
 
 	if (!fp) return 1; // error 
@@ -1873,7 +1835,6 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				int	nDigits;
 				vdb->zero = eldb->zero = set_tolerance(word[0].buffer, &decimal, &nDigits);
 				vdb->nDigits = eldb->nDigits = nDigits;
-//				vdb->zero = eldb->zero = 0.000000000001; // SHOULD BE OPTION
 			}
 			ov[i].x = atof(word[0].buffer);
 			ov[i].y = atof(word[1].buffer);

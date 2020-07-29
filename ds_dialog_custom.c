@@ -212,13 +212,11 @@ void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, 
 //-----------------------------------------------------------------------------
 {
 	int						i;
-//	DS_OBJECT_CONTROL		*dso;
 	DS_OBJECT_CONTROL_EX	*dsox;
 	HWND					hEdit;
 	RECT					rect; 
 
 	// do this for each geometry object  
-	//objID = 0;
 	*bottom = 0;
 
 	for (i = 0, dsox = ds_obj_variable; i < nDS_Variable_Controls; ++i, ++dsox)
@@ -241,23 +239,19 @@ void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, 
 }
 
 //-----------------------------------------------------------------------------
-//LRESULT CALLBACK DlgObjectControl(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
 {
 	HWND					pWnd;
 	DS_CTX						*ctx;
-//	LONG_PTR				lp;
 	static HFONT			s_hFont = NULL;
-//	HFONT					hfDefault;
 	HWND					hEdit;
 	const TCHAR*			fontName = _T("Microsoft Sans Serif");
 	const long				nFontSize = 8;
 	LOGFONT					logFont = { 0 };
 	HDC						hdc = GetDC(hWndDlg);
 	int						yOffset = 15;
-	RECT					rect; // , urect;
-//	DWORD					error;
+	RECT					rect; 
 	DS_GEO_OBJECT			*gobj;
 	int						temp, clrUpdate;
 	char					buffer[128]; 
@@ -277,7 +271,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 
 		int						i, nObj, bottom, maxBottom;
 		DS_OBJECT_CONTROL		*dso;
-//		DS_OBJECT_CONTROL_EX	*dsox;
 		// do this for each geometry object  
 		objID = 0;
 		bottom = 0;
@@ -325,9 +318,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		break;
 
 	case WM_PAINT:
-		// get update rect
-//		GetUpdateRect(hWndDlg, &urect, 0);
-
 		objID = 0;
 
 		// fill in the default
@@ -338,7 +328,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		{// send messages to all controls to update content
 			ds_fill_object_controls( hWndDlg, ++objID,  gobj, buffer);
 		}
-//		return TRUE;
 		break;
 
 	case WM_COMMAND:
@@ -347,11 +336,10 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		case IDOK:
 			ctx->objControl = 0;
 			DestroyWindow(hWndDlg);
-//			return TRUE;
+
 		case IDCANCEL:
 			ctx->objControl = 0;
 			DestroyWindow(hWndDlg);
-//			return TRUE;
 		}
 
 		control   = LOWORD(wParam); // the specific control that triggered the event
@@ -392,7 +380,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 				case DS_BASE_EDGE_OFFSET:  GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->eAttr.offset); InvalidateRect(pWnd, 0, 0); break;
 				case DS_BASE_VERTEX_SCALE: GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->vAttr.scale);  InvalidateRect(pWnd, 0, 0); break;
 				}
-//				return TRUE;
 				break;
 			}
 		}
@@ -427,25 +414,19 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		if (clrUpdate)
 		{
 			clrUpdate = 0;
-//			++ctx->clrCtl.updateFlag;
-//			InvalidateRect(ctx->mainWindow, 0, 0);
 			LPDRAWITEMSTRUCT lpdis = (DRAWITEMSTRUCT*)lParam;
 			InvalidateRect((HWND)lParam, 0, 0);
-//			return TRUE;
 		}
-//		return TRUE;
 		break;
 
 	case WM_DESTROY:
 		DestroyWindow(hWndDlg);
 		ctx->objControl = 0;
-//		return TRUE;
 		break;
 
 	case WM_CLOSE:
 		DestroyWindow(hWndDlg);
 		ctx->objControl = 0;
-//		return TRUE;
 		break;
 
 	case WM_DRAWITEM: // owner drawn 
@@ -454,7 +435,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 			RECT				lpr;
 			HBRUSH				hColorBrush;
 			DS_COLOR			*clr = 0;
-//			int					flag = 0;
 
 			control = LOWORD(wParam);   // the specific control that triggered the event
 			category = control / 100;	// control category
@@ -480,11 +460,10 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 			if (!gobj) break;;
 
 			switch (category) {
-			case DS_BASE_COLOR_FACE_SET:   /* flag = 1; */ clr = &gobj->cAttr.face.color;		break;
-			case DS_BASE_COLOR_EDGE_SET:   /* flag = 1; */ clr = &gobj->cAttr.edge.color;		break;
-			case DS_BASE_COLOR_VERTEX_SET: /* flag = 1; */ clr = &gobj->cAttr.vertex.color;		break;
+			case DS_BASE_COLOR_FACE_SET:   clr = &gobj->cAttr.face.color;		break;
+			case DS_BASE_COLOR_EDGE_SET:   clr = &gobj->cAttr.edge.color;		break;
+			case DS_BASE_COLOR_VERTEX_SET: clr = &gobj->cAttr.vertex.color;		break;
 			}
-//			if (flag)
 			if (clr)
 			{
 				hColorBrush = CreateSolidBrush(RGB((unsigned int)(clr->r * 255), (unsigned int)(clr->g * 255), (unsigned int)(clr->b * 255)));
@@ -497,7 +476,6 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 				FillRect(lpdis->hDC, &lpr, hColorBrush);
 			}
 		}
-//		return TRUE;
 		break;
 	}
 

@@ -39,8 +39,6 @@ void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT 
 	GUT_VECTOR	v; 
 	double		d;
 
-//	gut_distance_from_point_to_point(a, b, &d);
-//	d = eattr->maxLength;
 	d = ctx->eAttr.maxLength;
 	gut_plane_from_points(origin, b, a, &p);
 	d *= eattr->width / 2; // scale the edge length
@@ -84,8 +82,7 @@ void ds_geo_edge_to_triangles_hex_axii(DS_EDGE_ATTRIBUTES *eattr, GUT_POINT *a, 
 //-----------------------------------------------------------------------------------
 {
 	// create normals
-	GUT_VECTOR	h, w, tmp; // r, tmp;
-//	GUT_POINT	m;
+	GUT_VECTOR	h, w, tmp; 
 	double		rad, d;
 	double		angle, aInc;
 	int			i, j, nSeg=6;

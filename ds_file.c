@@ -31,8 +31,6 @@
 #include "ds_file.h"
 #include "ds_gua.h"
 
-//HINSTANCE		hInstance;
-
 //-----------------------------------------------------------------------------
 int ds_file_set_window_text(HWND hWnd, char *name)
 //-----------------------------------------------------------------------------
@@ -108,8 +106,6 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 			ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height);
 			MoveWindow(ctx->mainWindow, ctx->window.start_x, ctx->window.start_y, ctx->window.width + WINDOW_SIZE_OFFSET_WIDTH, ctx->window.height + WINDOW_SIZE_OFFSET_HEIGHT, 1); // fix size & position
 		}
-		//				InvalidateRect(hWnd, 0, 0);
-		//				SendMessage(ctx->mainWindow, WM_SHOWWINDOW, 0, 0); // re-enable tool windows
 		if (ctx->window.toolsVisible)
 		{
 			if (!ctx->attrControl)
@@ -126,7 +122,6 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
 		}
-		//				ds_update_obj_control_window(ctx);
 		InvalidateRect(ctx->mainWindow, 0, 0);
 	}
 	return 0;
@@ -197,8 +192,6 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 	else if (type == 2) // sat tables 
 	{
 		return ds_process_restore_file(ctx, ctx->filename);
-//			if ( ds_restore_state(ctx, ctx->filename))
-//			MessageBox(NULL, "State restoration contained errors.", 0, MB_OK);
 	}
 	return 1;
 }
@@ -208,10 +201,7 @@ int ds_write_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 //-----------------------------------------------------------------------------
 {
 	char			sFilter[] = "State Files (*.dss)\0*.dss\0All Files (*.*)\0*.*\0\0";
-//	char			*p;
-//	BOOL			bRes;
 	OPENFILENAME	ofn;
-//	FILE			*fp;
 
 	ctx->filename[0] = 0; // null terminate
 	ofn.lStructSize = sizeof(OPENFILENAME);
@@ -281,7 +271,6 @@ int ds_file_drag_and_drop( HWND hWnd, HDROP hdrop )
 			DragQueryFile(hdrop, index, (LPSTR)buffer, (UINT)256);
 
 			// reset the menus
-			//FILM_SetDirectoryAndFile ( buffer );
 			ds_file_initialization(hWnd, buffer);// , 0);
 	
 			ctx->gobjAddFlag = 0;
@@ -310,7 +299,6 @@ DS_GEO_OBJECT *ds_geo_object_find(DS_CTX *ctx, char *filename)
 }
 
 //-----------------------------------------------------------------------------
-//DS_GEO_OBJECT *geo_object_create2(DS_CTX *ctx, char *filename)
 DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
 //-----------------------------------------------------------------------------
 {
