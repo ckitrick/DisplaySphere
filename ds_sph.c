@@ -328,7 +328,6 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		DragAcceptFiles ( hWnd, TRUE );
 		break;
 
-//	case WM_USER+200:
 	case WM_SHOWWINDOW:
 		// open tool windows 
 		if (ctx && ctx->window.toolsVisible)
@@ -354,33 +353,33 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		switch (LOWORD(wParam)) {
 		case ID_FILE_OPEN_POLY:
 			ds_open_file_dialog(hWnd, ctx, 0);   // application-defined 
-			if ( ctx->objInfo ) (ctx->objInfo, WM_PAINT, 0, 0);//init
+			SetCurrentDirectory(ctx->curWorkingDir);
 			ds_update_obj_control_window(ctx);
 			InvalidateRect(hWnd, 0, 0);
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
-			//			return 0;
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER+1000, 0, 0);
 			break;
 
 		case ID_FILE_OPEN_POLY_ADD:
 			ctx->gobjAddFlag = 1;
 			ds_open_file_dialog(hWnd, ctx, 0);   // application-defined 
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);//init
+			SetCurrentDirectory(ctx->curWorkingDir);
 			ds_update_obj_control_window(ctx);
 			ctx->gobjAddFlag = 0;
 			InvalidateRect(hWnd, 0, 0);
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 			break;
 
 		case ID_FILE_READCOLORTABLES:
 			ds_open_file_dialog(hWnd, ctx, 1);   // application-defined 
+			SetCurrentDirectory(ctx->curWorkingDir);
 			InvalidateRect(hWnd, 0, 0);
 			break;
 
 		case ID_FILE_REPEAT:
 			if (!ds_read_file_from_buffer(ctx)) {
+				SetCurrentDirectory(ctx->curWorkingDir);
 				InvalidateRect(hWnd, 0, 0);
-				if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
-//				SendMessage(ctx->objControl, WM_INITDIALOG, 0, 0);//init
+				if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 				if (ctx->objControl) SendMessage(ctx->objControl, WM_PAINT, 0, 0);//init
 			}
 			break;
@@ -390,12 +389,17 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			break;
 
 		case ID_FILE_SAVESTATE: //ds_save_state(ctx, "C:/TEMP/ds_state.txt"); break;
-			if (ds_write_file_dialog(hWnd, ctx, 0) )
+			if (ds_write_file_dialog(hWnd, ctx, 0))
+			{
 				ds_save_state(ctx, ctx->filename); // "C:/TEMP/ds_state.txt");
+				SetCurrentDirectory(ctx->curWorkingDir);
+			}
 			break;
 
 		case ID_FILE_RESTORESTATE: //ds_restore_state(ctx, "C:/TEMP/ds_state.txt"); break;
 			ds_open_file_dialog(hWnd, ctx, 2);
+			SetCurrentDirectory(ctx->curWorkingDir);
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 			break;
 
 		case ID_FILE_ABOUT:
@@ -440,8 +444,9 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		if ( GetKeyState(VK_SHIFT) & 0x1000 ) // check high order bit to see if key is down
 			ctx->gobjAddFlag = 1; // return to default state
 		ds_file_drag_and_drop( hWnd, (HDROP)wParam );
+		SetCurrentDirectory(ctx->curWorkingDir);
 		InvalidateRect(hWnd, 0, 0);
-//		SendMessage(ctx->objInfo, WM_PAINT, 0, 0);//init
+		if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 		break;
 
 	case WM_SIZE:
@@ -485,7 +490,7 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			}
 			ds_file_set_window_text(hWnd, ctx->filename);
 			break;
-		case 'h': ctx->drawAdj.hiResFlag = !ctx->drawAdj.hiResFlag; ds_set_render_quality(ctx); break; 
+		case 'h': ctx->drawAdj.hiResFlag = !ctx->drawAdj.hiResFlag; ds_set_render_quality(ctx); break;
 		case 'i': ds_capture_image(hWnd); break;
 		case 'n': ctx->drawAdj.normalizeFlag = ctx->drawAdj.normalizeFlag ? 0 : 1; break; //global_normalize = ctx->global_normalize ? 0 : 1; break;			/* n key */
 		case 'o': // change base geometry orientation
@@ -535,7 +540,7 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			break;
 		}
 		InvalidateRect(hWnd, 0, 0);
-		SendMessage(ctx->attrControl, WM_PAINT, 0, 0);//init
+		if (ctx->attrControl) SendMessage(ctx->attrControl, WM_PAINT, 0, 0);//init
 		break;
 
     case WM_LBUTTONDOWN:
@@ -642,7 +647,7 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	// decode command line options
 	char	*p = (char*)lpszCmdLine;
 
-	char	buffer[1024];
+	char	buffer[1024], curArg[128];
 	char	*av[64];
 	int		ac,
 			error=0,
@@ -655,14 +660,26 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	// parse the command string
 	ac = ds_parse_lexeme(buffer, av, 64);
 	nextAc = 0;
+	curArg[0] = 0;
 
-	ds_command_line(ctx, ac, av, &error, &badArgIndex); // NEED TO HANDLE ERRORS
+	ctx->errorInfo.count = 0;
+	ds_command_line(ctx, ac, av, &error, &badArgIndex, &ctx->errorInfo); // NEED TO HANDLE ERRORS
 	if (error)
 	{
 		char	buffer[128];
+		int		i;
+		buffer[0] = 0;
+		strcat(buffer, "An error in the command line was encountered at: ");
+		for (i = 0; i < ctx->errorInfo.count; ++i)
+		{
+			strcat(buffer, ctx->errorInfo.text[i]);
+			strcat(buffer, ",");
+		}
+		strcat(buffer, ">");
+
 		//badArgIndex = 0;
-		sprintf(buffer, "An error in the command line was encountered at <%s>", av[badArgIndex]);
-		MessageBox(NULL, buffer, 0, MB_OK);
+//		sprintf(buffer, "An error in the command line was encountered at <%s><%s>", av[badArgIndex], curArg);
+		MessageBox(NULL, buffer, "Command Line Error", MB_OK);
 	}
 	return 0;
 }
@@ -793,6 +810,7 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 				fopen_s(&fp, buffer, "r");
 				if (fp)
 				{
+					buf[0] = 0;
 					fgets(buf, 256, fp);
 					argCount = ds_parse_lexeme(buf, array, 64); // split line into words
 					if (argCount && !strcmp(array[0], "DS_STATE"))
@@ -801,6 +819,12 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 						fclose(fp);
 						return ds_process_restore_file(ctx, buffer);
 					}
+				}
+				else
+				{
+					char buffer[128];
+					sprintf(buffer, "Dragged file <%s> failed to open.", buffer);
+					MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
 				}
 				fclose(fp);
 			}
@@ -814,7 +838,7 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 	ctx->gobjAddFlag = 0; // return to default state
 
 	ds_update_obj_control_window(ctx);
-	if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
+	if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER+1000, 0, 0);
 	return 0;
 }
 

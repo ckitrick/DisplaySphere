@@ -123,6 +123,7 @@
 #define IDC_RADIO54                     1067
 #define IDC_BUTTON3                     1068
 #define IDC_RADIO55                     1068
+#define IDC_CHECK76                     1068
 #define IDC_STATIC41                    1069
 #define IDC_CHECK27                     1069
 #define IDC_STATIC42                    1070
@@ -223,6 +224,7 @@
 #define IDC_CHECK51                     1113
 #define IDC_STATIC95                    1114
 #define IDC_CHECK52                     1114
+#define IDC_EDIT54                      1114
 #define IDC_STATIC96                    1115
 #define IDC_BUTTON10                    1115
 #define IDC_BUTTON27                    1115

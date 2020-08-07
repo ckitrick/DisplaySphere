@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2020 Christopher J Kitrick
+	Copyright (c) 2020 Christopher J Kitrick
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -56,7 +56,6 @@ int ds_file_initialization( HWND hWnd, char *filename )
 	char		c, *p;
 	FILE		*fp;
 	DS_CTX		*ctx;
-//	char	buffer[128], buf1[24], buf2[12];
 
 	ctx = (DS_CTX*)GetWindowLong ( hWnd, GWL_USERDATA );
 
@@ -78,6 +77,12 @@ int ds_file_initialization( HWND hWnd, char *filename )
 		ds_parse_file(ctx, fp, filename);
 		fclose(fp);
 	}
+	else
+	{
+		char buffer[128];
+		sprintf(buffer, "File <%s> failed to open.", filename);
+		MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+	}
 
 	return 0;
 }
@@ -87,15 +92,28 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 //-----------------------------------------------------------------------------
 {
 	RECT		before;
-	int			w, h;
+	int			w, h, stereoFlag = ctx->drawAdj.stereoFlag;
+	char		curArg[128], buffer[128];
 
 	GetWindowRect(ctx->mainWindow, &before);
 	w = before.right - before.left - WINDOW_SIZE_OFFSET_WIDTH;
 	h = before.bottom - before.top - WINDOW_SIZE_OFFSET_HEIGHT;
+	curArg[0] = 0;
 
-	if (ds_restore_state(ctx, filename))
+	ctx->errorInfo.count = 0;
+	if (ds_restore_state(ctx, filename, &ctx->errorInfo))
 	{
-		MessageBox(NULL, "State restoration contained errors.", 0, MB_OK);
+		int		i;
+		buffer[0] = 0;
+
+		strcat(buffer, "State restoration contained errors: <" );
+		for (i = 0; i < ctx->errorInfo.count; ++i)
+		{
+			strcat(buffer, ctx->errorInfo.text[i]);
+			strcat(buffer, ",");
+		}
+		strcat(buffer, ">");
+		MessageBox(NULL, buffer, "State Restoration", MB_OK);
 		return 1;
 	}
 	else
@@ -106,6 +124,9 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 			ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height);
 			MoveWindow(ctx->mainWindow, ctx->window.start_x, ctx->window.start_y, ctx->window.width + WINDOW_SIZE_OFFSET_WIDTH, ctx->window.height + WINDOW_SIZE_OFFSET_HEIGHT, 1); // fix size & position
 		}
+		else if (stereoFlag && !ctx->drawAdj.stereoFlag )
+			ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height);
+
 		if (ctx->window.toolsVisible)
 		{
 			if (!ctx->attrControl)
@@ -117,7 +138,6 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 			if (!ctx->objControl)
 			{
 				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_control);
-				//			ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG7), hWnd, DlgObjectControl5);
 				ShowWindow(ctx->objControl, SW_SHOW);
 				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
@@ -182,6 +202,12 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 			ds_file_type_initialization(ctx, p + 1);
 			ds_parse_file(ctx, fp, ctx->filename);
 		}
+		else
+		{
+			char buffer[128];
+			sprintf(buffer, "File <%s> failed to open.", ctx->filename);
+			MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+		}
 		fclose(fp);
 	}
 	else if (type == 1) // color tables 
@@ -244,8 +270,11 @@ int ds_read_file_from_buffer (DS_CTX *ctx)
 		fclose(fp);
 	}
 	else
-		MessageBox(NULL, "File read failed.", 0, MB_OK);
-
+	{
+		char buffer[128];
+		sprintf(buffer, "File <%s> failed to open.", ctx->filename);
+		MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+	}
 	return 0;
 }
 
@@ -330,6 +359,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
 	gobj->cAttr		= ctx->defInputObj.cAttr;
 	gobj->vAttr		= ctx->defInputObj.vAttr;
 	gobj->rAttr		= ctx->defInputObj.rAttr; 
+	gobj->tAttr		= ctx->defInputObj.tAttr;
 
 	gobj->filename = malloc(strlen(filename) + 1);
 	strcpy(gobj->filename, filename);
@@ -370,7 +400,7 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, FILE *fp, char *filename)
 	};
 
 	// atempt to read OFF format first 
-	fileType = gua_off_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+	fileType = gua_off_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.face.defaultColor);
 
 	switch (fileType) {
 	case FILE_OFF:
@@ -380,11 +410,11 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, FILE *fp, char *filename)
 		if (ctx->inputTrans.guaFlag)
 		{
 			guaFlag = 1;// normal GUA data created
-			gua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+			gua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.face.defaultColor);
 		}
 		else
 		{	// NGUA data created
-			ngua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+			ngua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.face.defaultColor);
 		}
 	}
 

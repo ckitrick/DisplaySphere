@@ -55,9 +55,9 @@ typedef struct {
 	ARGUMENT_SUBSTITUTE	*argument;
 } ARGUMENT_SUBSTITUTE_SET;
 
-typedef int(*ARG_USER_FUNCTION)(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex);
+typedef int(*ARG_USER_FUNCTION)(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex, DS_ERROR *errInfo);
 ARGUMENT_SUBSTITUTE *arg_find_substitute(ARGUMENT_SUBSTITUTE_SET *set, char *arg);
 ARGUMENT *arg_find(ARGUMENT_SET *set, char *arg);
-int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex);
-int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex);
+int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex, DS_ERROR *errInfo);
+int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex, DS_ERROR *errInfo);
 

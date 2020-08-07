@@ -218,11 +218,13 @@ int ds_general_color_dialog(HWND hOwnerWnd, DS_CTX *ctx, DS_COLOR *clr)
 }
 
 //-----------------------------------------------------------------------------
-static void ds_dlg_spin_update(DS_CTX *ctx, int what, char *buffer)
+static void ds_dlg_spin_update(DS_CTX *ctx, HWND dlg, int control, int what, char *buffer)
 //-----------------------------------------------------------------------------
 {
 	int		flag = 0;
 	float	value;
+
+	GetDlgItemText(dlg, control, buffer, 256);	// get text from edit control
 	value = (float)atof(buffer);
 
 	switch (what) {
@@ -244,15 +246,21 @@ static void ds_dlg_spin_update(DS_CTX *ctx, int what, char *buffer)
 			InvalidateRect(ctx->mainWindow, 0, 0);
 		}
 	}
+	if (flag)
+	{
+		if (what != 3) sprintf(buffer, "%.3f", value);
+		else sprintf(buffer, "%d", (int)value);  
+		SetDlgItemText(dlg, control, buffer);
+	}
 }
 
 //-----------------------------------------------------------------------------
-//LRESULT CALLBACK DlgAttributesFull(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
 {
 	// Full scope attributes dialog - designed to be a floating non-modal dialog
 	//
+	static PAINTSTRUCT		ps;
 #define CLAMP_COLOR( color )	\
 	if ( color < 0.0 )			\
 		color = 0.0;			\
@@ -270,16 +278,9 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
 
 	switch (Msg) {
-	case WM_NEXTDLGCTL:
-	{
-
-		int i;
-		i = 12;
-	}
-	break;
 	case WM_INITDIALOG:
 	case WM_PAINT:
-		{
+	{
 			// Geometry Adjustments
 			CheckRadioButton(hWndDlg, IDC_RADIO1, IDC_RADIO3, (ctx->geomAdj.polymode[0] == 0 ? IDC_RADIO1 : (ctx->geomAdj.polymode[0] == 1 ? IDC_RADIO2 : IDC_RADIO3)));
 			CheckRadioButton(hWndDlg, IDC_RADIO4, IDC_RADIO6, (ctx->geomAdj.polymode[1] == 0 ? IDC_RADIO4 : (ctx->geomAdj.polymode[1] == 1 ? IDC_RADIO5 : IDC_RADIO6)));
@@ -328,6 +329,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			}
 
 			// Color Adjustments 
+			sprintf(buffer, "%.2f", ctx->clrCtl.face.defaultColor.a);  SetDlgItemText(hWndDlg, IDC_EDIT54, buffer);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
@@ -371,27 +373,28 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			switch (uiCode){
 			case EN_KILLFOCUS:
 				switch (LOWORD(wParam)) {
-				case IDC_EDIT1: GetDlgItemText(hWndDlg, IDC_EDIT1, buffer, 256); ctx->drawAdj.clipZIncrement = atof(buffer); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT2: GetDlgItemText(hWndDlg, IDC_EDIT2, buffer, 256); ds_dlg_spin_update(ctx, 3, buffer); break;
-				case IDC_EDIT3: GetDlgItemText(hWndDlg, IDC_EDIT3, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.width); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT4:	GetDlgItemText(hWndDlg, IDC_EDIT4, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.height); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT5:	GetDlgItemText(hWndDlg, IDC_EDIT5, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.offset); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT6:	GetDlgItemText(hWndDlg, IDC_EDIT6, buffer, 256); strcpy(ctx->png.basename, buffer); break;
-				case IDC_EDIT7:	GetDlgItemText(hWndDlg, IDC_EDIT7, buffer, 256); ds_dlg_spin_update(ctx, 0, buffer); break;
-				case IDC_EDIT8:	GetDlgItemText(hWndDlg, IDC_EDIT8, buffer, 256); ds_dlg_spin_update(ctx, 1, buffer); break;
-				case IDC_EDIT11: GetDlgItemText(hWndDlg, IDC_EDIT11, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.x); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT12: GetDlgItemText(hWndDlg, IDC_EDIT12, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.y); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT13: GetDlgItemText(hWndDlg, IDC_EDIT13, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.z); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT14: GetDlgItemText(hWndDlg, IDC_EDIT14, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.x); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT15: GetDlgItemText(hWndDlg, IDC_EDIT15, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.y); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT16: GetDlgItemText(hWndDlg, IDC_EDIT16, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.z); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT17: GetDlgItemText(hWndDlg, IDC_EDIT17, buffer, 256); ctx->drawAdj.clipZValue = atof(buffer); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT20: GetDlgItemText(hWndDlg, IDC_EDIT20, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.x);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT21: GetDlgItemText(hWndDlg, IDC_EDIT21, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.y);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT22: GetDlgItemText(hWndDlg, IDC_EDIT22, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.z);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT23: GetDlgItemText(hWndDlg, IDC_EDIT23, buffer, 256); ds_dlg_spin_update(ctx, 2, buffer); break;
-				case IDC_EDIT24: GetDlgItemText(hWndDlg, IDC_EDIT24, buffer, 256); sscanf(buffer, "%lf", &ctx->renderVertex.scale); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT25: GetDlgItemText(hWndDlg, IDC_EDIT25, buffer, 256); sscanf(buffer, "%f", &ctx->drawAdj.eyeSeparation); InvalidateRect(pWnd, 0, 0); break;
+				case IDC_EDIT1:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT1,  buffer, (void*)&ctx->drawAdj.clipZIncrement, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT2:  ds_dlg_spin_update( ctx, hWndDlg, IDC_EDIT2, 3, buffer);
+				case IDC_EDIT3:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT3,  buffer, (void*)&ctx->eAttr.width , 1, 3, 0, 0, 0); break;
+				case IDC_EDIT4:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT4,  buffer, (void*)&ctx->eAttr.height, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT5:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT5,  buffer, (void*)&ctx->eAttr.offset, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT6:	 strcpy(ctx->png.basename, buffer); break;
+				case IDC_EDIT7:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT7, 0, buffer);
+				case IDC_EDIT8:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT8, 1, buffer);
+				case IDC_EDIT11: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT11, buffer, (void*)&ctx->inputTrans.zAxis.x, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT12: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT12, buffer, (void*)&ctx->inputTrans.zAxis.y, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT13: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT13, buffer, (void*)&ctx->inputTrans.zAxis.z, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT14: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT14, buffer, (void*)&ctx->inputTrans.yAxis.x, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT15: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT15, buffer, (void*)&ctx->inputTrans.yAxis.y, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT16: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT16, buffer, (void*)&ctx->inputTrans.yAxis.z, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT17: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT17, buffer, (void*)&ctx->drawAdj.clipZValue, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->clrCtl.light.x, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->clrCtl.light.y, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->clrCtl.light.z, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT23:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT23, 2, buffer);
+				case IDC_EDIT24: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT24, buffer, (void*)&ctx->renderVertex.scale, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT25: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT25, buffer, (void*)&ctx->drawAdj.eyeSeparation, 0, 3, 0, 0, 0); break;
+				case IDC_EDIT54: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT54, buffer, (void*)&ctx->clrCtl.face.defaultColor.a, 0, 2, 1, 0.0, 1.0); break;
 				}
 				break;
 			}
@@ -416,7 +419,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_RADIO21: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO21, BM_GETCHECK, 1, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO22: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO22, BM_GETCHECK, 1, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 
-		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.triangle.defaultColor); break;
+		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.face.defaultColor); break;
 		case IDC_BUTTON5: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.bkgClear); break;
 
 		case IDC_CHECK1: ctx->drawAdj.projection = SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_GETCHECK, 0, 0) ? GEOMETRY_PROJECTION_PERPSECTIVE : GEOMETRY_PROJECTION_ORTHOGRAPHIC; ds_reshape(pWnd, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break;
@@ -494,6 +497,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 					SetDlgItemText(hWndDlg, IDC_STATIC49, szDir);
 					strcpy(ctx->curWorkingDir, szDir); // save new current working directory
 					SetCurrentDirectory(szDir);
+					ctx->cdChangeFlag = 1;
 				}
 			}
 			break;
@@ -536,8 +540,8 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 
 			switch ((UINT)wParam) {
 			case IDC_BUTTON2: flag = 1;  clr = &ctx->clrCtl.line.override;			break;
-			case IDC_BUTTON3: flag = 1;  clr = &ctx->clrCtl.triangle.override;		break;
-			case IDC_BUTTON4: flag = 1;  clr = &ctx->clrCtl.triangle.defaultColor;	break;
+			case IDC_BUTTON3: flag = 1;  clr = &ctx->clrCtl.face.override;		break;
+			case IDC_BUTTON4: flag = 1;  clr = &ctx->clrCtl.face.defaultColor;	break;
 			case IDC_BUTTON5: flag = 1;  clr = &ctx->clrCtl.bkgClear;				break;
 			case IDC_BUTTON12: flag = 1;  clr = &ctx->renderVertex.clr;				break;
 			}
@@ -622,6 +626,8 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 
 	switch (Msg) {
 	case WM_INITDIALOG:
+		// Here we put the info on the Column headers
+		// this is not data, only name of each header we like
 		column[0].mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;    // Type of mask
 		column[0].pszText = "Object";                            // First Header Text
 		column[0].cx = 0x72;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
@@ -646,26 +652,63 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 		column[5].pszText = "#UEdges";                            // First Header Text
 		column[5].cx = 0x42;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
 		SendMessage(lWnd, LVM_INSERTCOLUMN, 5, (LPARAM)&column[5]); // Insert/Show the coloum
-
-	case WM_PAINT:
+//		break;
 		SendMessage(lWnd, LVM_DELETEALLITEMS, 0, 0);
-		// Here we put the info on the Coulom headers
-		// this is not data, only name of each header we like
-
 		i = 0;
+		memset(&item, 0, sizeof(item)); // Zero struct's Members
 		LL_SetHead(ctx->gobjectq);
 		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 		{
 			item.mask = LVIF_TEXT;   // Text Style
 			item.cchTextMax = 256; // Max size of test
 			item.iItem = i;          // choose item  
-			item.iSubItem = 0;       // Put in first coluom
-			item.state = 1;
-			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
 
 			item.iSubItem = 0;       // Put in first column
 			item.pszText = ds_name_start(gobj->filename); // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 1;       // Put in first column
+			sprintf(temp, "%d", gobj->nTri);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
 			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 2;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nVtx);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 3;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nEdge);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 4;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nUTri);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 5;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nUEdge);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+			++i;
+		}
+		break;
+
+	case WM_USER + 1000:
+		SendMessage(lWnd, LVM_DELETEALLITEMS, 0, 0);
+		i = 0;
+		memset(&item, 0, sizeof(item)); // Zero struct's Members
+		LL_SetHead(ctx->gobjectq);
+		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+		{
+			item.mask = LVIF_TEXT;   // Text Style
+			item.cchTextMax = 256; // Max size of test
+			item.iItem = i;          // choose item  
+
+			item.iSubItem = 0;       // Put in first column
+			item.pszText = ds_name_start(gobj->filename); // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
 
 			item.iSubItem = 1;       // Put in first column
 			sprintf(temp, "%d", gobj->nTri);

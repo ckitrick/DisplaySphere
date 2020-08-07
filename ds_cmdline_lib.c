@@ -100,7 +100,7 @@ ARGUMENT_SUBSTITUTE *arg_find_substitute(ARGUMENT_SUBSTITUTE_SET *set, char *arg
 }
 
 //-----------------------------------------------------------------------------
-int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex)
+int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex, DS_ERROR *errInfo)
 //-----------------------------------------------------------------------------
 {
 	if (!(arg->nArgs & 0xff)) // zero sub-args
@@ -109,7 +109,7 @@ int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, in
 		++*currentArgIndex; // consume the arg
 		switch ((int)arg->type) {
 		case ATYPE_SET_EXPLICIT:	arg->addr ? (*(int*)arg->addr = (int)arg->data) : 0; break;
-		case ATYPE_USER_FUNCTION:	return ((ARG_USER_FUNCTION)arg->addr)(arg, currentArgIndex, maxNArgs, av, error, argIndex); break;
+		case ATYPE_USER_FUNCTION:	return ((ARG_USER_FUNCTION)arg->addr)(arg, currentArgIndex, maxNArgs, av, error, argIndex, errInfo); break;
 		default:
 			++*error;
 			return 1;
@@ -130,7 +130,7 @@ int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, in
 		{
 			ARGUMENT_SET	*set;
 			if (!(set = (ARGUMENT_SET*)arg->addr)) { ++*error; return 1; }
-			if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex)) { ++*error; return 1; }
+			if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex, errInfo)) { ++*error; return 1; }
 		}
 		break;
 		case ATYPE_STRING:  arg->addr ? strcpy((char*)arg->addr, av[*currentArgIndex]) : 0;		break;
@@ -185,7 +185,7 @@ int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, in
 				{
 					ARGUMENT_SET	*set;
 					if (!(set = (ARGUMENT_SET*)addr)) return 1;
-					if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex)) { ++*error; return 1; }
+					if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex, errInfo)) { ++*error; return 1; }
 					addr = (void*)(set + 1); // (((ARGUMENT_SET*)addr)[1]); // next
 				}
 				break;
@@ -223,7 +223,7 @@ int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, in
 					ARGUMENT_SET	*set;
 					if (!arg->addr[i]) { ++*error; return 1; }
 					if (!(set = (ARGUMENT_SET*)arg->addr[i])) { ++*error; return 1; }
-					if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex)) { ++*error; return 1; }
+					if (arg_decode(set, currentArgIndex, maxNArgs, av, error, argIndex, errInfo)) { ++*error; return 1; }
 				}
 				break;
 				case ATYPE_STRING:  arg->addr[i] ? strcpy((char*)arg->addr[i], av[*currentArgIndex]) : 0;	break;
@@ -254,7 +254,7 @@ int arg_process(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, in
 }
 
 //-----------------------------------------------------------------------------
-int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex )
+int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av, int *error, int *argIndex, DS_ERROR *errInfo )
 //-----------------------------------------------------------------------------
 {
 	ARGUMENT	*arg;
@@ -264,6 +264,8 @@ int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av,
 		arg = arg_find(set, av[*currentArgIndex]);
 		if (!arg)
 		{
+			strcpy(errInfo->text[errInfo->count], av[*currentArgIndex]);
+			++errInfo->count;
 			*error = ARG_ERROR_ARG_NOT_FOUND; // failure
 			*argIndex = *currentArgIndex;
 			return 1; // stop
@@ -271,9 +273,10 @@ int arg_decode(ARGUMENT_SET *set, int *currentArgIndex, int maxNArgs, char **av,
 		else
 		{
 			// process single arg
-			if (arg_process(arg, currentArgIndex, maxNArgs, av, error, argIndex))
+			if (arg_process(arg, currentArgIndex, maxNArgs, av, error, argIndex, errInfo))
 			{
-//				++*error;
+				strcpy(errInfo->text[errInfo->count], arg->text);
+				++errInfo->count;
 				*error = ARG_ERROR_ARG_DATA_NOT_FOUND; // failure
 				*argIndex = *currentArgIndex;
 				return 1;// break; // error

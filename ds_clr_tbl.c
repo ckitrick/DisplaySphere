@@ -10,6 +10,7 @@
 */
 /*
 	This group of functions are designed to handle color tables. 
+	Alpha is always set to 1.0
 */
 
 #include <stdlib.h>
@@ -186,6 +187,7 @@ void ds_clr_default_color_tables(DS_CTX *ctx)
 		ct.color[i].r = (float)(hclr008[i].r / 255.0);
 		ct.color[i].g = (float)(hclr008[i].g / 255.0);
 		ct.color[i].b = (float)(hclr008[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
 	}
 	ct.nColors = 8;
 	ds_ctbl_add_color_table(&ctx->cts, &ct);
@@ -194,6 +196,7 @@ void ds_clr_default_color_tables(DS_CTX *ctx)
 		ct.color[i].r = (float)(hclr016[i].r / 255.0);
 		ct.color[i].g = (float)(hclr016[i].g / 255.0);
 		ct.color[i].b = (float)(hclr016[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
 	}
 	ct.nColors = 16;
 	ds_ctbl_add_color_table(&ctx->cts, &ct);
@@ -202,6 +205,7 @@ void ds_clr_default_color_tables(DS_CTX *ctx)
 		ct.color[i].r = (float)(hclr032[i].r / 255.0);
 		ct.color[i].g = (float)(hclr032[i].g / 255.0);
 		ct.color[i].b = (float)(hclr032[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
 	}
 	ct.nColors = 32;
 	ds_ctbl_add_color_table(&ctx->cts, &ct);
@@ -210,6 +214,7 @@ void ds_clr_default_color_tables(DS_CTX *ctx)
 		ct.color[i].r = (float)(hclr064[i].r / 255.0);
 		ct.color[i].g = (float)(hclr064[i].g / 255.0);
 		ct.color[i].b = (float)(hclr064[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
 	}
 	ct.nColors = 64;
 	ds_ctbl_add_color_table(&ctx->cts, &ct);
@@ -441,6 +446,7 @@ int ds_ctbl_read_color_table(FILE *fp, DS_COLOR_TABLE *ct, int max, int *nc, int
 			c[*nc].r = (float)(ur / 255.0);
 			c[*nc].g = (float)(ug / 255.0);
 			c[*nc].b = (float)(ub / 255.0);
+			c[*nc].a = (float)1.0;
 			ct->nColors = ++*nc;
 		}
 		else if (n == 3)
@@ -452,6 +458,7 @@ int ds_ctbl_read_color_table(FILE *fp, DS_COLOR_TABLE *ct, int max, int *nc, int
 			ds_text_to_color(&colorFormat, word[0].buffer, &c[*nc].r);
 			ds_text_to_color(&colorFormat, word[1].buffer, &c[*nc].g);
 			ds_text_to_color(&colorFormat, word[2].buffer, &c[*nc].b);
+			c[*nc].a = (float)1.0; 
 			ct->nColors = ++*nc;
 		}
 		else
@@ -500,7 +507,12 @@ int ds_ctbl_process_color_table_file(DS_COLOR_TABLE_SET *cts, char *filename)
 
 	fopen_s(&fp, filename, "r");
 	if (!fp)
+	{
+		char buffer[128];
+		sprintf(buffer, "File <%s> failed to open.", filename);
+		MessageBox(0, buffer, "File Open Failure", MB_OK);
 		return 1; // failed to open file
+	}
 
 	ct.nColors = 0;
 	ct.color = clr;

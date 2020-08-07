@@ -53,10 +53,10 @@ void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT 
 	gut_point_plus_vector(b, &v, &out[2]);
 	gut_point_plus_vector(a, &v, &out[3]);
 	d = (1 - eattr->height);
-	gut_scale_pt(&out[0], &out[4], d);
-	gut_scale_pt(&out[1], &out[5], d);
-	gut_scale_pt(&out[2], &out[6], d);
-	gut_scale_pt(&out[3], &out[7], d);
+	gut_scale_pt_from_origin(origin, &out[0], &out[4], d);
+	gut_scale_pt_from_origin(origin, &out[1], &out[5], d);
+	gut_scale_pt_from_origin(origin, &out[2], &out[6], d);
+	gut_scale_pt_from_origin(origin, &out[3], &out[7], d);
 	// triangle out(0,1,2) - top
 	// triangle out(2,3,0) - top
 	// triangle out(0,4,5) - side
@@ -66,14 +66,14 @@ void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT 
 	if (eattr->offset != 1.0)
 	{	// move the points radially (in or out)
 		d = eattr->offset;
-		gut_scale_pt(&out[0], &out[0], d);
-		gut_scale_pt(&out[1], &out[1], d);
-		gut_scale_pt(&out[2], &out[2], d);
-		gut_scale_pt(&out[3], &out[3], d);
-		gut_scale_pt(&out[4], &out[4], d);
-		gut_scale_pt(&out[5], &out[5], d);
-		gut_scale_pt(&out[6], &out[6], d);
-		gut_scale_pt(&out[7], &out[7], d);
+		gut_scale_pt_from_origin(origin, &out[0], &out[0], d);
+		gut_scale_pt_from_origin(origin, &out[1], &out[1], d);
+		gut_scale_pt_from_origin(origin, &out[2], &out[2], d);
+		gut_scale_pt_from_origin(origin, &out[3], &out[3], d);
+		gut_scale_pt_from_origin(origin, &out[4], &out[4], d);
+		gut_scale_pt_from_origin(origin, &out[5], &out[5], d);
+		gut_scale_pt_from_origin(origin, &out[6], &out[6], d);
+		gut_scale_pt_from_origin(origin, &out[7], &out[7], d);
 	}
 }
 
@@ -149,15 +149,21 @@ void ds_geo_edge_to_triangles_hex(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_PO
 	// create normals
 	GUT_VECTOR	z, x, y, h, w, tmp; //  r, tmp;
 	GUT_POINT	m;
-	double		rad, d, t;
+	double		rad, d; // , t;
 	int			i;
 	double		angle, aInc;
 
 	gut_vector((GUT_POINT*)a, (GUT_POINT*)b, &y);
 	gut_normalize_vector(&y);
 
-	gut_point_on_line_closest_to_origin((GUT_POINT*)a, (GUT_POINT*)b, &m, &t);
+//	gut_point_on_line_closest_to_origin((GUT_POINT*)a, (GUT_POINT*)b, &m, &t);
+//	gut_distance_from_point_to_point(&m, origin, &d);
+
+//	gut_distance_from_point_to_line((GUT_POINT*)a, (GUT_POINT*)b, origin, &d);
+
+	gut_pt_on_line_closest_to_pt(a, b, origin, &m);
 	gut_distance_from_point_to_point(&m, origin, &d);
+
 	if (d < 0.00001) // line ab passes thru origin
 	{
 		z.i = 0; z.j = 0.0; z.k = 1.0; z.l = 0.0; // z axis

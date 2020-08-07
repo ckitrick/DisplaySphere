@@ -139,7 +139,7 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug\DisplaySphere.exe</OutputFile>
       <AdditionalLibraryDirectories>../../lib;../lpng1637/projects/vstudio/Debug;../lpng1637/projects/vstudio/Debug;%(AdditionalLibraryDirectories);</AdditionalLibraryDirectories>
-      <AdditionalDependencies>avlc_dbg.lib;glu32.lib;glut32.lib;odbc32.lib;odbccp32.lib;opengl32.lib;matrixc_dbg.lib;geoutilc.lib;memoryc.lib;linkc.lib;strigc.lib;libpng16.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avlc_dbg.lib;glu32.lib;glut32.lib;odbc32.lib;odbccp32.lib;opengl32.lib;matrixc_dbg.lib;geoutilc_dbg.lib;memoryc_dbg.lib;linkc.lib;strigc.lib;libpng16.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions> /VERBOSE:LIB  /nodefaultlib:"/NODEFAULTLIB:LIBC" </AdditionalOptions>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

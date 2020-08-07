@@ -23,9 +23,12 @@
 #include <math.h>
 #include <commdlg.h>
 #include "resource.h"
+#include <avl_new.h>
 #include <geoutil.h>
 #include <matrix.h>
+#include <mem.h>
 #include <link.h>
+#include <memory.h>
 #include "ds_sph.h"
 #include "ds_file.h"
 #include "ds_gua.h"
@@ -50,6 +53,7 @@ void ds_pre_init(DS_CTX *ctx)
 	// current directory 
 	ctx->curWorkingDir[0] = 0;
 	GetCurrentDirectory(512, ctx->curWorkingDir);
+	ctx->cdChangeFlag = 0; // default directory is where the executable is
 
 	ctx->drawAdj.axiiFlag = 0;
 	ctx->drawAdj.fogFlag = 1;
@@ -75,46 +79,6 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->base_geometry.oneFaceFlag = 0;
 	ctx->base_geometry.mirrorFlag = 0;
 	ctx->base_geometry.zRotFlag = 0;
-
-	ctx->gobjectq  = LL_Create();
-	ctx->inputObjq = LL_Create();
-	{
-		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
-		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
-
-		// object defaults: these are inheritied for each new object
-		gio->active					= 1;
-		gio->filename				= 0;
-		gio->drawWhat				= GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
-
-		gio->eAttr.type				= GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
-		gio->eAttr.height			= 0.02;
-		gio->eAttr.width			= 0.065;
-		gio->eAttr.offset			= 1.00;
-		gio->eAttr.maxLength		= 0;
-		gio->eAttr.minLength		= 100000000;
-
-		gio->vAttr.scale			= 0.07; // default: vertex scale
-		
-		// default: face, edge, and vertex color control
-		gio->cAttr.face.state		= DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
-		gio->cAttr.face.color.r		= (float)0;
-		gio->cAttr.face.color.g		= (float)0.8;
-		gio->cAttr.face.color.b		= (float)0;
-		gio->cAttr.edge.state		= DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.edge.color.r		= (float)0;
-		gio->cAttr.edge.color.g		= (float)0;
-		gio->cAttr.edge.color.b		= (float)0.8;
-		gio->cAttr.vertex.state		= DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.vertex.color.r	= (float)(214 / 255.0);
-		gio->cAttr.vertex.color.g	= (float)(205 / 255.0);
-		gio->cAttr.vertex.color.b	= (float)( 41 / 255.0);
-
-		// default: replication flags
-		gio->rAttr.oneFaceFlag		= 1;
-		gio->rAttr.zRotationFlag	= 0;
-		gio->rAttr.xMirrorFlag		= 0;
-	}
 
 	// default window size & position 
 	ctx->window.start_x			= 0;
@@ -165,13 +129,14 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->clrCtl.line.defaultColor.r			= 0;
 	ctx->clrCtl.line.defaultColor.g			= 0;
 	ctx->clrCtl.line.defaultColor.b			= 0;
-	ctx->clrCtl.triangle.flag				= 0; // override flag
-	ctx->clrCtl.triangle.override.r			= 0.0;
-	ctx->clrCtl.triangle.override.g			= 1.0; // green
-	ctx->clrCtl.triangle.override.b			= 0.0;
-	ctx->clrCtl.triangle.defaultColor.r		= 1.0; // red
-	ctx->clrCtl.triangle.defaultColor.g		= 0;
-	ctx->clrCtl.triangle.defaultColor.b		= 0;
+	ctx->clrCtl.face.flag					= 0; // override flag
+	ctx->clrCtl.face.override.r				= 0.0;
+	ctx->clrCtl.face.override.g				= 1.0; // green
+	ctx->clrCtl.face.override.b				= 0.0;
+	ctx->clrCtl.face.defaultColor.r			= 1.0; // red
+	ctx->clrCtl.face.defaultColor.g			= 0;
+	ctx->clrCtl.face.defaultColor.b			= 0;
+	ctx->clrCtl.face.defaultColor.a			= 1.0;
 	ctx->clrCtl.autoColor					= 0; // don't use auto generated unique colors by default
 	ctx->clrCtl.user_color_table[0]			= 0; // empty string 
 	ctx->clrCtl.reverseColorFlag			= 0;
@@ -208,6 +173,63 @@ void ds_pre_init(DS_CTX *ctx)
 
 	// spin initial
 	ctx->drawAdj.spin.dx = ctx->drawAdj.spin.dy = ctx->drawAdj.spin.dz = ctx->drawAdj.spin.timerMSec = 0;
+
+	// transparency method initialization
+	ctx->transparency.mtx_set		= mem_create(sizeof(DS_MATRIX_SORT), 50);
+	ctx->transparency.fs_set		= mem_create(sizeof(DS_FACE_SORT), 100);
+	ctx->transparency.avlZSort		= avl_create(ds_transparent_face_compare, (void*)ctx);
+	ctx->transparency.avlMtxSort	= avl_create(ds_transparent_matrix_compare, (void*)ctx);
+
+	// error 
+	ctx->errorInfo.count = 0;
+
+	ctx->gobjectq = LL_Create();
+	ctx->inputObjq = LL_Create();
+	{
+		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
+		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
+
+													// object defaults: these are inheritied for each new object
+		gio->active = 1;
+		gio->filename = 0;
+		gio->drawWhat = GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
+
+		gio->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
+		gio->eAttr.height = 0.02;
+		gio->eAttr.width = 0.065;
+		gio->eAttr.offset = 1.00;
+		gio->eAttr.maxLength = 0;
+		gio->eAttr.minLength = 100000000;
+
+		gio->vAttr.scale = 0.07; // default: vertex scale
+
+								 // default: face, edge, and vertex color control
+		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
+		gio->cAttr.face.color.r = (float)0;
+		gio->cAttr.face.color.g = (float)0.8;
+		gio->cAttr.face.color.b = (float)0;
+		gio->cAttr.face.color.a = (float)1.0;
+		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.edge.color.r = (float)0;
+		gio->cAttr.edge.color.g = (float)0;
+		gio->cAttr.edge.color.b = (float)0.8;
+		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.vertex.color.r = (float)(214 / 255.0);
+		gio->cAttr.vertex.color.g = (float)(205 / 255.0);
+		gio->cAttr.vertex.color.b = (float)(41 / 255.0);
+		// inherit the global default
+		gio->faceDefault = ctx->clrCtl.face.defaultColor;
+
+		// default: replication flags
+		gio->rAttr.oneFaceFlag = 1;
+		gio->rAttr.zRotationFlag = 0;
+		gio->rAttr.xMirrorFlag = 0;
+
+		// default: transparency flags
+		gio->tAttr.onFlag = 0;
+		gio->tAttr.state = DS_COLOR_STATE_EXPLICIT;
+		gio->tAttr.alpha = (float)1.0;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -218,7 +240,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	// clear memory
 
 // current directory 
-	GetCurrentDirectory(512, ctx->curWorkingDir);
+	SetCurrentDirectory(ctx->curWorkingDir);
 
 	ctx->drawAdj.axiiFlag = 0;
 	ctx->drawAdj.fogFlag = 1;
@@ -264,43 +286,6 @@ void ds_pre_init2(DS_CTX *ctx)
 			lgobj->vIndex ? free(lgobj->vIndex) : 0;
 			lgobj ? free(lgobj) : 0; // free self
 		}
-	}
-	{
-		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
-		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
-
-		// object defaults: these are inheritied for each new object
-		gio->active = 1;
-		gio->filename = 0;
-		gio->drawWhat = GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
-
-		gio->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
-		gio->eAttr.height = 0.02;
-		gio->eAttr.width = 0.065;
-		gio->eAttr.offset = 1.00;
-		gio->eAttr.maxLength = 0;
-		gio->eAttr.minLength = 100000000;
-
-		gio->vAttr.scale = 0.07; // default: vertex scale
-
-								 // default: face, edge, and vertex color control
-		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
-		gio->cAttr.face.color.r = (float)0;
-		gio->cAttr.face.color.g = (float)0.8;
-		gio->cAttr.face.color.b = (float)0;
-		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.edge.color.r = (float)0;
-		gio->cAttr.edge.color.g = (float)0;
-		gio->cAttr.edge.color.b = (float)0.8;
-		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.vertex.color.r = (float)(214 / 255.0);
-		gio->cAttr.vertex.color.g = (float)(205 / 255.0);
-		gio->cAttr.vertex.color.b = (float)( 41 / 255.0);
-
-		// default: replication flags
-		gio->rAttr.oneFaceFlag   = 1;
-		gio->rAttr.zRotationFlag = 0;
-		gio->rAttr.xMirrorFlag   = 0;
 	}
 
 	// default window size & position 
@@ -359,13 +344,14 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->clrCtl.line.defaultColor.r = 0;
 	ctx->clrCtl.line.defaultColor.g = 0;
 	ctx->clrCtl.line.defaultColor.b = 0;
-	ctx->clrCtl.triangle.flag = 0; // override flag
-	ctx->clrCtl.triangle.override.r = 0.0;
-	ctx->clrCtl.triangle.override.g = 1.0; // green
-	ctx->clrCtl.triangle.override.b = 0.0;
-	ctx->clrCtl.triangle.defaultColor.r = 1.0; // red
-	ctx->clrCtl.triangle.defaultColor.g = 0;
-	ctx->clrCtl.triangle.defaultColor.b = 0;
+	ctx->clrCtl.face.flag = 0; // override flag
+	ctx->clrCtl.face.override.r = 0.0;
+	ctx->clrCtl.face.override.g = 1.0; // green
+	ctx->clrCtl.face.override.b = 0.0;
+	ctx->clrCtl.face.defaultColor.r = 1.0; // red
+	ctx->clrCtl.face.defaultColor.g = 0;
+	ctx->clrCtl.face.defaultColor.b = 0;
+	ctx->clrCtl.face.defaultColor.a = 1.0;
 	ctx->clrCtl.autoColor = 0; // don't use auto generated unique colors by default
 	ctx->clrCtl.user_color_table[0] = 0; // empty string 
 	ctx->clrCtl.reverseColorFlag = 0;
@@ -403,6 +389,55 @@ void ds_pre_init2(DS_CTX *ctx)
 	// spin initial
 	ctx->drawAdj.spinFlag = 0;
 	ctx->drawAdj.spin.dx = ctx->drawAdj.spin.dy = ctx->drawAdj.spin.dz = ctx->drawAdj.spin.timerMSec = 0;
+
+	// error 
+	ctx->errorInfo.count = 0;
+
+	{
+		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
+		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
+
+													// object defaults: these are inheritied for each new object
+		gio->active = 1;
+		gio->filename = 0;
+		gio->drawWhat = GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
+
+		gio->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
+		gio->eAttr.height = 0.02;
+		gio->eAttr.width = 0.065;
+		gio->eAttr.offset = 1.00;
+		gio->eAttr.maxLength = 0;
+		gio->eAttr.minLength = 100000000;
+
+		gio->vAttr.scale = 0.07; // default: vertex scale
+
+								 // default: face, edge, and vertex color control
+		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
+		gio->cAttr.face.color.r = (float)0;
+		gio->cAttr.face.color.g = (float)0.8;
+		gio->cAttr.face.color.b = (float)0;
+		gio->cAttr.face.color.a = (float)1.0;
+		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.edge.color.r = (float)0;
+		gio->cAttr.edge.color.g = (float)0;
+		gio->cAttr.edge.color.b = (float)0.8;
+		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.vertex.color.r = (float)(214 / 255.0);
+		gio->cAttr.vertex.color.g = (float)(205 / 255.0);
+		gio->cAttr.vertex.color.b = (float)(41 / 255.0);
+		// inherit the global default
+		gio->faceDefault = ctx->clrCtl.face.defaultColor;
+
+		// default: replication flags
+		gio->rAttr.oneFaceFlag = 1;
+		gio->rAttr.zRotationFlag = 0;
+		gio->rAttr.xMirrorFlag = 0;
+
+		// default: transparency flags
+		gio->tAttr.onFlag = 0;
+		gio->tAttr.state = DS_COLOR_STATE_EXPLICIT;
+		gio->tAttr.alpha = (float)1.0;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -510,7 +545,15 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 		{
 			fopen_s(&fp, gio->filename, "r");
 			if (!fp)
-				continue; // can't open file so skip
+			{
+				char buffer[128];
+				sprintf(buffer, "Input object <%s> failed to open.", gio->filename);
+				MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+				continue;
+			}
+			// copy default color
+			ctx->clrCtl.face.defaultColor = gio->faceDefault;
+			
 			gobj = ds_parse_file(ctx, fp, gio->filename);
 			// transfer the settings
 			fclose(fp);
@@ -540,6 +583,7 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 				gobj->cAttr		= gio->cAttr;
 				gobj->vAttr		= gio->vAttr;
 				gobj->rAttr		= gio->rAttr;
+				gobj->tAttr		= gio->tAttr;
 			}
 		}
 		free(gio->filename);
@@ -649,7 +693,12 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 		{
 			fopen_s(&fp, gio->filename, "r");
 			if (!fp)
+			{
+				char buffer[128];
+				sprintf(buffer, "Input object <%s> failed to open.", gio->filename);
+				MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
 				continue; // can't open file so skip
+			}
 			gobj = ds_parse_file(ctx, fp, gio->filename);
 			// transfer the settings
 			fclose(fp);
@@ -680,6 +729,7 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 				gobj->cAttr = gio->cAttr;
 				gobj->vAttr = gio->vAttr;
 				gobj->rAttr = gio->rAttr;
+				gobj->tAttr = gio->tAttr;
 			}
 		}
 		free(gio->filename);

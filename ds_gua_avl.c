@@ -144,7 +144,7 @@ typedef struct {
 	int					*rvid;		// array of reverse ordered uniqiue vertex IDs (sorted)
 	int					*ovid;		// array of unique vertex IDs in original order
 	int					teid;		// unique triangle ID 
-	float				rgb[3];		// explict color 
+	float				rgba[4];	// explict color 
 	int					id;			// global ID 
 	int					nv;			// number of vertices
 } GUA_TDATA;	// T Triangle data
@@ -677,7 +677,7 @@ static int gua_tedata_insert(GUA_DB *db, int *eid, int ne)
 }
 
 //--------------------------------------------------------------------------------
-static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgb)
+static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgba)
 //--------------------------------------------------------------------------------
 {
 	GUA_BLK				*blk;
@@ -705,9 +705,10 @@ static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgb)
 										 
 	t->teid = teid; // save the unique triangle ID by edge set
 	t->id = db->nc; // assign an unique ID 
-	t->rgb[0] = rgb[0];
-	t->rgb[1] = rgb[1];
-	t->rgb[2] = rgb[2];
+	t->rgba[0] = rgba[0];
+	t->rgba[1] = rgba[1];
+	t->rgba[2] = rgba[2];
+	t->rgba[3] = rgba[3];
 
 	db->p = 0;
 	// first attempt at tree insert 
@@ -1050,7 +1051,7 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 		GUA_TDATA *data = (GUA_TDATA*)blk->data;
 		for (i = 0; i < blk->nc; ++i) // go thru all components of this block
 		{
-			geo->tri[n].color = *(DS_COLOR*)&data[i].rgb;	// explict color - which can be the default color
+			geo->tri[n].color = *(DS_COLOR*)&data[i].rgba;	// explict color - which can be the default color
 			geo->tri[n].id = data[i].teid;			// unique ID 
 			geo->tri[n].vtx = iptr;					// attach array memory
 			geo->tri[n].nVtx = data[i].nv;
@@ -1195,7 +1196,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	int				n, m; 				// number of words parsed
 	GUA_VDATA		v[3];			// vertex coordinate data for current triangle 
 	double			elen[3];		// length of three edges of current triangle
-	float			rgb[3];			// color of triangle
+	float			rgb[4];			// color of triangle
 	int				explicitColor;	// color flag 
 	int				maxVID  = 0;
 	int				nDigits = 0;
@@ -1267,16 +1268,21 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				else
 					colorFormat = COLOR_FORMAT_255;
 			}
+			rgb[3] = defaultColor[3];
 			switch (colorFormat) {
 			case COLOR_FORMAT_ZERO_TO_ONE:
 				rgb[0] = (float)atof(word[9].buffer);
 				rgb[1] = (float)atof(word[10].buffer);
 				rgb[2] = (float)atof(word[11].buffer);
+				if (n>=13)
+					rgb[3] = (float)atof(word[12].buffer);
 				break;
 			case COLOR_FORMAT_255:
 				rgb[0] = (float)(atof(word[ 9].buffer) / 255.0);
 				rgb[1] = (float)(atof(word[10].buffer) / 255.0);
 				rgb[2] = (float)(atof(word[11].buffer) / 255.0);
+				if (n >= 13)
+					rgb[3] = (float)(atof(word[12].buffer) / 255.0);
 				break;
 			}
 		}
@@ -1285,6 +1291,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 			rgb[0] = defaultColor[0];
 			rgb[1] = defaultColor[1];
 			rgb[2] = defaultColor[2];
+			rgb[3] = defaultColor[3];
 		}
 
 		// transform vertices
@@ -1393,7 +1400,12 @@ void gua_dump(DS_CTX *ctx, void *guap, char *inputFilename, char *outputFilename
 	
 	passThru.fp = fp = fopen(outputFilename,"w");
 	if (!passThru.fp)
+	{
+		char buffer[128];
+		sprintf(buffer, "Unique geometry dump file <%s> failed to open.", outputFilename);
+		MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
 		return; // failed to open
+	}
 	passThru.m = vdb->nDigits;
 	passThru.n = vdb->nDigits + 4;
 
@@ -1531,11 +1543,17 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.r = (float)atof(word[9].buffer);
 				vct.color.g = (float)atof(word[10].buffer);
 				vct.color.b = (float)atof(word[11].buffer);
+				vct.color.a = (float)1.0;
+				if ( n >= 13 )
+					vct.color.a = (float)atof(word[12].buffer);
 				break;
 			case COLOR_FORMAT_255:
 				vct.color.r = (float)(atof(word[ 9].buffer) / 255.0);
 				vct.color.g = (float)(atof(word[10].buffer) / 255.0);
 				vct.color.b = (float)(atof(word[11].buffer) / 255.0);
+				vct.color.a = (float)1.0;
+				if (n >= 13)
+					vct.color.a = (float)(atof(word[12].buffer) / 255.0);
 			}
 		}
 		else
@@ -1543,6 +1561,7 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 			vct.color.r = defaultColor[0]; // default
 			vct.color.g = defaultColor[1]; // default
 			vct.color.b = defaultColor[2]; // default
+			vct.color.a = defaultColor[3]; // default
 		}
 
 		// transform vertices
@@ -1879,11 +1898,17 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				of[i].color.r = (float)atof(word[j+0].buffer);
 				of[i].color.g = (float)atof(word[j+1].buffer);
 				of[i].color.b = (float)atof(word[j+2].buffer);
+				of[i].color.a = (float)1.0;
+				if (n >= of[i].nVtx + 1 + 4) // color 
+					of[i].color.a = (float)atof(word[j + 3].buffer);
 				break;
 			case COLOR_FORMAT_255:
 				of[i].color.r = (float)(atoi(word[j+0].buffer) / 255.0);
 				of[i].color.g = (float)(atoi(word[j+1].buffer) / 255.0);
 				of[i].color.b = (float)(atoi(word[j+2].buffer) / 255.0);
+				of[i].color.a = (float)1.0;
+				if (n >= of[i].nVtx + 1 + 4) // color 
+					of[i].color.a = (float)(atoi(word[j + 3].buffer) / 255.0);
 				break;
 			}
 		}
