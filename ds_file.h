@@ -29,6 +29,13 @@ int		ds_open_file_dialog		(HWND hOwnerWnd, DS_CTX *ctx, int type);
 int		ds_write_file_dialog	(HWND hOwnerWnd, DS_CTX *ctx, int type);
 int		ds_read_file_from_buffer( DS_CTX *ctx );
 int		ds_file_drag_and_drop	( HWND hWnd, HDROP hdrop );
-int		ds_process_restore_file(DS_CTX *ctx, char *filename);
+int		ds_process_restore_file	(DS_CTX *ctx, char *filename);
+void	ds_filename_split		(char *name, int *array, int *count);
+DS_FILE *ds_file_open(DS_CTX *ctx, char *userName, char *mode);
+int		ds_file_close(DS_CTX *ctx, DS_FILE *dsf);
+void	ds_cd_relative_filename(DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char *newFilename);
+void	ds_pushd(DS_CTX *ctx, char *directory);
+void	ds_popd(DS_CTX *ctx);
+int		ds_build_url(DS_CTX *ctx, char *url);
 
 #endif

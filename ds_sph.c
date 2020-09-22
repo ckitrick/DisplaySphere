@@ -22,6 +22,7 @@
 #include <GL/gl.h>			/* OpenGL header file */
 #include <GL/glext.h>		/* OpenGL header file */
 #include <GL/wglext.h>
+#include <GL/glut.h>
 #include <stdio.h>
 #include <math.h>
 #include <commdlg.h>
@@ -328,7 +329,6 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		DragAcceptFiles ( hWnd, TRUE );
 		break;
 
-//	case WM_USER+200:
 	case WM_SHOWWINDOW:
 		// open tool windows 
 		if (ctx && ctx->window.toolsVisible)
@@ -354,48 +354,61 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		switch (LOWORD(wParam)) {
 		case ID_FILE_OPEN_POLY:
 			ds_open_file_dialog(hWnd, ctx, 0);   // application-defined 
-			if ( ctx->objInfo ) (ctx->objInfo, WM_PAINT, 0, 0);//init
+			//SetCurrentDirectory(ctx->curWorkingDir);
 			ds_update_obj_control_window(ctx);
 			InvalidateRect(hWnd, 0, 0);
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
-			//			return 0;
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER+1000, 0, 0);
 			break;
 
 		case ID_FILE_OPEN_POLY_ADD:
 			ctx->gobjAddFlag = 1;
 			ds_open_file_dialog(hWnd, ctx, 0);   // application-defined 
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);//init
+			//SetCurrentDirectory(ctx->curWorkingDir);
 			ds_update_obj_control_window(ctx);
 			ctx->gobjAddFlag = 0;
 			InvalidateRect(hWnd, 0, 0);
-			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 			break;
 
 		case ID_FILE_READCOLORTABLES:
 			ds_open_file_dialog(hWnd, ctx, 1);   // application-defined 
+			//SetCurrentDirectory(ctx->curWorkingDir);
 			InvalidateRect(hWnd, 0, 0);
 			break;
 
-		case ID_FILE_REPEAT:
-			if (!ds_read_file_from_buffer(ctx)) {
-				InvalidateRect(hWnd, 0, 0);
-				if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
-//				SendMessage(ctx->objControl, WM_INITDIALOG, 0, 0);//init
-				if (ctx->objControl) SendMessage(ctx->objControl, WM_PAINT, 0, 0);//init
-			}
-			break;
+//		case ID_FILE_REPEAT:
+//			if (!ds_read_file_from_buffer(ctx)) {
+//				//SetCurrentDirectory(ctx->curWorkingDir);
+//				InvalidateRect(hWnd, 0, 0);
+//				if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
+//				if (ctx->objControl) SendMessage(ctx->objControl, WM_PAINT, 0, 0);//init
+//			}
+//			break;
 
 		case ID_FILE_EXIT:
+			ds_exit(ctx);
 			exit(0);
 			break;
 
 		case ID_FILE_SAVESTATE: //ds_save_state(ctx, "C:/TEMP/ds_state.txt"); break;
-			if (ds_write_file_dialog(hWnd, ctx, 0) )
+			if (ds_write_file_dialog(hWnd, ctx, 0))
+			{
 				ds_save_state(ctx, ctx->filename); // "C:/TEMP/ds_state.txt");
+				//SetCurrentDirectory(ctx->curWorkingDir);
+			}
 			break;
 
 		case ID_FILE_RESTORESTATE: //ds_restore_state(ctx, "C:/TEMP/ds_state.txt"); break;
 			ds_open_file_dialog(hWnd, ctx, 2);
+			//SetCurrentDirectory(ctx->curWorkingDir);
+			if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
+			break;
+
+		case ID_FILE_DEFAULTSTATE: //ds_restore_state(ctx, "C:/TEMP/ds_state.txt"); break;
+			ds_pre_init2(ctx);
+			SetWindowText(ctx->mainWindow, "Display Sphere");
+			ds_post_init2(ctx);
+			InvalidateRect(hWnd, 0, 0);
 			break;
 
 		case ID_FILE_ABOUT:
@@ -430,8 +443,18 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			break;
 
 		case ID_SHOW_TOGGLE:
-			ctx->kbdToggle = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG2), hWnd, ds_dlg_kbd_toggles);
-			ShowWindow(ctx->kbdToggle, SW_SHOW);
+			if (!ctx->kbdToggle)
+			{
+				ctx->kbdToggle = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG2), hWnd, ds_dlg_kbd_toggles);
+				ShowWindow(ctx->kbdToggle, SW_SHOW);
+			}
+			break;
+		case ID_FILE_HELP:
+			{
+				char		url[1024];
+				ds_build_url(ctx, url);
+				ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+			}
 			break;
 		}
 		break;
@@ -440,8 +463,9 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		if ( GetKeyState(VK_SHIFT) & 0x1000 ) // check high order bit to see if key is down
 			ctx->gobjAddFlag = 1; // return to default state
 		ds_file_drag_and_drop( hWnd, (HDROP)wParam );
+		SetCurrentDirectory(ctx->currentDir);
 		InvalidateRect(hWnd, 0, 0);
-//		SendMessage(ctx->objInfo, WM_PAINT, 0, 0);//init
+		if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER + 1000, 0, 0);
 		break;
 
 	case WM_SIZE:
@@ -452,30 +476,42 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
     case WM_KEYDOWN: 
 		switch (wParam) {
-		case VK_LEFT:  ds_update3(ctx, -1,  0,  0 ); InvalidateRect(hWnd, 0, 0); break;
-		case VK_RIGHT: ds_update3(ctx,  1,  0,  0 ); InvalidateRect(hWnd, 0, 0); break;
-		case VK_UP:    ds_update3(ctx,  0, -1,  0 ); InvalidateRect(hWnd, 0, 0); break;
-		case VK_DOWN:  ds_update3(ctx,  0,  1,  0 ); InvalidateRect(hWnd, 0, 0); break;
-		case VK_PRIOR: ds_update3(ctx,  0,  0,  1 ); InvalidateRect(hWnd, 0, 0); break;
-		case VK_NEXT:  ds_update3(ctx,  0,  0, -1 ); InvalidateRect(hWnd, 0, 0); break;
+		case VK_LEFT:		ds_update3(ctx, -1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_RIGHT:		ds_update3(ctx, 1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_UP:			ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_DOWN:		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_PRIOR:		ds_update3(ctx, 0, 0, 1); InvalidateRect(hWnd, 0, 0); break;
+		case VK_NEXT:		ds_update3(ctx, 0, 0, -1); InvalidateRect(hWnd, 0, 0); break;
+		case 'O':
+		case 'o':
+			if (GetKeyState(VK_CONTROL) < 0) SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_OPEN_POLY, 0); break;
+		case 'A':
+		case 'a':
+			if (GetKeyState(VK_CONTROL) < 0) SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_OPEN_POLY_ADD, 0); break;
+		case 'I':
+		case 'i':
+			if (GetKeyState(VK_CONTROL) < 0) SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_OBJECTINFORMATION, 0); break;
+		case 'H':
+		case 'h':
+			if (GetKeyState(VK_CONTROL) < 0) SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_HELP, 0); break;
 		}
 		break;
 
     case WM_CHAR:
 		switch (wParam) {
 		case '0': ctx->drawAdj.circleFlag = !ctx->drawAdj.circleFlag; break; /* 2 key */
+		case 'A':
 		case 'a': ctx->drawAdj.axiiFlag = !ctx->drawAdj.axiiFlag; break; // reset drawing of axii
+		case 'B':
 		case 'b': ctx->geomAdj.polymode[1] += 1; if (ctx->geomAdj.polymode[1] > 2) ctx->geomAdj.polymode[1] = 0; break;// back polymode
+		case 'C':
 		case 'c': ctx->drawAdj.clipFlag = !ctx->drawAdj.clipFlag; break;
+		case 'E':
 		case 'e':
-			if (!ctx->objControl)
-			{
-				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_control);
-				ShowWindow(ctx->objControl, SW_SHOW);
-				ds_position_window(ctx, ctx->objControl, 0, 0); // move window to appropriate spot - left or right of the current window 
-			}
-			break;
+			SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_OBJECTCONTROL, 0); break;
+		case 'F':
 		case 'f': ctx->geomAdj.polymode[0] += 1; if (ctx->geomAdj.polymode[0] > 2) ctx->geomAdj.polymode[0] = 0; break;// front polymode
+		case 'G':
 		case 'g': // change base geometry
 			switch (ctx->base_geometry.type) {
 			case GEOMETRY_ICOSAHEDRON: ctx->base_geometry.type = GEOMETRY_OCTAHEDRON;  break;
@@ -485,9 +521,16 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			}
 			ds_file_set_window_text(hWnd, ctx->filename);
 			break;
-		case 'h': ctx->drawAdj.hiResFlag = !ctx->drawAdj.hiResFlag; ds_set_render_quality(ctx); break; 
+		case 'H':
+		case 'h': ctx->drawAdj.hiResFlag = !ctx->drawAdj.hiResFlag; ds_set_render_quality(ctx); break;
+		case 'I':
 		case 'i': ds_capture_image(hWnd); break;
+		case 'K':
+		case 'k':
+			SendMessage(ctx->mainWindow, WM_COMMAND, ID_SHOW_TOGGLE, 0); break;
+		case 'N':
 		case 'n': ctx->drawAdj.normalizeFlag = ctx->drawAdj.normalizeFlag ? 0 : 1; break; //global_normalize = ctx->global_normalize ? 0 : 1; break;			/* n key */
+		case 'O':
 		case 'o': // change base geometry orientation
 			switch (ctx->geomAdj.orientation) {
 			case GEOMETRY_ORIENTATION_FACE: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_EDGE; break;
@@ -496,19 +539,19 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			}
 			ds_file_set_window_text(hWnd, ctx->filename);
 			break;
+		case 'P':
 		case 'p': ctx->drawAdj.projection = !ctx->drawAdj.projection; ds_reshape(hWnd, ctx->window.width, ctx->window.height); break;	/* p key - switch from perspective to orthographic projection */
+		case 'R':
 		case 'r': ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0; ctx->rot[0] = ctx->rot[1] = ctx->rot[2] = 0; mtx_set_unity(&ctx->matrix); ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); break; // reset rotation/translation
+		case 'S':
 		case 's': if (ctx->drawAdj.spin.spinState) { ctx->drawAdj.spin.spinState = 0; KillTimer(hWnd, 0); }
 				  else { ctx->drawAdj.spin.spinState = ROTATE; SetTimer(hWnd, 0, (int)ctx->drawAdj.spin.timerMSec, 0); } break; // reset spin of axii
+		case 'W':
 		case 'w':
-			if (!ctx->attrControl)
-			{
-				ctx->attrControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG5), hWnd, ds_dlg_attributes);
-				ShowWindow(ctx->attrControl, SW_SHOW);
-				ds_position_window(ctx, ctx->attrControl, 0, 0); // move window to appropriate spot - left or right of the current window 
-			}
-			break;
+			SendMessage(ctx->mainWindow, WM_COMMAND, ID_FILE_ATTRIBUTECONTROL, 0); break;
+		case 'Z':
 		case 'z': ctx->drawAdj.fogFlag  = ctx->drawAdj.fogFlag ? 0 : 1; break;
+		case '_':
 		case '-':
 			if ( ctx->drawAdj.clipFlag )
 			{
@@ -532,10 +575,15 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			break;
 		case 27:			/* ESC key */
 			PostQuitMessage(0);
+			ds_exit(ctx);
+			exit(0);
 			break;
+
+		case '%': // NOT DOCUMENTED
+			ctx->relativeObjPathFlag = 1; break;
 		}
 		InvalidateRect(hWnd, 0, 0);
-		SendMessage(ctx->attrControl, WM_PAINT, 0, 0);//init
+		if (ctx->attrControl) SendMessage(ctx->attrControl, WM_PAINT, 0, 0);//init
 		break;
 
     case WM_LBUTTONDOWN:
@@ -595,6 +643,7 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 	case WM_CLOSE:
 		PostQuitMessage(0);
+		ds_exit(ctx);
 		exit(0);
 		break;
 
@@ -607,7 +656,12 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 	case WM_USER+100:
 		if (ctx->png.nFrames)//|| ctx->png.singleFlag )
 		{
+			int		spinState = ctx->drawAdj.spin.spinState;
+
+			ctx->drawAdj.spin.spinState = 0; // turn off spin 
 			ds_capture_image(hWnd);
+			ctx->drawAdj.spin.spinState = spinState; // restore spin
+
 			--ctx->png.nFrames;
 			if ( !ctx->png.nFrames )//|| ctx->png.singleFlag)
 				PostQuitMessage(0); // all done
@@ -642,7 +696,7 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	// decode command line options
 	char	*p = (char*)lpszCmdLine;
 
-	char	buffer[1024];
+	char	buffer[1024], curArg[128];
 	char	*av[64];
 	int		ac,
 			error=0,
@@ -653,16 +707,28 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	strncpy(buffer, (char*)lpszCmdLine, 1024);
 
 	// parse the command string
-	ac = ds_parse_lexeme(buffer, av, 64);
+	ctx->ac = ac = ds_parse_lexeme(buffer, av, 64);
 	nextAc = 0;
+	curArg[0] = 0;
 
-	ds_command_line(ctx, ac, av, &error, &badArgIndex); // NEED TO HANDLE ERRORS
+	ctx->errorInfo.count = 0;
+	ds_command_line(ctx, ac, av, &error, &badArgIndex, &ctx->errorInfo); // NEED TO HANDLE ERRORS
 	if (error)
 	{
 		char	buffer[128];
+		int		i;
+		buffer[0] = 0;
+		strcat(buffer, "An error in the command line was encountered at: ");
+		for (i = 0; i < ctx->errorInfo.count; ++i)
+		{
+			strcat(buffer, ctx->errorInfo.text[i]);
+			strcat(buffer, ",");
+		}
+		strcat(buffer, ">");
+
 		//badArgIndex = 0;
-		sprintf(buffer, "An error in the command line was encountered at <%s>", av[badArgIndex]);
-		MessageBox(NULL, buffer, 0, MB_OK);
+//		sprintf(buffer, "An error in the command line was encountered at <%s><%s>", av[badArgIndex], curArg);
+		MessageBox(NULL, buffer, "Command Line Error", MB_OK);
 	}
 	return 0;
 }
@@ -697,7 +763,12 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 
 	ds_post_init(&ctx);// , polyhedron); // re-initialize neccessary items after window is created and command line is processed 
 
+	if ( !ctx.ac && ctx.internalDSS )
+		ds_process_restore_file(&ctx, ctx.internalDSS);
+
     ShowWindow(hWnd, nCmdShow);
+		
+	ds_dlg_splash_screen(&ctx);
 
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
@@ -721,7 +792,40 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 
     return 0;
 }
-void *font = 0; // GLUT_BITMAP_HELVETICA_18;
+
+void *font = GLUT_BITMAP_HELVETICA_18;
+
+//-----------------------------------------------------------------------------
+void label(float x, float y, float z, float nz, char *string)
+//-----------------------------------------------------------------------------
+{
+	int				len,
+		i;
+	static char		buf[36];
+	static int		first = 1;
+	static char		*av[2];
+	static GLubyte	bitmap[10];
+
+	if (first)
+	{
+		i = 0;
+		first = 0;
+		glutInit(&i, av);
+	}
+
+	if (nz < 0.6)
+		return;
+
+	glColor3f(0.0, 0.0, 0.0);
+	glRasterPos3f(x, y, z);
+	len = (int)strlen(string);
+	glBitmap((GLsizei)0, (GLsizei)0, (GLfloat)0, (GLfloat)0, (GLfloat)(-len*5.0), (GLfloat)-7.0, &bitmap);
+	for (i = 0; i < len; i++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+//		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+	}
+}
 
 //-----------------------------------------------------------------------------
 void textout ( float offset, float x, float y, float z, char *string )
@@ -730,7 +834,15 @@ void textout ( float offset, float x, float y, float z, char *string )
 	int				len,
 					i;
 	static char		buf[36];
-
+	static int		first = 1;
+	static char		*av[2];
+	static GLubyte	bitmap[10];
+	if (first)
+	{
+		i = 0;
+		first = 0;
+		glutInit(&i, av);
+	}
 	if ( fabs ( x ) <= 0.0000001 )
 		x = 0;
 	if ( fabs ( y ) <= 0.0000001 )
@@ -745,16 +857,14 @@ void textout ( float offset, float x, float y, float z, char *string )
 	y *= offset;
 	z *= offset;
 
-	glDisable    ( GL_LIGHTING   );
 	glColor3f(0.0, 0.0, 0.0);
 	glRasterPos3f( x, y, z );
-	len = (int) strlen(buf);
+	len = (int)strlen(string);
+	glBitmap((GLsizei)0, (GLsizei)0, (GLfloat)0, (GLfloat)0, (GLfloat)(-len*5.0), (GLfloat)-7.0, &bitmap);
 	for (i = 0; i < len; i++)
 	{
-//		glutBitmapCharacter(font, string[i]);
-//		glutBitmapCharacter(font, buf[i]);
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
 	}
-	glEnable    ( GL_LIGHTING   );
 
 }
 
@@ -784,7 +894,7 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 			// get the new filename
 			DragQueryFile(hdrop, index, (LPSTR)buffer, (UINT)256);
 
-			// special check
+			// special check for state and color files
 			{
 				FILE	*fp;
 				char	buf[256];
@@ -793,14 +903,30 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 				fopen_s(&fp, buffer, "r");
 				if (fp)
 				{
+					buf[0] = 0;
 					fgets(buf, 256, fp);
 					argCount = ds_parse_lexeme(buf, array, 64); // split line into words
-					if (argCount && !strcmp(array[0], "DS_STATE"))
+					if (argCount)
 					{
-						ctx->gobjAddFlag = 0;
-						fclose(fp);
-						return ds_process_restore_file(ctx, buffer);
+						if (!strcmp(array[0], "DS_STATE"))
+						{
+							ctx->gobjAddFlag = 0;
+							fclose(fp);
+							return ds_process_restore_file(ctx, buffer);
+						}
+						else if (!strcmp(array[0], "DS_COLOR"))
+						{
+							ctx->gobjAddFlag = 0;
+							fclose(fp);
+							return ds_ctbl_process_color_table_file(&ctx->cts, buffer);
+						}
 					}
+				}
+				else
+				{
+					char buffer[128];
+					sprintf(buffer, "Dragged file <%s> failed to open.", buffer);
+					MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
 				}
 				fclose(fp);
 			}
@@ -814,7 +940,7 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 	ctx->gobjAddFlag = 0; // return to default state
 
 	ds_update_obj_control_window(ctx);
-	if (ctx->objInfo) SendMessage(ctx->objInfo, WM_PAINT, 0, 0);
+	if (ctx->objInfo) SendMessage(ctx->objInfo, WM_USER+1000, 0, 0);
 	return 0;
 }
 
@@ -946,7 +1072,7 @@ HWND ds_create_opengl_window(DS_CTX *ctx, char* title, int x, int y, int width, 
 	}
 
 	HWND WND = CreateWindow(
-		"Core", "OpenGL Window",        // class name, window name  WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
+		"Core", title,        // class name, window name  WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
 		WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, // style
 //		config.posX, config.posY,       // posx, posy
 //		config.width, config.height,    // width, height
@@ -1204,8 +1330,8 @@ int ds_capture_image(HWND hWnd)
 			*(rp++) = bp;
 		}
 
-		if (strlen(ctx->curWorkingDir))
-			SetCurrentDirectory(ctx->curWorkingDir);
+		if (strlen(ctx->captureDir))
+			SetCurrentDirectory(ctx->captureDir);
 
 		if (ctx->png.singleFlag) //do not add index
 			sprintf(outputFilename, "%s.png", ctx->png.basename); // , ctx->png.curFrame++);
@@ -1224,6 +1350,8 @@ int ds_capture_image(HWND hWnd)
 
 			ds_save_state(ctx, outputFilename);
 		}
+
+		SetCurrentDirectory(ctx->currentDir);
 
 		if (!ctx->png.singleFlag) //do not add index
 			++ctx->png.curFrame;
@@ -1411,8 +1539,8 @@ int ds_capture_image_black_and_white(HWND hWnd)
 			*(rp++) = bp;
 		}
 
-		if (strlen(ctx->curWorkingDir))
-			SetCurrentDirectory(ctx->curWorkingDir);
+		if (strlen(ctx->captureDir))
+			SetCurrentDirectory(ctx->captureDir);
 
 		if (ctx->png.singleFlag) //do not add index
 			sprintf(outputFilename, "%s_b.png", ctx->png.basename); // , ctx->png.curFrame++);
@@ -1431,6 +1559,8 @@ int ds_capture_image_black_and_white(HWND hWnd)
 
 			ds_save_state(ctx, outputFilename);
 		}
+
+		SetCurrentDirectory(ctx->currentDir);
 
 		if (!ctx->png.singleFlag) //do not add index
 			++ctx->png.curFrame;

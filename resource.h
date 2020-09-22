@@ -13,6 +13,7 @@
 #define IDD_DIALOG5                     127
 #define IDD_DIALOG6                     129
 #define IDD_DIALOG8                     131
+#define IDD_DIALOG3                     134
 #define IDC_STATIC1                     1003
 #define IDC_STATIC2                     1004
 #define IDC_STATIC3                     1005
@@ -78,6 +79,7 @@
 #define IDC_RADIO17                     1046
 #define IDC_RADIO22                     1046
 #define IDC_RADIO35                     1046
+#define IDC_RADIO70                     1046
 #define IDC_RADIO18                     1047
 #define IDC_STATIC37                    1048
 #define IDC_RADIO36                     1048
@@ -123,6 +125,7 @@
 #define IDC_RADIO54                     1067
 #define IDC_BUTTON3                     1068
 #define IDC_RADIO55                     1068
+#define IDC_CHECK76                     1068
 #define IDC_STATIC41                    1069
 #define IDC_CHECK27                     1069
 #define IDC_STATIC42                    1070
@@ -139,16 +142,21 @@
 #define IDC_CHECK32                     1075
 #define IDC_EDIT3                       1076
 #define IDC_CHECK33                     1076
+#define IDC_STATIC60                    1076
 #define IDC_STATIC46                    1077
 #define IDC_CHECK34                     1077
+#define IDC_STATIC61                    1077
 #define IDC_EDIT4                       1078
 #define IDC_BUTTON18                    1078
 #define IDC_CHECK62                     1078
+#define IDC_STATIC62                    1078
 #define IDC_STATIC47                    1079
 #define IDC_CHECK35                     1079
 #define IDC_CHECK69                     1079
+#define IDC_STATIC63                    1079
 #define IDC_EDIT5                       1080
 #define IDC_CHECK36                     1080
+#define IDC_STATIC64                    1080
 #define IDC_STATIC48                    1081
 #define IDC_BUTTON19                    1081
 #define IDC_BUTTON6                     1082
@@ -165,6 +173,7 @@
 #define IDC_CHECK38                     1087
 #define IDC_CHECK11                     1088
 #define IDC_BUTTON21                    1088
+#define IDC_STATIC65                    1088
 #define IDC_EDIT7                       1089
 #define IDC_BUTTON22                    1089
 #define IDC_EDIT8                       1090
@@ -223,9 +232,11 @@
 #define IDC_CHECK51                     1113
 #define IDC_STATIC95                    1114
 #define IDC_CHECK52                     1114
+#define IDC_EDIT54                      1114
 #define IDC_STATIC96                    1115
 #define IDC_BUTTON10                    1115
 #define IDC_BUTTON27                    1115
+#define IDC_STATIC66                    1115
 #define IDC_STATIC97                    1116
 #define IDC_BUTTON11                    1116
 #define IDC_BUTTON28                    1116
@@ -240,14 +251,19 @@
 #define IDC_EDIT39                      1119
 #define IDC_EDIT20                      1120
 #define IDC_EDIT40                      1120
+#define IDC_STATIC101                   1120
 #define IDC_EDIT21                      1121
 #define IDC_EDIT41                      1121
+#define IDC_STATIC102                   1121
 #define IDC_EDIT22                      1122
 #define IDC_CHECK53                     1122
+#define IDC_STATIC103                   1122
 #define IDC_CHECK16                     1123
 #define IDC_CHECK54                     1123
+#define IDC_STATIC104                   1123
 #define IDC_CHECK17                     1124
 #define IDC_CHECK55                     1124
+#define IDC_STATIC105                   1124
 #define IDC_CHECK18                     1125
 #define IDC_CHECK56                     1125
 #define IDC_CHECK19                     1126
@@ -269,11 +285,15 @@
 #define IDC_CHECK59                     1135
 #define IDC_EDIT24                      1136
 #define IDC_CHECK60                     1136
+#define IDC_BUTTON13                    1136
 #define IDC_CHECK61                     1137
+#define IDC_BUTTON14                    1137
 #define IDC_CHECK22                     1138
 #define IDC_CHECK63                     1138
+#define IDC_BUTTON15                    1138
 #define IDC_CHECK23                     1139
 #define IDC_CHECK64                     1139
+#define IDC_STATIC67                    1139
 #define IDC_CHECK24                     1140
 #define IDC_CHECK65                     1140
 #define IDC_BUTTON33                    1141
@@ -299,6 +319,21 @@
 #define IDC_CHECK73                     1161
 #define IDC_CHECK74                     1162
 #define IDC_CHECK75                     1163
+#define IDC_RADIO56                     11116
+#define IDC_RADIO57                     11117
+#define IDC_RADIO58                     11118
+#define IDC_RADIO59                     11119
+#define IDC_RADIO60                     11120
+#define IDC_RADIO61                     11127
+#define IDC_RADIO62                     11128
+#define IDC_RADIO63                     11129
+#define IDC_RADIO64                     11130
+#define IDC_RADIO65                     11131
+#define IDC_RADIO71                     11141
+#define IDC_RADIO72                     11142
+#define IDC_RADIO73                     11143
+#define IDC_RADIO74                     11144
+#define IDC_RADIO75                     11145
 #define ID_FILE_REPEAT                  40002
 #define ID_FILE_ABOUT                   40003
 #define ID_FILE_OPEN_POLY               40006
@@ -318,6 +353,8 @@
 #define ID_FILE_OBJECTCONTROL           40019
 #define ID_FILE_SAVESTATE               40020
 #define ID_FILE_RESTORESTATE            40021
+#define ID_FILE_HELP                    40024
+#define ID_FILE_DEFAULTSTATE            40025
 #define ID_APP_ABOUT                    50000
 #define ID_SHOW_TOGGLE                  0xE150
 
@@ -325,8 +362,8 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        133
-#define _APS_NEXT_COMMAND_VALUE         40022
+#define _APS_NEXT_RESOURCE_VALUE        136
+#define _APS_NEXT_COMMAND_VALUE         40026
 #define _APS_NEXT_CONTROL_VALUE         1135
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

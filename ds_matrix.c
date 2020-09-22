@@ -581,6 +581,8 @@ void ds_geometry_draw_init(DS_CTX *ctx, DS_GEO_OBJECT *gobj) //, BASE_GEOMETRY_N
 	base->zRoll = 0;
 	base->curFaceIndex = 0;
 	base->curTransformIndex = 0; // reset
+
+	gobj->matrixID = 0; // initialize the matrix associated with the data
 }
 
 //------------------------------------------------------------------------------------

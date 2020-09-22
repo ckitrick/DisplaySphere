@@ -70,19 +70,26 @@ enum {
 	DS_BASE_COLOR_FACE_USE_A		= 700,
 	DS_BASE_COLOR_FACE_USE_O		= 800,
 	DS_BASE_COLOR_FACE_SET			= 900,
-	DS_BASE_COLOR_EDGE_USE_A		= 1000,
-	DS_BASE_COLOR_EDGE_USE_O		= 1100,
-	DS_BASE_COLOR_EDGE_SET			= 1200,
-	DS_BASE_COLOR_VERTEX_SET		= 1300,
-	DS_BASE_EDGE_ROUND				= 1400,
-	DS_BASE_EDGE_BOX				= 1500,
-	DS_BASE_EDGE_WIDTH				= 1600,
-	DS_BASE_EDGE_HEIGHT				= 1700,
-	DS_BASE_EDGE_OFFSET				= 1800,
-	DS_BASE_VERTEX_SCALE			= 1900,
-	DS_BASE_REPLICATE_FACE			= 2000,
-	DS_BASE_REPLICATE_Z				= 2100,
-	DS_BASE_REPLICATE_X				= 2200,
+	DS_BASE_COLOR_TRANS_ON			= 1000,
+	DS_BASE_COLOR_TRANS_E			= 1100,
+	DS_BASE_COLOR_TRANS_O			= 1200,
+	DS_BASE_COLOR_TRANS_ALPHA		= 1300,
+	DS_BASE_COLOR_EDGE_USE_A		= 1400,
+	DS_BASE_COLOR_EDGE_USE_O		= 1500,
+	DS_BASE_COLOR_EDGE_SET			= 1600,
+	DS_BASE_COLOR_VERTEX_SET		= 1700,
+	DS_BASE_EDGE_ROUND				= 1800,
+	DS_BASE_EDGE_BOX				= 1900,
+	DS_BASE_EDGE_WIDTH				= 2000,
+	DS_BASE_EDGE_HEIGHT				= 2100,
+	DS_BASE_EDGE_OFFSET				= 2200,
+	DS_BASE_VERTEX_SCALE			= 2300,
+	DS_BASE_REPLICATE_FACE			= 2400,
+	DS_BASE_REPLICATE_Z				= 2500,
+	DS_BASE_REPLICATE_X				= 2600,
+	DS_BASE_LABEL_FACE				= 2700,
+	DS_BASE_LABEL_EDGE				= 2800,
+	DS_BASE_LABEL_VERTEX			= 2900,
 };
 
 typedef struct {
@@ -102,67 +109,94 @@ typedef struct {
 } DS_OBJECT_CONTROL_EX;
 
 DS_OBJECT_CONTROL ds_obj_fixed[] = {
-	L"Button",	L"Object",			DS_STATIC,		  3, 3, 74,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Draw",			DS_STATIC,		 81, 3, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Color",			DS_STATIC,		126, 3,130,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Face",			DS_STATIC,		126,14, 54,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Edge",			DS_STATIC,		182,14, 42,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Vertex",			DS_STATIC,		226,14, 30,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Edge",			DS_STATIC,		259, 3,127,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Vertex",			DS_STATIC,		390, 3, 38,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Button",	L"Replication",		DS_STATIC,		431, 3, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,
-	L"Static",	L"name",			DS_STATIC,		  9,23,50,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Vis",				DS_STATIC,		 63,23,10,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"F",				DS_STATIC,		 87,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"E",				DS_STATIC,		 99,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"V",				DS_STATIC,		111,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"E",				DS_STATIC,		132,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"A",				DS_STATIC,		143,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"O",				DS_STATIC,		154,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"A",				DS_STATIC,		188,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"O",				DS_STATIC,		199,24, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"R",				DS_STATIC,		266,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"B",				DS_STATIC,		278,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Width",			DS_STATIC,		292,22,20,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Height",			DS_STATIC,		324,22,22,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Offset",			DS_STATIC,		358,22,22,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Scale",			DS_STATIC,		400,22,18,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"1F",				DS_STATIC,		436,23, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Z",				DS_STATIC,		450,23, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"X",				DS_STATIC,		462,23, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Button",	L"Object",			DS_STATIC,		  3, 2, 91,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  //   3, 2, 75,38
+	L"Button",	L"Draw",			DS_STATIC,		 96, 2, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  //  82, 2, 40,38
+	L"Button",	L"Color",			DS_STATIC,		139, 2,195,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 126, 2,199,38
+	L"Button",	L"Face",			DS_STATIC,		139,13, 54,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 126,13, 55,38
+	L"Button",	L"Transparency",	DS_STATIC,		195,13, 62,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 184,13, 62,38
+	L"Button",	L"Edge",			DS_STATIC,		259,13, 44,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 249,13, 44,38
+	L"Button",	L"Vertex",			DS_STATIC,		305,13, 29,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 296,13, 29,38
+	L"Button",	L"Edge",			DS_STATIC,		336, 2,103,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 329, 2,106,38
+	L"Button",	L"Vertex",			DS_STATIC,		441, 2, 31,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 438, 2, 31,38
+	L"Button",	L"Replicate",		DS_STATIC,		474, 2, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 472, 2, 41,38
+	L"Button",	L"Labels",			DS_STATIC,		517, 2, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 517, 2, 41,38
+
+	L"Static",	L"NAME",			DS_STATIC,		  8,22,65,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Vis",				DS_STATIC,		 80,22,10,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"F",				DS_STATIC,		102,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"E",				DS_STATIC,		114,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"V",				DS_STATIC,		126,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"E",				DS_STATIC,		146,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"A",				DS_STATIC,		157,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"O",				DS_STATIC,		168,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"On",				DS_STATIC,		199,22, 9,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"E",				DS_STATIC,		213,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"O",				DS_STATIC,		224,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"alpha",			DS_STATIC,		236,22,18,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"A",				DS_STATIC,		265,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"O",				DS_STATIC,		276,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"R",				DS_STATIC,		342,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"B",				DS_STATIC,		352,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Width",			DS_STATIC,		363,20,20,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Height",			DS_STATIC,		389,20,22,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Offset",			DS_STATIC,		414,20,22,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"Scale",			DS_STATIC,		447,20,18,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"1F",				DS_STATIC,		479,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Z",				DS_STATIC,		493,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"X",				DS_STATIC,		503,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+
+	L"Static",	L"F",				DS_STATIC,		524,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"E",				DS_STATIC,		535,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"V",				DS_STATIC,		547,20, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
 };
 
 int nDS_Fixed_Controls = sizeof(ds_obj_fixed) / sizeof(DS_OBJECT_CONTROL);
 
 DS_OBJECT_CONTROL_EX ds_obj_variable[] = {
-	(LPCWSTR)WC_STATIC,  L"",	DS_BASE_NAME					,	  9,32,50, 8,	WS_VISIBLE | WS_CHILD | SS_LEFT,								0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_ACTIVE					,	 63,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_FACE				,	 85,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_EDGE				,	 97,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_VERTEX				,	109,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_STATIC,  L"default",DS_BASE_NAME				,	  8,32,66, 8,	WS_VISIBLE | WS_CHILD | SS_LEFT,								0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_ACTIVE					,	 80,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_FACE				,	100,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_EDGE				,	112,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_VERTEX				,	124,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 	// face color
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_E		,	130,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,	0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_A		,	141,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_O		,	152,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_SET			,	163,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_E		,	144,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,	0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_A		,	155,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_USE_O		,	166,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_FACE_SET			,	177,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	// transparency
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_TRANS_ON			,	199,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_TRANS_E			,	211,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,	0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_TRANS_O			,	222,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
+	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_COLOR_TRANS_ALPHA		,	233,31,21,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
 	// edge color
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_USE_A		,	186,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,		0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_USE_O		,	197,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_SET			,	208,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_USE_A		,	263,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,		0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_USE_O		,	274,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_EDGE_SET			,	286,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
 	// vertex color 
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_VERTEX_SET		,	234,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_COLOR_VERTEX_SET		,	313,32,13, 9,	WS_VISIBLE | WS_CHILD | WS_BORDER | BS_OWNERDRAW | WS_TABSTOP, WS_EX_CLIENTEDGE,
 	// Edge round/box size
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_EDGE_ROUND				,	264,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,		0,
-	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_EDGE_BOX				,	275,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
-	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_WIDTH				,	287,30,30,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
-	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_HEIGHT				,	320,30,30,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
-	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_OFFSET				,	354,30,30,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_EDGE_ROUND				,	340,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP | WS_GROUP,		0,
+	(LPCWSTR)WC_BUTTON,	L"",	DS_BASE_EDGE_BOX				,	350,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON | WS_TABSTOP,		0,
+	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_WIDTH				,	361,30,24,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_HEIGHT				,	387,30,24,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_EDGE_OFFSET				,	412,30,24,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
 	// Vertex Scale
-	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_VERTEX_SCALE			,	394,30,30,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
+	(LPCWSTR)WC_EDIT,	L"",	DS_BASE_VERTEX_SCALE			,	445,30,24,12,	WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE,
 	// Replication 
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_FACE			,	435,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_Z				,	447,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_X				,	459,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_FACE			,	479,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_Z				,	492,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_REPLICATE_X				,	502,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	// Replication 
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_FACE				,	521,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_EDGE				,	533,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_VERTEX			,	545,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 };
 
 int nDS_Variable_Controls = sizeof(ds_obj_variable) / sizeof(DS_OBJECT_CONTROL_EX);
@@ -191,6 +225,11 @@ static void ds_fill_object_controls(HWND hWndDlg, int objID, DS_GEO_OBJECT *gobj
 	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_FACE_USE_A + objID, BM_SETCHECK, (gobj->cAttr.face.state & DS_COLOR_STATE_AUTOMATIC ? BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_FACE_USE_O + objID, BM_SETCHECK, (gobj->cAttr.face.state & DS_COLOR_STATE_OVERRIDE ?  BST_CHECKED : BST_UNCHECKED), 0);
 
+	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_TRANS_ON    + objID, BM_SETCHECK, (gobj->tAttr.onFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_TRANS_E     + objID, BM_SETCHECK, (gobj->tAttr.state & DS_COLOR_STATE_EXPLICIT ? BST_CHECKED : BST_UNCHECKED), 0);
+	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_TRANS_O     + objID, BM_SETCHECK, (gobj->tAttr.state & DS_COLOR_STATE_OVERRIDE ? BST_CHECKED : BST_UNCHECKED), 0);
+	sprintf(buffer, "%.2f", gobj->tAttr.alpha);  SetDlgItemText(hWndDlg, DS_BASE_COLOR_TRANS_ALPHA + objID, buffer);
+
 	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_EDGE_USE_A + objID, BM_SETCHECK, (gobj->cAttr.edge.state & DS_COLOR_STATE_AUTOMATIC ? BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_COLOR_EDGE_USE_O + objID, BM_SETCHECK, (gobj->cAttr.edge.state & DS_COLOR_STATE_OVERRIDE ?  BST_CHECKED : BST_UNCHECKED), 0);
 
@@ -205,6 +244,10 @@ static void ds_fill_object_controls(HWND hWndDlg, int objID, DS_GEO_OBJECT *gobj
 	SendDlgItemMessage(hWndDlg, DS_BASE_REPLICATE_FACE + objID, BM_SETCHECK, (gobj->rAttr.oneFaceFlag ?   BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_REPLICATE_Z    + objID, BM_SETCHECK, (gobj->rAttr.zRotationFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_REPLICATE_X    + objID, BM_SETCHECK, (gobj->rAttr.xMirrorFlag ?   BST_CHECKED : BST_UNCHECKED), 0);
+
+	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_FACE   + objID, BM_SETCHECK, (gobj->lFlags.face   ? BST_CHECKED : BST_UNCHECKED), 0);
+	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_EDGE   + objID, BM_SETCHECK, (gobj->lFlags.edge   ? BST_CHECKED : BST_UNCHECKED), 0);
+	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_VERTEX + objID, BM_SETCHECK, (gobj->lFlags.vertex ? BST_CHECKED : BST_UNCHECKED), 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -239,11 +282,29 @@ void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, 
 }
 
 //-----------------------------------------------------------------------------
+void ds_edit_text_update(HWND pWnd, HWND dlg, int control, char *buffer, void *vPtr, int doubleFlag, int nDigits, int clamp, double min, double max)
+//-----------------------------------------------------------------------------
+{
+	// Helper function 
+	double		value;
+	GetDlgItemText(dlg, control, buffer, 256);	// get text from edit control
+	value = atof(buffer);						// extract number from text
+	if (clamp)									// check for clamping
+		if (value < min)		value = min;
+		else if (value > max)	value = max;
+	sprintf(buffer, "%.*f", nDigits, value);	// reformat answer
+	if (doubleFlag)	*((double*)vPtr) = value;	// copy value to appropriate address
+	else			*((float*)vPtr) = (float)value;
+	SetDlgItemText(dlg, control, buffer);		// reset control
+	InvalidateRect(pWnd, 0, 0);					// update main window
+}
+
+//-----------------------------------------------------------------------------
 LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
 {
 	HWND					pWnd;
-	DS_CTX						*ctx;
+	DS_CTX					*ctx;
 	static HFONT			s_hFont = NULL;
 	HWND					hEdit;
 	const TCHAR*			fontName = _T("Microsoft Sans Serif");
@@ -257,6 +318,7 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 	char					buffer[128]; 
 	int						control, category, objID;
 	static DS_GEO_OBJECT	gobj_def;
+	static PAINTSTRUCT		ps;
 
 	pWnd = GetWindow(hWndDlg, GW_OWNER);
 	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
@@ -315,9 +377,21 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 			h += WINDOW_SIZE_OFFSET_HEIGHT;
 			MoveWindow(hWndDlg, window.left, window.top, w, h, 1);// need to add extra
 		}
+		objID = 0;
+
+		// fill in the default
+		ds_fill_object_controls(hWndDlg, objID, &gobj_def, buffer);
+
+		LL_SetHead(ctx->gobjectq);
+		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+		{// send messages to all controls to update content
+			ds_fill_object_controls(hWndDlg, ++objID, gobj, buffer);
+		}
 		break;
 
 	case WM_PAINT:
+		BeginPaint(hWndDlg, &ps);
+/*
 		objID = 0;
 
 		// fill in the default
@@ -328,6 +402,8 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		{// send messages to all controls to update content
 			ds_fill_object_controls( hWndDlg, ++objID,  gobj, buffer);
 		}
+*/
+		EndPaint(hWndDlg, &ps);
 		break;
 
 	case WM_COMMAND:
@@ -348,7 +424,7 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		objID     = control % 100;	// object ID 
 		temp      = 0;
 
-		if (control < 100 || control > 2300)
+		if (control < 100 || control > 3000)
 			return FALSE;
 
 		if (objID < 0 || objID > LL_GetLength(ctx->gobjectq))
@@ -371,14 +447,14 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		{
 			UINT uiID = LOWORD(wParam);
 			UINT uiCode = HIWORD(wParam);   // spin_update ( ctx, what, buffer )  what = 0,1,2
-
 			switch (uiCode) {
 			case EN_KILLFOCUS:
 				switch (category) {
-				case DS_BASE_EDGE_WIDTH:   GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->eAttr.width);  InvalidateRect(pWnd, 0, 0); break;
-				case DS_BASE_EDGE_HEIGHT:  GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->eAttr.height); InvalidateRect(pWnd, 0, 0); break;
-				case DS_BASE_EDGE_OFFSET:  GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->eAttr.offset); InvalidateRect(pWnd, 0, 0); break;
-				case DS_BASE_VERTEX_SCALE: GetDlgItemText(hWndDlg, control, buffer, 256); sscanf(buffer, "%lf", &gobj->vAttr.scale);  InvalidateRect(pWnd, 0, 0); break;
+				case DS_BASE_EDGE_WIDTH:		ds_edit_text_update(pWnd, hWndDlg, control, buffer, (void *)&gobj->eAttr.width,  1, 3, 0, 0.0, 1.0); break;
+				case DS_BASE_EDGE_HEIGHT:		ds_edit_text_update(pWnd, hWndDlg, control, buffer, (void *)&gobj->eAttr.height, 1, 3, 0, 0.0, 1.0); break;
+				case DS_BASE_EDGE_OFFSET:		ds_edit_text_update(pWnd, hWndDlg, control, buffer, (void *)&gobj->eAttr.offset, 1, 3, 0, 0.0, 1.0); break;
+				case DS_BASE_VERTEX_SCALE:		ds_edit_text_update(pWnd, hWndDlg, control, buffer, (void *)&gobj->vAttr.scale,  1, 3, 0, 0.0, 1.0); break;
+				case DS_BASE_COLOR_TRANS_ALPHA: ds_edit_text_update(pWnd, hWndDlg, control, buffer, (void *)&gobj->tAttr.alpha,  0, 2, 1, 0.0, 1.0); break;
 				}
 				break;
 			}
@@ -398,6 +474,10 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		case DS_BASE_COLOR_FACE_USE_O: gobj->cAttr.face.state = DS_COLOR_STATE_OVERRIDE;  InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_COLOR_FACE_SET:   clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &gobj->cAttr.face.color);   InvalidateRect(pWnd, 0, 0); break;
 
+		case DS_BASE_COLOR_TRANS_ON: gobj->tAttr.onFlag = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case DS_BASE_COLOR_TRANS_E:  gobj->tAttr.state = DS_COLOR_STATE_EXPLICIT;  InvalidateRect(pWnd, 0, 0); break;
+		case DS_BASE_COLOR_TRANS_O:  gobj->tAttr.state = DS_COLOR_STATE_OVERRIDE;  InvalidateRect(pWnd, 0, 0); break;
+
 		case DS_BASE_COLOR_EDGE_USE_A: gobj->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;  InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_COLOR_EDGE_USE_O: gobj->cAttr.edge.state = DS_COLOR_STATE_OVERRIDE;  InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_COLOR_EDGE_SET:   clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &gobj->cAttr.edge.color);   InvalidateRect(pWnd, 0, 0); break;
@@ -410,6 +490,10 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		case DS_BASE_REPLICATE_FACE:	gobj->rAttr.oneFaceFlag   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_REPLICATE_Z:		gobj->rAttr.zRotationFlag = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_REPLICATE_X:		gobj->rAttr.xMirrorFlag   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+
+		case DS_BASE_LABEL_FACE:		gobj->lFlags.face   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case DS_BASE_LABEL_EDGE:		gobj->lFlags.edge   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case DS_BASE_LABEL_VERTEX:		gobj->lFlags.vertex = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		}
 		if (clrUpdate)
 		{

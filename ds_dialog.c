@@ -19,6 +19,7 @@
 #include <GL/gl.h>			/* OpenGL header file */
 #include <GL/glext.h>		/* OpenGL header file */
 #include <GL/wglext.h>
+#include <GL/glut.h>
 #include <stdio.h>
 #include <math.h>
 #include <commdlg.h>
@@ -29,6 +30,42 @@
 #include "ds_sph.h"
 #include "ds_file.h"
 #include "ds_gua.h"
+
+/* Start of HyperLink URL */
+#define DS_HYPERLINK			2020
+#define PROP_ORIGINAL_FONT      TEXT("_Hyperlink_Original_Font_")
+#define PROP_ORIGINAL_PROC      TEXT("_Hyperlink_Original_Proc_")
+#define PROP_STATIC_HYPERLINK   TEXT("_Hyperlink_From_Static_")
+#define PROP_UNDERLINE_FONT     TEXT("_Hyperlink_Underline_Font_")
+LRESULT CALLBACK _HyperlinkParentProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK _HyperlinkProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+static void CreateHyperLink(HWND hwndControl);
+/* End of HyperLink URL */
+
+//-----------------------------------------------------------------------------
+int ds_dlg_splash_screen(DS_CTX *ctx)
+//-----------------------------------------------------------------------------
+{
+	if (!ctx->program.firstTime)
+		return 0;
+
+	DialogBox(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG3), ctx->mainWindow, ds_dlg_about);
+
+	// update the installation file
+	FILE	*fp;
+	char	buffer[512];
+
+	sprintf(buffer, "%s\\state\\installation.txt", ctx->program.dataLocation);
+	fopen_s(&fp, buffer, "r");
+	if (fp)
+	{
+		fclose(fp);
+		fopen_s(&fp, buffer, "w");
+		fprintf(fp, "\"%s\"\n", ctx->program.exeLocation);
+		fclose(fp);
+	}
+	return 0;
+}
 
 //-----------------------------------------------------------------------------
 LRESULT CALLBACK ds_dlg_kbd_toggles(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -62,9 +99,7 @@ LRESULT CALLBACK ds_dlg_kbd_toggles(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARA
 			SelectObject(hdcSource[0], bmpSource[0]);
 			hdcSource[1] = CreateCompatibleDC(GetDC(0));
 			SelectObject(hdcSource[1], bmpSource[1]);
-//			return 0;
 		}
-//		return TRUE;
 		break;
 
 	case WM_PAINT:
@@ -72,7 +107,6 @@ LRESULT CALLBACK ds_dlg_kbd_toggles(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARA
 			hdcDestination = BeginPaint(hWndDlg, &ps);
 			BitBlt(hdcDestination, 250, 15, 64, 64, hdcSource[1], 0, 0, SRCAND); // SRCCOPY);
 			EndPaint(hWndDlg, &ps);
-//			return 0;
 		}
 		break;
 
@@ -82,25 +116,20 @@ LRESULT CALLBACK ds_dlg_kbd_toggles(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARA
 		case IDOK:
 			EndDialog(hWndDlg, 0);
 			ctx->kbdToggle = 0;
-//			InvalidateRect(pWnd, 0, 0);
-//			return TRUE;
 		case IDCANCEL:
 			EndDialog(hWndDlg, 0);
 			ctx->kbdToggle = 0;
-//			return TRUE;
 		}
 		break;
 
 	case WM_DESTROY:
 		ctx->kbdToggle = 0;
 		EndDialog(hWndDlg, 0);
-//		return TRUE;
 		break;
 
 	case WM_CLOSE:
 		ctx->kbdToggle = 0;
 		EndDialog(hWndDlg, 0);
-//		return TRUE;
 		break;
 	}
 
@@ -145,15 +174,128 @@ LRESULT CALLBACK ds_dlg_about(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 			ha = arect.bottom - arect.top;
 			wa = arect.right - arect.left;
 			MoveWindow(hWndDlg, mrect.left + (wm - wa) / 2, mrect.top + (hm - ha) / 2, wa, ha, 1);
+
+			char	buffer[64];
+			sprintf(buffer, "Version: %d.%d", ctx->version.major, ctx->version.minor);
+			SetDlgItemText(hWndDlg, IDC_STATIC91, buffer);
+
+			sprintf(buffer, "%d", ctx->opengl.samplesPerPixel);
+			SetDlgItemText(hWndDlg, IDC_STATIC103, buffer);
+
+			sprintf(buffer, "%s", ctx->executable.fullName);
+			SetDlgItemText(hWndDlg, IDC_STATIC105, buffer);
+		}
+		CreateHyperLink(GetDlgItem(hWndDlg, IDC_STATIC104));
+		break;
+
+	case WM_PAINT:
+		{
+			hdcDestination = BeginPaint(hWndDlg, &ps);
+			BitBlt(hdcDestination, 360, 15, 64, 64, hdcSource[1], 0, 0, SRCAND); // SRCCOPY);
+			EndPaint(hWndDlg, &ps);
 		}
 		break;
+
+	case WM_COMMAND:
+		switch (wParam)
+		{
+		case IDOK:		EndDialog(hWndDlg, 0); InvalidateRect(pWnd, 0, 0); break;
+		case IDCANCEL:	EndDialog(hWndDlg, 0); break;
+		default:
+			if (HIWORD(wParam) == BN_CLICKED) { //Buttons, checkboxs, labels, static labels clicked
+				switch (LOWORD(wParam))
+				{
+				case IDC_STATIC104:
+					char		url[1024];
+					ds_build_url(ctx, url);
+					ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+//
+//					FILE *fp;
+//					fopen_s(&fp, PROGRAM_DOCUMENTATION, "r");
+//					if (fp)
+//					{
+//						fclose(fp);
+//						ShellExecute(NULL, "open", PROGRAM_DOCUMENTATION_URL, NULL, NULL, SW_SHOWNORMAL);
+//					}
+//					else
+//					{
+//						char buffer[1024];
+//						sprintf(buffer, "File <%s> not found.", PROGRAM_DOCUMENTATION);
+//						MessageBox(ctx->mainWindow, buffer, "Error", 0);
+//					}
+					break;
+				}
+			}
+		}
+		break;
+
+	case WM_DESTROY:
+		break;
+
+	case WM_CLOSE:
+		EndDialog(hWndDlg, 0);
+		break;
+	}
+
+	return FALSE;
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK ds_dlg_splashscreen(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+{
+	//	char			buffer[256];
+	HWND			pWnd;
+	DS_CTX			*ctx;
+	static HBITMAP	bmpSource[2];// = NULL;
+	static HDC		hdcSource[2]; // = NULL;
+	PAINTSTRUCT		ps;
+	HDC				hdcDestination;
+	HINSTANCE		hInst;
+
+	pWnd = GetWindow(hWndDlg, GW_OWNER);
+	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
+	hInst = GetModuleHandle(NULL);// returns HINSTANCE of the calling process
+
+	switch (Msg) {
+	case WM_INITDIALOG:
+	{
+		RECT	mrect, arect;
+
+		bmpSource[0] = (HBITMAP)LoadImageA(hInst, MAKEINTRESOURCEA(IDB_BITMAP2), IMAGE_BITMAP, 0, 0, 0);
+		bmpSource[1] = (HBITMAP)LoadImageA(hInst, MAKEINTRESOURCEA(IDB_BITMAP1), IMAGE_BITMAP, 0, 0, 0);
+		hdcSource[0] = CreateCompatibleDC(GetDC(0));
+		SelectObject(hdcSource[0], bmpSource[0]);
+		hdcSource[1] = CreateCompatibleDC(GetDC(0));
+		SelectObject(hdcSource[1], bmpSource[1]);
+
+		// place dialog window in the center of the main window 
+		GetWindowRect(pWnd, &mrect);
+		GetWindowRect(hWndDlg, &arect);
+		int		hm, wm, ha, wa;
+		hm = mrect.bottom - mrect.top;
+		wm = mrect.right - mrect.left;
+		ha = arect.bottom - arect.top;
+		wa = arect.right - arect.left;
+		MoveWindow(hWndDlg, mrect.left + (wm - wa) / 2, mrect.top + (hm - ha) / 2, wa, ha, 1);
+
+//		char	buffer[64];
+//		sprintf(buffer, "Version: %d.%d", ctx->version.major, ctx->version.minor);
+//		SetDlgItemText(hWndDlg, IDC_STATIC91, buffer);
+//
+//		sprintf(buffer, "%d", ctx->opengl.samplesPerPixel);
+//		SetDlgItemText(hWndDlg, IDC_STATIC103, buffer);
+//
+//		sprintf(buffer, "%s", ctx->executable.fullName);
+//		SetDlgItemText(hWndDlg, IDC_STATIC105, buffer);
+	}
+//	CreateHyperLink(GetDlgItem(hWndDlg, IDC_STATIC104));
+	break;
 
 	case WM_PAINT:
 	{
 		hdcDestination = BeginPaint(hWndDlg, &ps);
-		//		BitBlt(hdcDestination, 250, 15, 64, 64, hdcSource[1], 0, 0, SRCAND); // SRCCOPY);
-		BitBlt(hdcDestination, 300, 15, 64, 64, hdcSource[1], 0, 0, SRCAND); // SRCCOPY);
-//			BitBlt(hdcDestination, 100, 24, 64, 64, hdcSource[1], 0, 0, SRCAND);
+		BitBlt(hdcDestination, 360, 15, 64, 64, hdcSource[1], 0, 0, SRCAND); // SRCCOPY);
 		EndPaint(hWndDlg, &ps);
 	}
 	break;
@@ -161,11 +303,29 @@ LRESULT CALLBACK ds_dlg_about(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 	case WM_COMMAND:
 		switch (wParam)
 		{
-		case IDOK:
-			EndDialog(hWndDlg, 0);
-			InvalidateRect(pWnd, 0, 0);
-		case IDCANCEL:
-			EndDialog(hWndDlg, 0);
+		case IDOK:		EndDialog(hWndDlg, 0); InvalidateRect(pWnd, 0, 0); break;
+		case IDCANCEL:	EndDialog(hWndDlg, 0); break;
+//		default:
+//			if (HIWORD(wParam) == BN_CLICKED) { //Buttons, checkboxs, labels, static labels clicked
+//				switch (LOWORD(wParam))
+//				{
+//				case IDC_STATIC104:
+//					FILE *fp;
+//					fopen_s(&fp, PROGRAM_DOCUMENTATION, "r");
+//					if (fp)
+//					{
+//						fclose(fp);
+//						ShellExecute(NULL, "open", PROGRAM_DOCUMENTATION_URL, NULL, NULL, SW_SHOWNORMAL);
+//					}
+//					else
+//					{
+//						char buffer[1024];
+//						sprintf(buffer, "File <%s> not found.", PROGRAM_DOCUMENTATION);
+//						MessageBox(ctx->mainWindow, buffer, "Error", 0);
+//					}
+//					break;
+//				}
+//			}
 		}
 		break;
 
@@ -218,11 +378,13 @@ int ds_general_color_dialog(HWND hOwnerWnd, DS_CTX *ctx, DS_COLOR *clr)
 }
 
 //-----------------------------------------------------------------------------
-static void ds_dlg_spin_update(DS_CTX *ctx, int what, char *buffer)
+static void ds_dlg_spin_update(DS_CTX *ctx, HWND dlg, int control, int what, char *buffer)
 //-----------------------------------------------------------------------------
 {
 	int		flag = 0;
 	float	value;
+
+	GetDlgItemText(dlg, control, buffer, 256);	// get text from edit control
 	value = (float)atof(buffer);
 
 	switch (what) {
@@ -244,15 +406,21 @@ static void ds_dlg_spin_update(DS_CTX *ctx, int what, char *buffer)
 			InvalidateRect(ctx->mainWindow, 0, 0);
 		}
 	}
+	if (flag)
+	{
+		if (what != 3) sprintf(buffer, "%.3f", value);
+		else sprintf(buffer, "%d", (int)value);  
+		SetDlgItemText(dlg, control, buffer);
+	}
 }
 
 //-----------------------------------------------------------------------------
-//LRESULT CALLBACK DlgAttributesFull(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
 {
 	// Full scope attributes dialog - designed to be a floating non-modal dialog
 	//
+	static PAINTSTRUCT		ps;
 #define CLAMP_COLOR( color )	\
 	if ( color < 0.0 )			\
 		color = 0.0;			\
@@ -270,16 +438,9 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
 
 	switch (Msg) {
-	case WM_NEXTDLGCTL:
-	{
-
-		int i;
-		i = 12;
-	}
-	break;
 	case WM_INITDIALOG:
 	case WM_PAINT:
-		{
+	{
 			// Geometry Adjustments
 			CheckRadioButton(hWndDlg, IDC_RADIO1, IDC_RADIO3, (ctx->geomAdj.polymode[0] == 0 ? IDC_RADIO1 : (ctx->geomAdj.polymode[0] == 1 ? IDC_RADIO2 : IDC_RADIO3)));
 			CheckRadioButton(hWndDlg, IDC_RADIO4, IDC_RADIO6, (ctx->geomAdj.polymode[1] == 0 ? IDC_RADIO4 : (ctx->geomAdj.polymode[1] == 1 ? IDC_RADIO5 : IDC_RADIO6)));
@@ -292,11 +453,16 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_SETCHECK, (ctx->base_geometry.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->clrCtl.reverseColorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 
-			i = ctx->geomAdj.drawWhat;
-			SendDlgItemMessage(hWndDlg, IDC_CHECK22, BM_SETCHECK, (i &  GEOMETRY_DRAW_TRIANGLES ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK23, BM_SETCHECK, (i &  GEOMETRY_DRAW_EDGES     ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_SETCHECK, (i &  GEOMETRY_DRAW_VERTICES  ? BST_CHECKED : BST_UNCHECKED), 0);
-			sprintf(buffer, "%.3f", ctx->renderVertex.scale);  SetDlgItemText(hWndDlg, IDC_EDIT24, buffer);
+			// Label settings
+			CheckRadioButton(hWndDlg, IDC_RADIO56, IDC_RADIO60, ((int)ctx->label.edge.font   - 4 + IDC_RADIO56));
+			CheckRadioButton(hWndDlg, IDC_RADIO61, IDC_RADIO65, ((int)ctx->label.vertex.font - 4 + IDC_RADIO61));
+			CheckRadioButton(hWndDlg, IDC_RADIO71, IDC_RADIO75, ((int)ctx->label.face.font   - 4 + IDC_RADIO71));
+
+//			i = ctx->geomAdj.drawWhat;
+//			SendDlgItemMessage(hWndDlg, IDC_CHECK22, BM_SETCHECK, (i &  GEOMETRY_DRAW_TRIANGLES ? BST_CHECKED : BST_UNCHECKED), 0);
+//			SendDlgItemMessage(hWndDlg, IDC_CHECK23, BM_SETCHECK, (i &  GEOMETRY_DRAW_EDGES     ? BST_CHECKED : BST_UNCHECKED), 0);
+//			SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_SETCHECK, (i &  GEOMETRY_DRAW_VERTICES  ? BST_CHECKED : BST_UNCHECKED), 0);
+//			sprintf(buffer, "%.3f", ctx->renderVertex.scale);  SetDlgItemText(hWndDlg, IDC_EDIT24, buffer);
 
 			// Drawing Adjustments - version 2 (Check Boxes)
 			SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_SETCHECK, (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERPSECTIVE ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
@@ -304,6 +470,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_SETCHECK, (ctx->drawAdj.circleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_SETCHECK, (ctx->drawAdj.fogFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_SETCHECK, (ctx->drawAdj.axiiFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+			SendDlgItemMessage(hWndDlg, IDC_CHECK24,BM_SETCHECK, (ctx->drawAdj.axiiLabelFlag ? BST_CHECKED : BST_UNCHECKED), 0); // label 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_SETCHECK, (ctx->drawAdj.clipFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_SETCHECK, (ctx->drawAdj.spin.spinState ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->drawAdj.clipVisibleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
@@ -328,15 +495,16 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			}
 
 			// Color Adjustments 
+			sprintf(buffer, "%.2f", ctx->clrCtl.face.defaultColor.a);  SetDlgItemText(hWndDlg, IDC_EDIT54, buffer);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
 			sprintf(buffer, "%.3f", ctx->clrCtl.light.z);  SetDlgItemText(hWndDlg, IDC_EDIT22, buffer);
 
 			// Edge Attributes - init
-			sprintf(buffer, "%.4f", ctx->eAttr.width);  SetDlgItemText(hWndDlg, IDC_EDIT3, buffer);
-			sprintf(buffer, "%.4f", ctx->eAttr.height); SetDlgItemText(hWndDlg, IDC_EDIT4, buffer);
-			sprintf(buffer, "%.4f", ctx->eAttr.offset); SetDlgItemText(hWndDlg, IDC_EDIT5, buffer);
+//			sprintf(buffer, "%.4f", ctx->eAttr.width);  SetDlgItemText(hWndDlg, IDC_EDIT3, buffer);
+//			sprintf(buffer, "%.4f", ctx->eAttr.height); SetDlgItemText(hWndDlg, IDC_EDIT4, buffer);
+//			sprintf(buffer, "%.4f", ctx->eAttr.offset); SetDlgItemText(hWndDlg, IDC_EDIT5, buffer);
 
 			// Input Modifications - init
 			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->inputTrans.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0);
@@ -354,7 +522,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT16, buffer);
 
 			// Image Capture 
-			SetDlgItemText(hWndDlg, IDC_STATIC49, ctx->curWorkingDir); // ctx->imageCapture.directory);
+			SetDlgItemText(hWndDlg, IDC_STATIC49, ctx->captureDir); // ctx->imageCapture.directory);
 			SetDlgItemText(hWndDlg, IDC_EDIT6, ctx->png.basename);
 			sprintf(buffer, "index: %05d", ctx->png.curFrame);     
 			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);		
@@ -371,33 +539,34 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			switch (uiCode){
 			case EN_KILLFOCUS:
 				switch (LOWORD(wParam)) {
-				case IDC_EDIT1: GetDlgItemText(hWndDlg, IDC_EDIT1, buffer, 256); ctx->drawAdj.clipZIncrement = atof(buffer); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT2: GetDlgItemText(hWndDlg, IDC_EDIT2, buffer, 256); ds_dlg_spin_update(ctx, 3, buffer); break;
-				case IDC_EDIT3: GetDlgItemText(hWndDlg, IDC_EDIT3, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.width); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT4:	GetDlgItemText(hWndDlg, IDC_EDIT4, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.height); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT5:	GetDlgItemText(hWndDlg, IDC_EDIT5, buffer, 256); sscanf(buffer, "%lf", &ctx->eAttr.offset); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT6:	GetDlgItemText(hWndDlg, IDC_EDIT6, buffer, 256); strcpy(ctx->png.basename, buffer); break;
-				case IDC_EDIT7:	GetDlgItemText(hWndDlg, IDC_EDIT7, buffer, 256); ds_dlg_spin_update(ctx, 0, buffer); break;
-				case IDC_EDIT8:	GetDlgItemText(hWndDlg, IDC_EDIT8, buffer, 256); ds_dlg_spin_update(ctx, 1, buffer); break;
-				case IDC_EDIT11: GetDlgItemText(hWndDlg, IDC_EDIT11, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.x); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT12: GetDlgItemText(hWndDlg, IDC_EDIT12, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.y); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT13: GetDlgItemText(hWndDlg, IDC_EDIT13, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.zAxis.z); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT14: GetDlgItemText(hWndDlg, IDC_EDIT14, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.x); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT15: GetDlgItemText(hWndDlg, IDC_EDIT15, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.y); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT16: GetDlgItemText(hWndDlg, IDC_EDIT16, buffer, 256); sscanf(buffer, "%lf", &ctx->inputTrans.yAxis.z); ds_geo_build_transform_matrix(ctx); break;
-				case IDC_EDIT17: GetDlgItemText(hWndDlg, IDC_EDIT17, buffer, 256); ctx->drawAdj.clipZValue = atof(buffer); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT20: GetDlgItemText(hWndDlg, IDC_EDIT20, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.x);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT21: GetDlgItemText(hWndDlg, IDC_EDIT21, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.y);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT22: GetDlgItemText(hWndDlg, IDC_EDIT22, buffer, 256); sscanf(buffer, "%lf", &ctx->clrCtl.light.z);  InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT23: GetDlgItemText(hWndDlg, IDC_EDIT23, buffer, 256); ds_dlg_spin_update(ctx, 2, buffer); break;
-				case IDC_EDIT24: GetDlgItemText(hWndDlg, IDC_EDIT24, buffer, 256); sscanf(buffer, "%lf", &ctx->renderVertex.scale); InvalidateRect(pWnd, 0, 0); break;
-				case IDC_EDIT25: GetDlgItemText(hWndDlg, IDC_EDIT25, buffer, 256); sscanf(buffer, "%f", &ctx->drawAdj.eyeSeparation); InvalidateRect(pWnd, 0, 0); break;
+				case IDC_EDIT1:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT1,  buffer, (void*)&ctx->drawAdj.clipZIncrement, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT2:  ds_dlg_spin_update( ctx, hWndDlg, IDC_EDIT2, 3, buffer);
+				case IDC_EDIT3:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT3,  buffer, (void*)&ctx->eAttr.width , 1, 3, 0, 0, 0); break;
+				case IDC_EDIT4:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT4,  buffer, (void*)&ctx->eAttr.height, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT5:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT5,  buffer, (void*)&ctx->eAttr.offset, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT6:	 GetDlgItemText(hWndDlg, IDC_EDIT6, buffer, 256);  strcpy(ctx->png.basename, buffer); break;
+				case IDC_EDIT7:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT7, 0, buffer);
+				case IDC_EDIT8:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT8, 1, buffer);
+				case IDC_EDIT11: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT11, buffer, (void*)&ctx->inputTrans.zAxis.x, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT12: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT12, buffer, (void*)&ctx->inputTrans.zAxis.y, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT13: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT13, buffer, (void*)&ctx->inputTrans.zAxis.z, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT14: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT14, buffer, (void*)&ctx->inputTrans.yAxis.x, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT15: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT15, buffer, (void*)&ctx->inputTrans.yAxis.y, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT16: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT16, buffer, (void*)&ctx->inputTrans.yAxis.z, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT17: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT17, buffer, (void*)&ctx->drawAdj.clipZValue, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->clrCtl.light.x, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->clrCtl.light.y, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->clrCtl.light.z, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT23:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT23, 2, buffer);
+				case IDC_EDIT24: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT24, buffer, (void*)&ctx->renderVertex.scale, 1, 4, 0, 0, 0); break;
+				case IDC_EDIT25: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT25, buffer, (void*)&ctx->drawAdj.eyeSeparation, 0, 3, 0, 0, 0); break;
+				case IDC_EDIT54: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT54, buffer, (void*)&ctx->clrCtl.face.defaultColor.a, 0, 2, 1, 0.0, 1.0); break;
 				}
 				break;
 			}
 		}
 		switch (wParam) { // on command 
-		case IDC_RADIO1: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO1, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO1: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO1, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;//; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO2: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO2, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO3: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO3, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO4: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO4, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
@@ -416,7 +585,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_RADIO21: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO21, BM_GETCHECK, 1, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO22: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO22, BM_GETCHECK, 1, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 
-		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.triangle.defaultColor); break;
+		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.face.defaultColor); break;
 		case IDC_BUTTON5: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.bkgClear); break;
 
 		case IDC_CHECK1: ctx->drawAdj.projection = SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_GETCHECK, 0, 0) ? GEOMETRY_PROJECTION_PERPSECTIVE : GEOMETRY_PROJECTION_ORTHOGRAPHIC; ds_reshape(pWnd, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break;
@@ -424,6 +593,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_CHECK3: ctx->drawAdj.circleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK4: ctx->drawAdj.fogFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK5: ctx->drawAdj.axiiFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK24: ctx->drawAdj.axiiLabelFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK6: ctx->drawAdj.clipFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_CHECK7: ctx->drawAdj.spin.spinState = SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_GETCHECK, 0, 0) ? ROTATE : 0; InvalidateRect(pWnd, 0, 0); 
 			if (!ctx->drawAdj.spin.spinState ) KillTimer(pWnd, 0);
@@ -461,9 +631,23 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			}
 			InvalidateRect(pWnd, 0, 0); break;
 
-		case IDC_CHECK22: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_TRIANGLES; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK23: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_EDGES; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK24: ctx->geomAdj.drawWhat ^= GEOMETRY_DRAW_VERTICES; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO56: ctx->label.edge.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO57: ctx->label.edge.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO58: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_10;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO59: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_12;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO60: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_18;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
+
+		case IDC_RADIO61: ctx->label.vertex.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO62: ctx->label.vertex.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO63: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_10;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO64: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_12;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO65: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_18;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
+
+		case IDC_RADIO71: ctx->label.face.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO72: ctx->label.face.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO73: ctx->label.face.font = GLUT_BITMAP_HELVETICA_10;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO74: ctx->label.face.font = GLUT_BITMAP_HELVETICA_12;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_RADIO75: ctx->label.face.font = GLUT_BITMAP_HELVETICA_18;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
 
 		case IDCANCEL:
 			DestroyWindow(hWndDlg);
@@ -492,8 +676,10 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 				{
 					SHGetPathFromIDList(lpItem, szDir);
 					SetDlgItemText(hWndDlg, IDC_STATIC49, szDir);
-					strcpy(ctx->curWorkingDir, szDir); // save new current working directory
-					SetCurrentDirectory(szDir);
+//					strcpy(ctx->curWorkingDir, szDir); // save new current working directory
+					strcpy(ctx->captureDir, szDir); // save new current working directory
+					ds_build_dsf(&ctx->capDir, ctx->captureDir, 0); // update capture directory
+//					SetCurrentDirectory(szDir);
 				}
 			}
 			break;
@@ -515,6 +701,10 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			sprintf(buffer, "index: %05d", ctx->png.curFrame);
 			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);
 			break;
+
+		case IDC_BUTTON13: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.face.color); break;
+		case IDC_BUTTON14: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.edge.color); break;
+		case IDC_BUTTON15: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.vertex.color); break;
 		}
 		if (clrUpdate)
 		{
@@ -535,11 +725,14 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			int					flag = 0;
 
 			switch ((UINT)wParam) {
-			case IDC_BUTTON2: flag = 1;  clr = &ctx->clrCtl.line.override;			break;
-			case IDC_BUTTON3: flag = 1;  clr = &ctx->clrCtl.triangle.override;		break;
-			case IDC_BUTTON4: flag = 1;  clr = &ctx->clrCtl.triangle.defaultColor;	break;
-			case IDC_BUTTON5: flag = 1;  clr = &ctx->clrCtl.bkgClear;				break;
+			case IDC_BUTTON2:  flag = 1;  clr = &ctx->clrCtl.line.override;			break;
+			case IDC_BUTTON3:  flag = 1;  clr = &ctx->clrCtl.face.override;			break;
+			case IDC_BUTTON4:  flag = 1;  clr = &ctx->clrCtl.face.defaultColor;		break;
+			case IDC_BUTTON5:  flag = 1;  clr = &ctx->clrCtl.bkgClear;				break;
 			case IDC_BUTTON12: flag = 1;  clr = &ctx->renderVertex.clr;				break;
+			case IDC_BUTTON13: flag = 1;  clr = &ctx->label.face.color;				break;
+			case IDC_BUTTON14: flag = 1;  clr = &ctx->label.edge.color;				break;
+			case IDC_BUTTON15: flag = 1;  clr = &ctx->label.vertex.color;			break;
 			}
 			if (flag)
 			{
@@ -622,6 +815,8 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 
 	switch (Msg) {
 	case WM_INITDIALOG:
+		// Here we put the info on the Column headers
+		// this is not data, only name of each header we like
 		column[0].mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;    // Type of mask
 		column[0].pszText = "Object";                            // First Header Text
 		column[0].cx = 0x72;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
@@ -646,26 +841,63 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 		column[5].pszText = "#UEdges";                            // First Header Text
 		column[5].cx = 0x42;                                   // width of column	SendMessage(lWnd, LVM_INSERTCOLUMN, 0, &column[0]);
 		SendMessage(lWnd, LVM_INSERTCOLUMN, 5, (LPARAM)&column[5]); // Insert/Show the coloum
-
-	case WM_PAINT:
+//		break;
 		SendMessage(lWnd, LVM_DELETEALLITEMS, 0, 0);
-		// Here we put the info on the Coulom headers
-		// this is not data, only name of each header we like
-
 		i = 0;
+		memset(&item, 0, sizeof(item)); // Zero struct's Members
 		LL_SetHead(ctx->gobjectq);
 		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 		{
 			item.mask = LVIF_TEXT;   // Text Style
 			item.cchTextMax = 256; // Max size of test
 			item.iItem = i;          // choose item  
-			item.iSubItem = 0;       // Put in first coluom
-			item.state = 1;
-			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
 
 			item.iSubItem = 0;       // Put in first column
 			item.pszText = ds_name_start(gobj->filename); // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 1;       // Put in first column
+			sprintf(temp, "%d", gobj->nTri);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
 			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 2;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nVtx);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 3;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nEdge);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 4;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nUTri);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+
+			item.iSubItem = 5;       // Put in first coluom
+			sprintf(temp, "%d", gobj->nUEdge);
+			item.pszText = temp; // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_SETITEM, 0, (LPARAM)&item); // Send to the Listview
+			++i;
+		}
+		break;
+
+	case WM_USER + 1000:
+		SendMessage(lWnd, LVM_DELETEALLITEMS, 0, 0);
+		i = 0;
+		memset(&item, 0, sizeof(item)); // Zero struct's Members
+		LL_SetHead(ctx->gobjectq);
+		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+		{
+			item.mask = LVIF_TEXT;   // Text Style
+			item.cchTextMax = 256; // Max size of test
+			item.iItem = i;          // choose item  
+
+			item.iSubItem = 0;       // Put in first column
+			item.pszText = ds_name_start(gobj->filename); // Text to display (can be from a char variable) (Items)
+			SendMessage(lWnd, LVM_INSERTITEM, 0, (LPARAM)&item); // Send to the Listview
 
 			item.iSubItem = 1;       // Put in first column
 			sprintf(temp, "%d", gobj->nTri);
@@ -727,3 +959,145 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 	return FALSE;
 }
 
+//
+// The following code from web: https://stackoverflow.com/questions/7784975/c-win32-add-a-hyperlink-to-a-dialog
+//
+//-----------------------------------------------------------------------------
+static void CreateHyperLink(HWND hwndControl)
+//-----------------------------------------------------------------------------
+{
+	// Subclass the parent so we can color the controls as we desire.
+	HWND hwndParent = GetParent(hwndControl);
+	if (NULL != hwndParent)
+	{
+		WNDPROC pfnOrigProc = (WNDPROC)GetWindowLong(hwndParent, GWL_WNDPROC);
+		if (pfnOrigProc != _HyperlinkParentProc)
+		{
+			SetProp(hwndParent, PROP_ORIGINAL_PROC, (HANDLE)pfnOrigProc);
+			SetWindowLong(hwndParent, GWL_WNDPROC, (LONG)(WNDPROC)_HyperlinkParentProc);
+		}
+	}
+
+	// Make sure the control will send notifications.
+	DWORD dwStyle = GetWindowLong(hwndControl, GWL_STYLE);
+	SetWindowLong(hwndControl, GWL_STYLE, dwStyle | SS_NOTIFY);
+
+	// Subclass the existing control.
+	WNDPROC pfnOrigProc = (WNDPROC)GetWindowLong(hwndControl, GWL_WNDPROC);
+	SetProp(hwndControl, PROP_ORIGINAL_PROC, (HANDLE)pfnOrigProc);
+	SetWindowLong(hwndControl, GWL_WNDPROC, (LONG)(WNDPROC)_HyperlinkProc);
+
+	// Create an updated font by adding an underline.
+	HFONT hOrigFont = (HFONT)SendMessage(hwndControl, WM_GETFONT, 0, 0);
+	SetProp(hwndControl, PROP_ORIGINAL_FONT, (HANDLE)hOrigFont);
+
+	LOGFONT lf;
+	GetObject(hOrigFont, sizeof(lf), &lf);
+	lf.lfUnderline = TRUE;
+
+	HFONT hFont = CreateFontIndirect(&lf);
+	SetProp(hwndControl, PROP_UNDERLINE_FONT, (HANDLE)hFont);
+
+	// Set a flag on the control so we know what color it should be.
+	SetProp(hwndControl, PROP_STATIC_HYPERLINK, (HANDLE)1);
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK _HyperlinkParentProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+{
+	WNDPROC pfnOrigProc = (WNDPROC)GetProp(hwnd, PROP_ORIGINAL_PROC);
+
+	switch (message)
+	{
+	case WM_CTLCOLORSTATIC:
+	{
+		HDC hdc = (HDC)wParam;
+		HWND hwndCtl = (HWND)lParam;
+
+		BOOL fHyperlink = (NULL != GetProp(hwndCtl, PROP_STATIC_HYPERLINK));
+		if (fHyperlink)
+		{
+			LRESULT lr = CallWindowProc(pfnOrigProc, hwnd, message, wParam, lParam);
+			SetTextColor(hdc, RGB(0, 0, 192));
+			return lr;
+		}
+
+		break;
+	}
+	case WM_DESTROY:
+	{
+		SetWindowLong(hwnd, GWL_WNDPROC, (LONG)pfnOrigProc);
+		RemoveProp(hwnd, PROP_ORIGINAL_PROC);
+		break;
+	}
+	}
+	return CallWindowProc(pfnOrigProc, hwnd, message, wParam, lParam);
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK _HyperlinkProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+{
+	WNDPROC pfnOrigProc = (WNDPROC)GetProp(hwnd, PROP_ORIGINAL_PROC);
+
+	switch (message)
+	{
+	case WM_DESTROY:
+	{
+		SetWindowLong(hwnd, GWL_WNDPROC, (LONG)pfnOrigProc);
+		RemoveProp(hwnd, PROP_ORIGINAL_PROC);
+
+		HFONT hOrigFont = (HFONT)GetProp(hwnd, PROP_ORIGINAL_FONT);
+		SendMessage(hwnd, WM_SETFONT, (WPARAM)hOrigFont, 0);
+		RemoveProp(hwnd, PROP_ORIGINAL_FONT);
+
+		HFONT hFont = (HFONT)GetProp(hwnd, PROP_UNDERLINE_FONT);
+		DeleteObject(hFont);
+		RemoveProp(hwnd, PROP_UNDERLINE_FONT);
+
+		RemoveProp(hwnd, PROP_STATIC_HYPERLINK);
+
+		break;
+	}
+	case WM_MOUSEMOVE:
+	{
+		if (GetCapture() != hwnd)
+		{
+			HFONT hFont = (HFONT)GetProp(hwnd, PROP_UNDERLINE_FONT);
+			SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, FALSE);
+			InvalidateRect(hwnd, NULL, FALSE);
+			SetCapture(hwnd);
+		}
+		else
+		{
+			RECT rect;
+			GetWindowRect(hwnd, &rect);
+
+			POINT pt = { LOWORD(lParam), HIWORD(lParam) };
+			ClientToScreen(hwnd, &pt);
+
+			if (!PtInRect(&rect, pt))
+			{
+				HFONT hFont = (HFONT)GetProp(hwnd, PROP_ORIGINAL_FONT);
+				SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, FALSE);
+				InvalidateRect(hwnd, NULL, FALSE);
+				ReleaseCapture();
+			}
+		}
+		break;
+	}
+	case WM_SETCURSOR:
+	{
+		// Since IDC_HAND is not available on all operating systems,
+		// we will load the arrow cursor if IDC_HAND is not present.
+		HCURSOR hCursor = LoadCursor(NULL, IDC_HAND);
+		if (NULL == hCursor)
+			hCursor = LoadCursor(NULL, IDC_ARROW);
+		SetCursor(hCursor);
+		return TRUE;
+	}
+	}
+
+	return CallWindowProc(pfnOrigProc, hwnd, message, wParam, lParam);
+}

@@ -60,6 +60,9 @@
     <ClCompile Include="ds_cmdline.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ds_labels.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

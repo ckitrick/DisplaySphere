@@ -14,7 +14,8 @@
 typedef struct {
 	float	r,
 			g,
-			b;
+			b,
+			a;
 } DS_COLOR;
 
 typedef struct {

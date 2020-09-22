@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2020 Christopher J Kitrick
+	Copyright (c) 2020 Christopher J Kitrick
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -32,6 +32,322 @@
 #include "ds_gua.h"
 
 //-----------------------------------------------------------------------------
+int ds_build_url(DS_CTX *ctx, char *url)
+//-----------------------------------------------------------------------------
+{
+	char	env[256], post_env[256], *src, *dst, c;
+	sprintf(env, "%%%s%%", PROGRAM_DATA_LOCATION);
+	//#define PROGRAM_DOCUMENTATION_URL		"file:///c:/Program%20Files%20(x86)/DisplaySphere/DisplaySphere%20Documentation%20v0-96.pdf"
+	sprintf(url, "file:///");
+	ds_filename_env_var(env, post_env);
+	src = post_env;
+	dst = url + strlen(url);
+	while (c = *src++)
+	{
+		if (c == ' ') { *dst++ = '%'; *dst++ = '2'; *dst++ = '0'; }
+		else if (c == '\\') *dst++ = '/';
+		else *dst++ = c;
+	}
+	*dst = 0;
+
+	src = PROGRAM_DOCUMENTATION;
+	dst = url + strlen(url);
+	while (c = *src++)
+	{
+		if (c == ' ') { *dst++ = '%'; *dst++ = '2'; *dst++ = '0'; }
+		else if (c == '\\') *dst++ = '/';
+		else *dst++ = c;
+	}
+	*dst = 0;
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+int ds_filename_env_var(char *original , char *modified)
+//-----------------------------------------------------------------------------
+{
+	// process a string and expand embedded environment variables: %env_var% 
+	char		c;
+	while (c = *original++)
+	{
+		if (c == '%')
+		{
+			char	buffer[512];
+			int		n = 0;
+			while (c = *original++)
+			{
+				if (c == '%')
+					break;
+				else
+					buffer[n++] = c;
+			}
+			if (n)
+			{
+				char		env[512], *cp;
+				buffer[n++] = 0;
+				if (n = GetEnvironmentVariable(buffer, env, 512))
+				{
+					cp = env;
+					while (c = *cp++)
+					{
+						*modified++ = c;
+					}
+				}
+				else
+				{
+					return 1; // error
+				}
+			}
+		}
+		else
+			*modified++ = c;
+	}
+	*modified = 0;
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+void ds_filename_split(char *name, int *array, int *count)
+//-----------------------------------------------------------------------------
+{
+	// split a path-filename into parts - this function changes the name string
+	int		i, j, flag, len;
+	*count = 0;
+	flag = 0;
+	len = strlen(name);
+	array[(*count)++] = 0;
+	for (i = 0; i < len; ++i)
+	{
+		if (name[i] == '\\' || name[i] == '/')
+		{
+			name[i] = 0;
+			flag = 1;
+		}
+		else if (flag)
+		{
+			array[(*count)++] = i;
+			flag = 0;
+		}
+	}
+
+	// clean up unneccessary pieces
+	for (i = *count - 1; i >= 0; --i)
+	{
+		if (!strcmp(&name[array[i]], "."))
+		{
+			if (i == (*count - 1))
+				--*count;
+			else
+			{
+				for (j = i + 1; j < (*count); ++j)
+				{
+					array[j - 1] = array[j];
+				}
+				--*count;
+			}
+		}
+		else if (!strcmp(&name[array[i]], ".."))
+		{
+			for (j = i + 1; j < (*count); ++j)
+			{
+				array[j - 2] = array[j];
+			}
+			*count -= 2;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+void ds_cd_relative_filename (DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char *newFilename)
+//-----------------------------------------------------------------------------
+{
+	// create new filename based on its relative location to the current directory path
+	// current directory path is from a environment variable (%ProgramData%)
+	int		i, j=0, k, l = 0;
+
+	if (ctx->relativeObjPathFlag)
+	{
+		int		min = exec->count;
+
+		if (min > object->count)
+			min = object->count;
+
+		for (i = j = 0; i < min; ++i, ++j)
+		{
+			if (stricmp(&exec->splitName[exec->word[i]], &object->splitName[object->word[i]]))
+				break;
+		}
+
+		if (j)
+		{
+//			strcpy(&newFilename[l], "%ProgramData%");
+//			strcpy(&newFilename[l], "%USERPROFILE%");
+			strcpy(&newFilename[l], "%PUBLIC%");
+			l += strlen(newFilename);
+
+			k = exec->count - j;
+			if (!k)
+			{
+				//			strcpy(&newFilename[l], "./");
+				//			l += 2; //strlen(newFilename[l])
+							strcpy(&newFilename[l], "/");
+							l += 1; //strlen(newFilename[l])
+			}
+			else
+			{
+				for (i = 0; i < k; ++i)
+				{
+//					strcpy(&newFilename[l], "../");
+//					l += 3;
+					strcpy(&newFilename[l], "/../");
+					l += 4;
+				}
+			}
+		}
+	}
+	for (i = j; i < object->count; ++i)
+	{
+		strcpy(&newFilename[l], &object->splitName[object->word[i]]);
+		l += strlen(&object->splitName[object->word[i]]);
+		if (i < object->count - 1)
+		{
+			strcpy(&newFilename[l], "/");
+			l += 1;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
+//-----------------------------------------------------------------------------
+{
+	// buffer is the input filename/path (may have imbedded env variable)
+	// either use what is provided or create one
+	if (!dsf)
+	{
+		if (!(dsf = (DS_FILE*)malloc(sizeof(DS_FILE))))
+			return dsf;
+	}
+	else
+	{
+		if (dsf->fullName)	free(dsf->fullName);
+		if (dsf->userName)	free(dsf->userName);
+		if (dsf->splitName) free(dsf->splitName);
+		if (dsf->word)		free(dsf->word);
+		if (dsf->fp)		fclose(dsf->fp);
+	}
+
+	int		i; // , j;
+	int		word[128];
+	char	string[512];
+
+	// initialize memory
+	dsf->fullName	= 0;
+	dsf->userName	= 0;
+	dsf->nameOnly	= 0;
+	dsf->word		= 0;
+	dsf->fp			= 0;
+	dsf->splitName	= 0;
+
+	// process any embedded environment variables 
+	ds_filename_env_var(buffer, string);
+
+	dsf->fullName  = (char*)malloc(strlen(string) + 1);
+	dsf->splitName = (char*)malloc(strlen(string) + 1);
+	strcpy(dsf->fullName, string);
+	strcpy(dsf->splitName, string);
+	ds_filename_split(dsf->splitName, word, &dsf->count);
+	if (pathFlag)
+	{
+		if ( dsf->count)
+			dsf->fullName[word[dsf->count-1]-1] = 0; // truncate the string
+		--dsf->count; // remove the name of the file to just get the path
+	}
+	if (dsf->count)
+	{
+		dsf->word = (int*)malloc(sizeof(int)*dsf->count);
+		for (i = 0; i < dsf->count; ++i)
+			dsf->word[i] = word[i];
+	}
+//	// make a copy of the fullName's path only
+//	for (i = 0, j = 0; i < dsf->count; ++i)
+//	{
+//		sprintf(&buffer[j], "%s", &dsf->splitName[dsf->word[i]]);
+//		j += strlen(&buffer[j]);
+//
+//		if (i < dsf->count - 1)
+//		{
+//			buffer[j++] = '/';
+//			buffer[j] = 0;
+//		}
+//	}
+	return dsf;
+}
+
+//-----------------------------------------------------------------------------
+DS_FILE *ds_file_open(DS_CTX *ctx, char *userName, char *mode)
+//-----------------------------------------------------------------------------
+{
+	FILE		*fp;
+	// standard interface to open file
+
+	if (!fopen_s(&fp, userName, mode))
+	{
+		char	fullName[512], *nameOnly;
+		DS_FILE	*dsf = (DS_FILE*)malloc(sizeof(DS_FILE));
+		int		word[128];
+		int		i;
+
+		if (!dsf)
+			return 0;
+
+		dsf->userName	= 0;
+		dsf->fullName	= 0;
+		dsf->nameOnly	= 0;
+		dsf->splitName	= 0;
+		dsf->fp			= fp;
+		dsf->userName = (char*)malloc(strlen(userName) + 1);
+		strcpy(dsf->userName, userName);
+		GetFullPathName(userName, 512, fullName, &nameOnly);
+		dsf->fullName = (char*)malloc(strlen(fullName) + 1);
+		dsf->splitName = (char*)malloc(strlen(fullName) + 1);
+		strcpy(dsf->fullName, fullName);
+		strcpy(dsf->splitName, fullName);
+		dsf->nameOnly = dsf->fullName + (nameOnly - fullName);
+		ds_filename_split(dsf->splitName, word, &dsf->count);
+		if (dsf->count)
+		{
+			dsf->word = (int*)malloc(sizeof(int)*dsf->count);
+			for (i = 0; i < dsf->count; ++i)
+				dsf->word[i] = word[i];
+		}
+		ds_build_dsf(&ctx->curDir, fullName, 1);
+		strcpy(ctx->currentDir, ctx->curDir.fullName);
+//		SetCurrentDirectory(ctx->curDir.fullName);
+		return dsf;
+	}
+	else
+		return 0;
+}
+
+//-----------------------------------------------------------------------------
+int ds_file_close(DS_CTX *ctx, DS_FILE *dsf)
+//-----------------------------------------------------------------------------
+{
+	if (!dsf)
+		return 1;
+
+	if (dsf->fp)		fclose(dsf->fp);
+	if (dsf->userName)	free(dsf->userName);
+	if (dsf->fullName)	free(dsf->fullName);
+	if (dsf->splitName)	free(dsf->splitName);
+	if (dsf->word)		free(dsf->word);
+	
+	free(dsf);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
 int ds_file_set_window_text(HWND hWnd, char *name)
 //-----------------------------------------------------------------------------
 {
@@ -53,30 +369,31 @@ int ds_file_type_initialization ( DS_CTX *ctx, char *filename )
 int ds_file_initialization( HWND hWnd, char *filename )
 //-----------------------------------------------------------------------------
 {
-	char		c, *p;
-	FILE		*fp;
+//	char		c, *p;
+//	FILE		*fp;
 	DS_CTX		*ctx;
-//	char	buffer[128], buf1[24], buf2[12];
+	DS_FILE		*dsf;
 
 	ctx = (DS_CTX*)GetWindowLong ( hWnd, GWL_USERDATA );
 
-	p = filename + ( strlen(filename ) - 1 );
-	while (c = *p--)
+	dsf = ds_file_open(ctx, filename, "r");
+
+	if (dsf)
 	{
-		if (c == '\\')
+		ds_file_set_window_text(hWnd, dsf->nameOnly);
+		if ( !ds_parse_file(ctx, dsf) )
+			ds_file_close(ctx, dsf); // free up the dsf
+		else
 		{
-			++p;
-			break;
+			fclose(dsf->fp); // close the file
+			dsf->fp = 0; // track the closure
 		}
 	}
-
-	fopen_s(&fp, filename, "r" );
-
-	if (fp)
+	else
 	{
-		ds_file_set_window_text(hWnd, p + 1);
-		ds_parse_file(ctx, fp, filename);
-		fclose(fp);
+		char buffer[128];
+		sprintf(buffer, "File <%s> failed to open.", filename);
+		MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
 	}
 
 	return 0;
@@ -87,15 +404,28 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 //-----------------------------------------------------------------------------
 {
 	RECT		before;
-	int			w, h;
+	int			w, h, stereoFlag = ctx->drawAdj.stereoFlag;
+	char		curArg[128], buffer[128];
 
 	GetWindowRect(ctx->mainWindow, &before);
 	w = before.right - before.left - WINDOW_SIZE_OFFSET_WIDTH;
 	h = before.bottom - before.top - WINDOW_SIZE_OFFSET_HEIGHT;
+	curArg[0] = 0;
 
-	if (ds_restore_state(ctx, filename))
+	ctx->errorInfo.count = 0;
+	if (ds_restore_state(ctx, filename, &ctx->errorInfo))
 	{
-		MessageBox(NULL, "State restoration contained errors.", 0, MB_OK);
+		int		i;
+		buffer[0] = 0;
+
+		strcat(buffer, "State restoration contained errors: <" );
+		for (i = 0; i < ctx->errorInfo.count; ++i)
+		{
+			strcat(buffer, ctx->errorInfo.text[i]);
+			strcat(buffer, ",");
+		}
+		strcat(buffer, ">");
+		MessageBox(NULL, buffer, "State Restoration", MB_OK);
 		return 1;
 	}
 	else
@@ -106,6 +436,9 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 			ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height);
 			MoveWindow(ctx->mainWindow, ctx->window.start_x, ctx->window.start_y, ctx->window.width + WINDOW_SIZE_OFFSET_WIDTH, ctx->window.height + WINDOW_SIZE_OFFSET_HEIGHT, 1); // fix size & position
 		}
+		else if (stereoFlag && !ctx->drawAdj.stereoFlag )
+			ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height);
+
 		if (ctx->window.toolsVisible)
 		{
 			if (!ctx->attrControl)
@@ -117,7 +450,6 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 			if (!ctx->objControl)
 			{
 				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_control);
-				//			ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG7), hWnd, DlgObjectControl5);
 				ShowWindow(ctx->objControl, SW_SHOW);
 				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
@@ -132,57 +464,88 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 //-----------------------------------------------------------------------------
 {
 	char			pFilter[] = "Geometry Data (*.off,*.spc)\0*.off;*.spc\0OFF Data (*.off)\0*.off;\0SPC Data (*.spc)\0*.spc;\0All Files (*.*)\0*.*\0\0";
-	char			cFilter[] = "Color Table Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0";
+	char			cFilter[] = "Color Table Files (*.dsc,*.txt)\0*.dsc\0All Files (*.*)\0*.*\0\0";
 	char			sFilter[] = "State Files (*.dss,*.txt)\0*.dss;*.txt\0All Files (*.*)\0*.*\0\0";
-	char			*p;
 	BOOL			bRes;
-	OPENFILENAME	ofn;
-	FILE			*fp;
+	OPENFILENAMEA	ofn;
 
-	ctx->filename[0]      = 0; // null terminate
-	ofn.lStructSize       = sizeof( OPENFILENAME );
-	ofn.hwndOwner         = hOwnerWnd;
-	ofn.hInstance         = 0; //hInstance;
-	ofn.lpstrFilter       = !type ? pFilter : ( type==1 ? cFilter : sFilter );
-	ofn.lpstrCustomFilter = 0;
-	ofn.nMaxCustFilter    = 0;
-	ofn.nFilterIndex      = 0;
-	ofn.lpstrFile         = ctx->filename;
-	ofn.nMaxFile          = _MAX_PATH;
-	ofn.lpstrFileTitle    = 0;
-	ofn.nMaxFileTitle     = _MAX_FNAME+_MAX_EXT;
-	ofn.lpstrInitialDir   = 0;
-	ofn.lpstrTitle        = 0;
-	ofn.Flags             = OFN_HIDEREADONLY | OFN_CREATEPROMPT;
-	ofn.nFileOffset       = 0;
-	ofn.nFileExtension    = 0;
-	ofn.lpstrDefExt       = "off";
-	ofn.lCustData         = 0L;
-	ofn.lpfnHook          = 0;
-	ofn.lpTemplateName    = 0;
+	ctx->filename[0] = 0; // null terminate
 
-	bRes = GetOpenFileName ( &ofn );
+	ofn.lStructSize			= sizeof(OPENFILENAMEA);
+	ofn.hwndOwner			= hOwnerWnd;
+	ofn.hInstance			= 0;
+	ofn.lpstrFilter			= !type ? pFilter : (type == 1 ? cFilter : sFilter);;
+	ofn.lpstrCustomFilter	= 0;
+	ofn.nMaxCustFilter		= 0;
+	ofn.nFilterIndex		= 0;
+	ofn.lpstrFile			= ctx->filename;
+	ofn.nMaxFile			= _MAX_PATH;
+	ofn.lpstrFileTitle		= 0;
+	ofn.nMaxFileTitle		= _MAX_FNAME + _MAX_EXT;
+	ofn.lpstrInitialDir		= ctx->currentDir;
+	ofn.lpstrTitle			= 0;
+	ofn.Flags				= OFN_HIDEREADONLY | OFN_CREATEPROMPT;
+	ofn.nFileOffset			= 0;
+	ofn.nFileExtension		= 0;
+	ofn.lpstrDefExt			= "off";
+	ofn.lCustData			= 0;
+	ofn.lpfnHook			= 0;
+	ofn.lpTemplateName		= 0;
+//	ofn.lpEditInfo			= 0;
+//	ofn.lpstrPrompt			= 0;
+	ofn.pvReserved			= 0;
+	ofn.dwReserved			= 0;
+	ofn.FlagsEx				= 0;
+
+//	ofn.lStructSize       = sizeof( OPENFILENAME );
+//	ofn.hwndOwner         = hOwnerWnd;
+//	ofn.hInstance         = 0; //hInstance;
+//	ofn.lpstrFilter       = !type ? pFilter : ( type==1 ? cFilter : sFilter );
+//	ofn.lpstrCustomFilter = 0;
+//	ofn.nMaxCustFilter    = 0;
+//	ofn.nFilterIndex      = 0;
+//	ofn.lpstrFile         = ctx->filename;
+//	ofn.nMaxFile          = _MAX_PATH;
+//	ofn.lpstrFileTitle    = 0;
+//	ofn.nMaxFileTitle     = _MAX_FNAME+_MAX_EXT;
+//	ofn.lpstrInitialDir	  = ctx->currentDir; // ctx->curWorkingDir;
+//	ofn.lpstrTitle        = 0;
+//	ofn.Flags             = OFN_HIDEREADONLY | OFN_CREATEPROMPT;
+//	ofn.nFileOffset       = 0;
+//	ofn.nFileExtension    = 0;
+//	ofn.lpstrDefExt       = "off";
+//	ofn.lCustData         = 0L;
+//	ofn.lpfnHook          = 0;
+//	ofn.lpTemplateName    = 0;
+
+	bRes = GetOpenFileNameA ( &ofn );
 	if (!bRes)
 		return 0; // no file selected 
 
+	GetCurrentDirectory(512, ctx->currentDir); // update
+
 	if (!type) // geometry file
 	{
-		p = ctx->filename + (strlen(ctx->filename) - 1);
-		while (*p != '\\')
-		{
-			--p;
-		}
-		ds_file_set_window_text(hOwnerWnd, p + 1);
+		DS_FILE		*dsf;
 
-
-		// repeat
-		fopen_s(&fp,ctx->filename, "r");
-		if (fp)
+		if (dsf = ds_file_open(ctx, ctx->filename, "r"))
 		{
-			ds_file_type_initialization(ctx, p + 1);
-			ds_parse_file(ctx, fp, ctx->filename);
+			ds_file_set_window_text(hOwnerWnd, dsf->nameOnly);
+			ds_file_type_initialization(ctx, dsf->nameOnly);
+			if (!ds_parse_file(ctx, dsf))
+				ds_file_close(ctx, dsf);
+			else
+			{
+				fclose(dsf->fp);// ds_file_close(ctx, dsf);
+				dsf->fp = 0;
+			}
 		}
-		fclose(fp);
+		else
+		{
+			char buffer[128];
+			sprintf(buffer, "File <%s> failed to open.", ctx->filename);
+			MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+		}
 	}
 	else if (type == 1) // color tables 
 	{
@@ -202,50 +565,59 @@ int ds_write_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 {
 	char			sFilter[] = "State Files (*.dss)\0*.dss\0All Files (*.*)\0*.*\0\0";
 	OPENFILENAME	ofn;
+	BOOL			bRes;
 
-	ctx->filename[0] = 0; // null terminate
-	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = hOwnerWnd;
-	ofn.hInstance = 0; //hInstance;
-	ofn.lpstrFilter = sFilter; // !type ? pFilter : (itype == 1 ? cFilter : sFilter);
-	ofn.lpstrCustomFilter = 0;
-	ofn.nMaxCustFilter = 0;
-	ofn.nFilterIndex = 0;
-	ofn.lpstrFile = ctx->filename;
-	ofn.nMaxFile = _MAX_PATH;
-	ofn.lpstrFileTitle = 0;
-	ofn.nMaxFileTitle = _MAX_FNAME + _MAX_EXT;
-	ofn.lpstrInitialDir = 0;
-	ofn.lpstrTitle = 0;
-	ofn.Flags = OFN_HIDEREADONLY | OFN_CREATEPROMPT;
-	ofn.nFileOffset = 0;
-	ofn.nFileExtension = 0;
-	ofn.lpstrDefExt = "off";
-	ofn.lCustData = 0L;
-	ofn.lpfnHook = 0;
-	ofn.lpTemplateName = 0;
+	ctx->filename[0]		= 0; // null terminate
+	ofn.lStructSize			= sizeof(OPENFILENAME);
+	ofn.hwndOwner			= hOwnerWnd;
+	ofn.hInstance			= 0; //hInstance;
+	ofn.lpstrFilter			= sFilter; // !type ? pFilter : (itype == 1 ? cFilter : sFilter);
+	ofn.lpstrCustomFilter	= 0;
+	ofn.nMaxCustFilter		= 0;
+	ofn.nFilterIndex		= 0;
+	ofn.lpstrFile			= ctx->filename;
+	ofn.nMaxFile			= _MAX_PATH;
+	ofn.lpstrFileTitle		= 0;
+	ofn.nMaxFileTitle		= _MAX_FNAME + _MAX_EXT;
+	ofn.lpstrInitialDir		= ctx->currentDir;
+	ofn.lpstrTitle			= 0;
+	ofn.Flags				= OFN_HIDEREADONLY | OFN_CREATEPROMPT;
+	ofn.nFileOffset			= 0;
+	ofn.nFileExtension		= 0;
+	ofn.lpstrDefExt			= "off";
+	ofn.lCustData			= 0L;
+	ofn.lpfnHook			= 0;
+	ofn.lpTemplateName		= 0;
 
-	return GetSaveFileName(&ofn);
+	if( bRes = GetSaveFileName(&ofn))
+		GetCurrentDirectory(512,ctx->currentDir); // update
+	
+	return bRes;
 }
 
 //-----------------------------------------------------------------------------
 int ds_read_file_from_buffer (DS_CTX *ctx)
 //-----------------------------------------------------------------------------
 {
-	FILE	*fp;
+//	FILE	*fp;
+	DS_FILE	*dsf;
 
-	if ( !strlen ( ctx->filename ) )
-		return 1;
-
-	fopen_s(&fp, ctx->filename, "r");
-	if (fp)
+	if (dsf = ds_file_open(ctx, ctx->filename, "r"))
 	{
-		ds_parse_file(ctx, fp, ctx->filename);
-		fclose(fp);
+		if (ds_parse_file(ctx, dsf))
+		{
+			fclose(dsf->fp);
+			dsf->fp = 0;
+		}
+		else 
+			ds_file_close(ctx, dsf);
 	}
 	else
-		MessageBox(NULL, "File read failed.", 0, MB_OK);
-
+	{
+		char buffer[128];
+		sprintf(buffer, "File <%s> failed to open.", ctx->filename);
+		MessageBox(ctx->mainWindow, buffer, "File Open Failure", MB_OK);
+	}
 	return 0;
 }
 
@@ -299,7 +671,7 @@ DS_GEO_OBJECT *ds_geo_object_find(DS_CTX *ctx, char *filename)
 }
 
 //-----------------------------------------------------------------------------
-DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
+DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename)
 //-----------------------------------------------------------------------------
 {
 	// initialize a geometric object
@@ -330,9 +702,12 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
 	gobj->cAttr		= ctx->defInputObj.cAttr;
 	gobj->vAttr		= ctx->defInputObj.vAttr;
 	gobj->rAttr		= ctx->defInputObj.rAttr; 
+	gobj->tAttr		= ctx->defInputObj.tAttr;
+	gobj->lFlags	= ctx->defInputObj.lFlags;
 
-	gobj->filename = malloc(strlen(filename) + 1);
-	strcpy(gobj->filename, filename);
+	gobj->filename = malloc(strlen(dsf->nameOnly) + 1);
+	strcpy(gobj->filename, dsf->nameOnly);
+	gobj->dsf		= dsf;
 
 	if (!ctx->gobjAddFlag) // remove all the previous geometry
 	{
@@ -346,6 +721,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
 			lgobj->tri		? free(lgobj->tri)		: 0;
 			lgobj->edge		? free(lgobj->edge)		: 0;
 			lgobj->vIndex   ? free(lgobj->vIndex)   : 0;
+			ds_file_close(ctx, lgobj->dsf);
 			lgobj			? free ( lgobj )		: 0; // free self
 		}
 	}
@@ -356,7 +732,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, char *filename)
 }
 
 //-----------------------------------------------------------------------------
-DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, FILE *fp, char *filename)
+DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf)
 //-----------------------------------------------------------------------------
 {
 	void			*gua;
@@ -370,7 +746,7 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, FILE *fp, char *filename)
 	};
 
 	// atempt to read OFF format first 
-	fileType = gua_off_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+	fileType = gua_off_read(ctx, (void*)&gua, dsf->fp, (float*)&ctx->clrCtl.face.defaultColor);
 
 	switch (fileType) {
 	case FILE_OFF:
@@ -380,35 +756,37 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, FILE *fp, char *filename)
 		if (ctx->inputTrans.guaFlag)
 		{
 			guaFlag = 1;// normal GUA data created
-			gua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+			gua_spc_read(ctx, (void*)&gua, dsf->fp, (float*)&ctx->clrCtl.face.defaultColor);
 		}
 		else
 		{	// NGUA data created
-			ngua_spc_read(ctx, (void*)&gua, fp, (float*)&ctx->clrCtl.triangle.defaultColor);
+			ngua_spc_read(ctx, (void*)&gua, dsf->fp, (float*)&ctx->clrCtl.face.defaultColor);
 		}
 	}
 
-	geo = ds_geo_object_create(ctx, filename); // create, initialize, and add to queue
-	if (guaFlag && ctx->inputTrans.guaResultsFlag)
+	if (geo = ds_geo_object_create(ctx, dsf)) // create, initialize, and add to queue
 	{
+		if (guaFlag && ctx->inputTrans.guaResultsFlag)
+		{
 
-		int			i, n = 0;
-		char		buffer[512];
-		n = strlen(filename);
-		for (i = n - 1; i >= 0; --i)
-			if (filename[i] == '.')
-			{
-				sprintf(buffer, "%.*s-unique.txt", i, filename);
-				break;
-			}
-		if (!i)
-			sprintf(buffer, "%s-unique.txt", filename);
-		gua_dump(ctx, gua, filename, buffer);
+			int			i, n = 0;
+			char		buffer[512];
+			n = strlen(dsf->fullName);
+			for (i = n - 1; i >= 0; --i)
+				if (dsf->fullName[i] == '.')
+				{
+					sprintf(buffer, "%.*s.dsu", i, dsf->fullName);
+					break;
+				}
+			if (!i)
+				sprintf(buffer, "%s.dsu", dsf->fullName);
+			gua_dump(ctx, gua, dsf->nameOnly, buffer);
+		}
+		if (guaFlag)
+			gua_convert_to_object(ctx, gua, geo);
+		else
+			ngua_convert_to_object(ctx, gua, geo);
 	}
-	if ( guaFlag)
-		gua_convert_to_object(ctx, gua, geo);
-	else
-		ngua_convert_to_object(ctx, gua, geo);
 
 	return geo;
 }
