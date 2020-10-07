@@ -36,6 +36,7 @@
 #include "ds_cmdline_lib.h"
 
 enum OPTION { // need to be in the same order as the options
+	OP_ACTIVE,
 	OP_AXIS,
 	OP_AXIS_LABEL,
 	OP_CAPTURE_DIRECTORY,
@@ -149,6 +150,7 @@ ARGUMENT_SET	set_orientation[] = {
 };
 
 ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
+	"-active",				"-act",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set current object to be active",
 	"-axis",				"-ax",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable axis",
 	"-axis_label",			"-axl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display axis labels",
 	"-capture_directory",	"-capd",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set capture directory",
@@ -221,6 +223,7 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 };
 
 ARGUMENT_SUBSTITUTE arg_main_substitute[]={
+/*	OP_CLR_BACKGROUND,		*/  "-act",			"-act",
 /*	OP_CLR_BACKGROUND,		*/  "-ax",			"-axis",
 /*	OP_CLR_BACKGROUND,		*/  "-axl",			"-axis_label",
 /*	OP_CD,					*/  "-capd",		"-capture_directory",
@@ -330,6 +333,7 @@ int ds_filename_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 	arg_main[OP_CLR_F_SET].addr		= (void*)&ctx->curInputObj->cAttr.face.color;
 	arg_main[OP_CLR_V_SET].addr		= (void*)&ctx->curInputObj->cAttr.vertex.color;
 	arg_main[OP_EDGE_PARAM].addr	= (void*)&ctx->curInputObj->eAttr.width;
+	arg_main[OP_ACTIVE].addr		= (void*)&ctx->curInputObj->active;
 	arg_main[OP_INACTIVE].addr		= (void*)&ctx->curInputObj->active;
 	arg_main[OP_VERTEX_SCALE].addr	= (void*)&ctx->curInputObj->vAttr.scale;
 	arg_main[OP_CLR_T_ON].addr		= (void*)&ctx->curInputObj->tAttr.onFlag;
@@ -986,6 +990,7 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_CLR_F_USE].addr		= (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
 	arg[OP_CLR_F_USE].data		= (void*)ctx;
 
+	arg[OP_ACTIVE].addr			= (void*)&ctx->defInputObj.active; //&gio->active;
 	arg[OP_INACTIVE].addr		= (void*)&ctx->defInputObj.active; //&gio->active;
 
 	arg[OP_LABEL_EDGE_ON].addr    = (void*)&ctx->defInputObj.lFlags.edge;				// need to set index & flag correctly afterwards
@@ -1077,12 +1082,16 @@ int ds_save_object_state(DS_CTX *ctx, FILE *fp, DS_GEO_OBJECT *gobj)
 		fprintf(fp, "# Default object settings\n");
 	}
 	if (!gobj->active) fprintf(fp, "-inactive\n");
+	else fprintf(fp, "-active\n");
 
-	fprintf(fp, "-draw ");
-	if (gobj->drawWhat & GEOMETRY_DRAW_TRIANGLES	) fprintf(fp, "f" );
-	if (gobj->drawWhat & GEOMETRY_DRAW_EDGES 		) fprintf(fp, "e" );
-	if (gobj->drawWhat & GEOMETRY_DRAW_VERTICES		) fprintf(fp, "v" );
-	fprintf(fp, "\n");
+	if (gobj->drawWhat != GEOMETRY_DRAW_NONE)
+	{
+		fprintf(fp, "-draw ");
+		if (gobj->drawWhat & GEOMETRY_DRAW_TRIANGLES) fprintf(fp, "f");
+		if (gobj->drawWhat & GEOMETRY_DRAW_EDGES)     fprintf(fp, "e");
+		if (gobj->drawWhat & GEOMETRY_DRAW_VERTICES)  fprintf(fp, "v");
+		fprintf(fp, "\n");
+	}
 
 	fprintf(fp, "-clr_f_use ");
 	switch(gobj->cAttr.face.state) {

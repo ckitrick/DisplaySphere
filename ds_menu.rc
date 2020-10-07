@@ -76,7 +76,7 @@ END
 // Dialog
 //
 
-IDD_DIALOG2 DIALOGEX 0, 0, 192, 360
+IDD_DIALOG2 DIALOGEX 0, 0, 215, 384
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "Keyboard Toggle Options"
@@ -98,12 +98,13 @@ BEGIN
     LTEXT           "-/+ Move z clip position",IDC_STATIC19,12,297,159,13
     LTEXT           "0 - (zero) draw circle around verts when (r != 1)",IDC_STATIC20,12,265,164,13
     LTEXT           "w - open attribute control window",IDC_STATIC21,12,233,159,13
-    LTEXT           "Arrow keys rotate X and Y axii",IDC_STATIC22,12,313,159,13
-    LTEXT           "Page up/down rotate Z axis",IDC_STATIC23,12,329,132,13
+    LTEXT           "Arrow keys rotate X (left/right) and Y (up/down) axii",IDC_STATIC22,12,313,186,13
+    LTEXT           "Page up/down rotate Z axis",IDC_STATIC23,12,346,132,13
     LTEXT           "e - open object control",IDC_STATIC24,12,57,118,13
     LTEXT           "h - high resolution",IDC_STATIC14,12,105,133,13
-    LTEXT           "esc - quit program",IDC_STATIC25,12,345,132,13
+    LTEXT           "Arrow keys (up/down) with SHIFT key does Z translation",IDC_STATIC25,12,329,186,13
     LTEXT           "k - keyboard toggles",IDC_STATIC13,12,137,159,13
+    LTEXT           "esc - quit program",IDC_STATIC26,12,363,132,13
 END
 
 IDD_DIALOG5 DIALOGEX 0, 0, 329, 312
@@ -298,8 +299,8 @@ BEGIN
     IDD_DIALOG2, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 185
-        BOTTOMMARGIN, 359
+        RIGHTMARGIN, 208
+        BOTTOMMARGIN, 383
     END
 
     IDD_DIALOG5, DIALOG

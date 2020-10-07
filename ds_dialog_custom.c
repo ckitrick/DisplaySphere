@@ -407,16 +407,16 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		break;
 
 	case WM_COMMAND:
-		switch (wParam)
-		{
-		case IDOK:
-			ctx->objControl = 0;
-			DestroyWindow(hWndDlg);
-
-		case IDCANCEL:
-			ctx->objControl = 0;
-			DestroyWindow(hWndDlg);
-		}
+//		switch (wParam)
+//		{
+//		case IDOK:
+//			ctx->objControl = 0;
+//			DestroyWindow(hWndDlg);
+//
+//		case IDCANCEL:
+//			ctx->objControl = 0;
+//			DestroyWindow(hWndDlg);
+//		}
 
 		control   = LOWORD(wParam); // the specific control that triggered the event
 		category  = control / 100;	// control category
@@ -504,13 +504,12 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		break;
 
 	case WM_DESTROY:
-		DestroyWindow(hWndDlg);
-		ctx->objControl = 0;
-		break;
-
 	case WM_CLOSE:
-		DestroyWindow(hWndDlg);
-		ctx->objControl = 0;
+		if (ctx->objControl)
+		{
+			DestroyWindow(hWndDlg);
+			ctx->objControl = 0;
+		}
 		break;
 
 	case WM_DRAWITEM: // owner drawn 

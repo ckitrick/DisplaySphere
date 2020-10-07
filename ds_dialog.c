@@ -123,13 +123,12 @@ LRESULT CALLBACK ds_dlg_kbd_toggles(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARA
 		break;
 
 	case WM_DESTROY:
-		ctx->kbdToggle = 0;
-		EndDialog(hWndDlg, 0);
-		break;
-
 	case WM_CLOSE:
-		ctx->kbdToggle = 0;
-		EndDialog(hWndDlg, 0);
+		if (ctx->kbdToggle)
+		{
+			ctx->kbdToggle = 0;
+			EndDialog(hWndDlg, 0);
+		}
 		break;
 	}
 
@@ -750,13 +749,12 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		break;
 
 	case WM_DESTROY:
-		ctx->attrControl = 0;
-		DestroyWindow(hWndDlg);
-		break;
-
 	case WM_CLOSE:
-		ctx->attrControl = 0;
-		DestroyWindow(hWndDlg);
+		if (ctx->attrControl)
+		{
+			ctx->attrControl = 0;
+			DestroyWindow(hWndDlg);
+		}
 		break;
 	}
 
@@ -941,18 +939,13 @@ LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wPara
 		break;
 
 	case WM_QUIT:
-		ctx->objInfo = 0;
-		DestroyWindow(hWndDlg);
-		break;
-
 	case WM_DESTROY:
-		ctx->objInfo = 0;
-		DestroyWindow(hWndDlg);
-		break;
-
 	case WM_CLOSE:
-		ctx->objInfo = 0;
-		DestroyWindow(hWndDlg);
+		if (ctx->objInfo)
+		{
+			ctx->objInfo = 0;
+			DestroyWindow(hWndDlg);
+		}
 		break;
 	}
 

@@ -478,8 +478,22 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		switch (wParam) {
 		case VK_LEFT:		ds_update3(ctx, -1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
 		case VK_RIGHT:		ds_update3(ctx, 1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
-		case VK_UP:			ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0); break;
-		case VK_DOWN:		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+
+//		case VK_UP:			ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0); break;
+//		case VK_DOWN:		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_UP:		
+			if (GetKeyState(VK_SHIFT) & 0x1000) // check high order bit to see if key is down
+				ds_update2(ctx, 3, 1, 0, 0);
+			else 
+				ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0);
+			break;
+		case VK_DOWN://		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+			if (GetKeyState(VK_SHIFT) & 0x1000) // check high order bit to see if key is down
+				ds_update2(ctx, 3, -1, 0, 0);
+			else
+				ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0);
+			break;
+
 		case VK_PRIOR:		ds_update3(ctx, 0, 0, 1); InvalidateRect(hWnd, 0, 0); break;
 		case VK_NEXT:		ds_update3(ctx, 0, 0, -1); InvalidateRect(hWnd, 0, 0); break;
 		case 'O':
@@ -1276,7 +1290,7 @@ int ds_capture_image(HWND hWnd)
 		n = w * h;
 		for (i = 0; i < n; ++i)
 		{
-			gray = (int)(*r * 0.3 + *g * 0.58 + *b * 0.11);
+			gray = (int)(*r * 0.3 + *g * 0.59 + *b * 0.11);
 			*r = *b = *g = gray;
 			r += 4;
 			g += 4;

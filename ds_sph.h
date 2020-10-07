@@ -13,7 +13,7 @@
 
 #define PROGRAM_NAME					"DisplaySphere" 
 #define PROGRAM_VERSION_MAJOR			0	 
-#define PROGRAM_VERSION_MINOR			98 
+#define PROGRAM_VERSION_MINOR			985 
 #define PROGRAM_EXE_LOCATION			"ProgramFiles(x86)" // environment variable
 //#define PROGRAM_DATA_LOCATION			"USERPROFILE"		// sample data location
 #define PROGRAM_DATA_LOCATION			"PUBLIC"			// sample data location
