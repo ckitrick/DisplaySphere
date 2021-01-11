@@ -27,261 +27,223 @@
 #include <geoutil.h>
 #include <matrix.h>
 #include <link.h>
-#include <avl_new.h>
 #include "ds_color.h"
 #include "ds_sph.h"
 #include "ds_file.h"
 
-typedef unsigned int IHCOLOR;
+typedef struct {
+	unsigned char	r, g, b;
+} HCOLOR;
 
-static IHCOLOR ihclr004[4] = { 0xdec964, 0xdbb1cf, 0x90e168, 0x99d8c8};
-static IHCOLOR ihclr008[8] = { 
-0xa2c8e3,
-0xceda4b,
-0xe7a5dd,
-0x7ae263,
-0xe6bba7,
-0x70e1c3,
-0xe8b558,
-0xbbd89c,
+static HCOLOR hclr008[8] = {
+0xff, 0xb3, 0x62,
+0x00, 0x39, 0xb1,
+0x01, 0xc0, 0x80,
+0xef, 0x00, 0x20,
+0x52, 0x7f, 0xff,
+0x9c, 0x00, 0x5e,
+0xcb, 0xad, 0xff,
+0x00, 0x2d, 0x61,
 };
-static IHCOLOR ihclr012[12] = { 0x7bdea1,
-0xdea6e4,
-0xa6e43d,
-0x81c7eb,
-0xe2ca39,
-0xe1b8c7,
-0x63e368,
-0xeeab7a,
-0x83ded0,
-0xb8dc6c,
-0xc1d1cc,
-0xd2d18e,
-};
-static IHCOLOR ihclr016[16] = { 0xaed6c2,
-0xc7e235,
-0xeb9de3,
-0x70e45a,
-0xc0b6eb,
-0xe7c135,
-0x75c3f2,
-0xb5dc68,
-0xe5b3c6,
-0x68e1a1,
-0xf1a66d,
-0x5fdfd9,
-0xdccc6e,
-0xa4cee2,
-0xbcd899,
-0xe1c3a5,
-};
-static IHCOLOR ihclr024[24] = { 0x5eead9,
-0xf993d2,
-0x6ae459,
-0xdcaae8,
-0xacdf42,
-0x9ab5f1,
-0xdeda31,
-0x77cdef,
-0xe9b346,
-0x59d5de,
-0xf49f89,
-0x56e5a1,
-0xe7bac2,
-0xa3e078,
-0xbebfdd,
-0xd4d363,
-0xbde6e8,
-0xe7be88,
-0x89dbac,
-0xcad58d,
-0x93c7c1,
-0x99da90,
-0xb4c0a0,
-0xd8e7c5,
-};
-static IHCOLOR ihclr032[32] = { 0xe3bfd0,
-0x64e74e,
-0xe29cf1,
-0xc3eb3f,
-0x83acf3,
-0xdcd733,
-0xeda2d8,
-0x90db51,
-0xc4b6eb,
-0xecba38,
-0x5bcfeb,
-0xd4d357,
-0x92c5f0,
-0xa9c554,
-0xf59ba9,
-0x61e385,
-0xacafcb,
-0xcfeb89,
-0xcfd3ee,
-0x4fe7ae,
-0xf0ab70,
-0x59e1d7,
-0xdecd76,
-0xaedade,
-0x9ada89,
-0xe5b6a5,
-0x87d9aa,
-0xdad8bf,
-0xadebd6,
-0xb9bf8b,
-0x99beac,
-0xdce7b0,
 
+static HCOLOR hclr016[16] = {
+0xf6, 0xa5, 0x00,
+0x5e, 0x00, 0xb8,
+0x4a, 0xe0, 0x82,
+0xff, 0x4f, 0xe8,
+0x67, 0x9d, 0x00,
+0x5f, 0x8d, 0xff,
+0x00, 0x74, 0x34,
+0xed, 0x00, 0x59,
+0x01, 0xa6, 0xd0,
+0x51, 0x4f, 0x00,
+0x01, 0x33, 0x85,
+0xfc, 0xb4, 0xaf,
+0x45, 0x09, 0x4a,
+0xd6, 0xbd, 0xe6,
+0x71, 0x47, 0x55,
+0xff, 0xa9, 0xd3,
 };
-static IHCOLOR ihclr064[64] = { 0xc7ce42,
-0x4a1ac6,
-0x34db25,
-0x9118d1,
-0x9dd81d,
-0x5965ff,
-0x01b235,
-0xab009b,
-0x98b400,
-0x0034af,
-0xffaa17,
-0x350073,
-0x8bd973,
-0x0173e5,
-0xf30006,
-0x20e0a1,
-0xdd005f,
-0x00984b,
-0xb38cff,
-0x2e8500,
-0xdb9aff,
-0x858f00,
-0xffa1fa,
-0x5d7900,
-0xff86d2,
-0x284e00,
-0x67005a,
-0xe4c44e,
-0x1d1d5c,
-0xc19700,
-0x00346d,
-0xff732a,
-0x22c2ff,
-0xb6001b,
-0x009d79,
-0xa50056,
-0xb4d178,
-0x3f1342,
-0xdbc671,
-0x003257,
-0xff7b3f,
-0x93b7ff,
-0xb54000,
-0x8dcfea,
-0x712900,
-0x009792,
-0xff748d,
-0x00360d,
-0xff8e5a,
-0x00542d,
-0xd2bdef,
-0x9b5900,
-0x4f052e,
-0xfeb86f,
-0x67001d,
-0xd3c696,
-0x431a05,
-0xf3b5cb,
-0x644e00,
-0xffa285,
-0x535d3c,
-0x8a6700,
-0x929e7a,
-0x93745b,
+
+static HCOLOR hclr032[32] = {
+0xff, 0xb7, 0x75,
+0x2d, 0x00, 0x96,
+0xec, 0xc2, 0x2b,
+0xb8, 0x2d, 0xe3,
+0x00, 0x77, 0x12,
+0xc5, 0x71, 0xff,
+0x8f, 0x88, 0x00,
+0x01, 0x41, 0xc7,
+0xff, 0x21, 0x15,
+0x27, 0x88, 0xff,
+0xb8, 0x57, 0x00,
+0x00, 0xca, 0xf5,
+0xfd, 0x00, 0x60,
+0x01, 0xc2, 0xbf,
+0xff, 0x11, 0x89,
+0x7c, 0xda, 0x97,
+0x42, 0x04, 0x56,
+0x63, 0x56, 0x00,
+0xff, 0x77, 0xde,
+0x2c, 0x3d, 0x00,
+0xd9, 0x9d, 0xff,
+0x3d, 0x1f, 0x07,
+0xa4, 0xc5, 0xff,
+0xb5, 0x00, 0x24,
+0x00, 0x7e, 0x6e,
+0xff, 0x65, 0x63,
+0x01, 0x7d, 0xb2,
+0x50, 0x06, 0x1c,
+0xe3, 0xb6, 0xf6,
+0x00, 0x47, 0x86,
+0xcd, 0xa9, 0x90,
+0xff, 0xac, 0xc9,
 };
+
+static HCOLOR hclr064[64] = {
+0xc7, 0xce, 0x42,
+0x4a, 0x1a, 0xc6,
+0x34, 0xdb, 0x25,
+0x91, 0x18, 0xd1,
+0x9d, 0xd8, 0x1d,
+0x59, 0x65, 0xff,
+0x01, 0xb2, 0x35,
+0xab, 0x00, 0x9b,
+0x98, 0xb4, 0x00,
+0x00, 0x34, 0xaf,
+0xff, 0xaa, 0x17,
+0x35, 0x00, 0x73,
+0x8b, 0xd9, 0x73,
+0x01, 0x73, 0xe5,
+0xf3, 0x00, 0x06,
+0x20, 0xe0, 0xa1,
+0xdd, 0x00, 0x5f,
+0x00, 0x98, 0x4b,
+0xb3, 0x8c, 0xff,
+0x2e, 0x85, 0x00,
+0xdb, 0x9a, 0xff,
+0x85, 0x8f, 0x00,
+0xff, 0xa1, 0xfa,
+0x5d, 0x79, 0x00,
+0xff, 0x86, 0xd2,
+0x28, 0x4e, 0x00,
+0x67, 0x00, 0x5a,
+0xe4, 0xc4, 0x4e,
+0x1d, 0x1d, 0x5c,
+0xc1, 0x97, 0x00,
+0x00, 0x34, 0x6d,
+0xff, 0x73, 0x2a,
+0x22, 0xc2, 0xff,
+0xb6, 0x00, 0x1b,
+0x00, 0x9d, 0x79,
+0xa5, 0x00, 0x56,
+0xb4, 0xd1, 0x78,
+0x3f, 0x13, 0x42,
+0xdb, 0xc6, 0x71,
+0x00, 0x32, 0x57,
+0xff, 0x7b, 0x3f,
+0x93, 0xb7, 0xff,
+0xb5, 0x40, 0x00,
+0x8d, 0xcf, 0xea,
+0x71, 0x29, 0x00,
+0x00, 0x97, 0x92,
+0xff, 0x74, 0x8d,
+0x00, 0x36, 0x0d,
+0xff, 0x8e, 0x5a,
+0x00, 0x54, 0x2d,
+0xd2, 0xbd, 0xef,
+0x9b, 0x59, 0x00,
+0x4f, 0x05, 0x2e,
+0xfe, 0xb8, 0x6f,
+0x67, 0x00, 0x1d,
+0xd3, 0xc6, 0x96,
+0x43, 0x1a, 0x05,
+0xf3, 0xb5, 0xcb,
+0x64, 0x4e, 0x00,
+0xff, 0xa2, 0x85,
+0x53, 0x5d, 0x3c,
+0x8a, 0x67, 0x00,
+0x92, 0x9e, 0x7a,
+0x93, 0x74, 0x5b,
+};
+
+static DS_COLOR c008[8];
+static DS_COLOR c016[16];
+static DS_COLOR c032[32];
+static DS_COLOR c064[64];
 
 //--------------------------------------------------------------------------------
-static int compare(void *passThru, void *av, void *bv)
+static int compare(GUA_DB *db, void *av, void *bv)
 //--------------------------------------------------------------------------------
 {
-	int		diff = ((DS_COLOR_TABLE*)av)->nColors - ((DS_COLOR_TABLE*)bv)->nColors;
+	GUA_VDATA *a = (GUA_VDATA*)av, *b = (GUA_VDATA*)bv;
+	double	diff;
+	db->nCmp++;
+	diff = a->p.x - b->p.x;
+	if (fabs(diff) > db->zero) // unique
+		return diff > 0.0 ? 1 : -1; // done - point will inserted into xyz tree
 
-	if (!diff)
-		((DS_COLOR_TABLE_SET*)passThru)->match = av; // save existing match
+	diff = a->p.y - b->p.y;
+	if (fabs(diff) > db->zero) // unique
+		return diff > 0.0 ? 1 : -1; // done - point will inserted into xyz tree
 
-	return diff;
-}
+	diff = a->p.z - b->p.z;
+	if (fabs(diff) > db->zero) // unique
+		return diff > 0.0 ? 1 : -1; // done - point will inserted into xyz tree
 
-//--------------------------------------------------------------------------------
-static int compare2(void *passThru, void *userdata)
-//--------------------------------------------------------------------------------
-{
-	if (((DS_COLOR_TABLE*)userdata)->nColors >= ((DS_COLOR_TABLE_SET*)passThru)->nColors)
-	{
-		((DS_COLOR_TABLE_SET*)passThru)->match = (DS_COLOR_TABLE*)userdata;
-		return 1; // stop traversal
-	}
-	else
-	{
-		((DS_COLOR_TABLE_SET*)passThru)->match = (DS_COLOR_TABLE*)userdata; // will end up with largest table
-		return 0;
-	}
-}
-
-//--------------------------------------------------------------------------------
-static int output_table (void *passThru, void *userdata)
-//--------------------------------------------------------------------------------
-{
-	DS_COLOR_TABLE_SET	*cts = (DS_COLOR_TABLE_SET*)passThru;
-	DS_COLOR_TABLE		*ct = (DS_COLOR_TABLE*)userdata;
-	int					i;
-
-	fprintf(cts->fp, "\n// %d entry\n", ct->nColors);
-	for (i = 0; i < ct->nColors; ++i)
-	{
-		// write color
-		fprintf(cts->fp, "#%02x%02x%02x\n", (int)(ct->color[i].r * 255), (int)(ct->color[i].g * 255), (int)(ct->color[i].b * 255));
-	}
+	db->p = (void*)a; // save the matching node
 	return 0;
 }
 
-//--------------------------------------------------------------------------------
-static int process(DS_COLOR_TABLE_SET *cts, DS_COLOR_TABLE *ct, IHCOLOR *array, int length)
-//--------------------------------------------------------------------------------
-{
-	int		i;
-	for (i = 0; i < length; ++i)
-	{
-		ct->color[i].r = (float)(((array[i] >> 16) & 0xff) / 255.0);
-		ct->color[i].g = (float)(((array[i] >>  8) & 0xff) / 255.0);
-		ct->color[i].b = (float)(((array[i] >>  0) & 0xff) / 255.0);
-		ct->color[i].a = (float)1.0;
-	}
-	ct->nColors = length;
-	ds_ctbl_add_color_table(cts, ct);
-	return 0;
-}
 
 //--------------------------------------------------------------------------------
 void ds_clr_default_color_tables(DS_CTX *ctx) 
 //--------------------------------------------------------------------------------
 {
-	// initialize the AVL tree
-	ctx->cts.avl = avl_create(compare, (void*)&ctx->cts );
-	ctx->cts.match = 0;
-
-	// Initialize the color table set with the built in set (4,8,12,16,24,32,64)
+	// Initialize the color table set with the built in set (8,16,32,64)
 	DS_COLOR_TABLE		ct;
 	DS_COLOR			color[128];
+	int					i;
+
+	ctx->ctx.avlTree = avl_create(compare,(void*)&ctx->cts);
 
 	ct.color = color;
-	process(&ctx->cts, &ct, ihclr004,  4);
-	process(&ctx->cts, &ct, ihclr008,  8);
-	process(&ctx->cts, &ct, ihclr012, 12);
-	process(&ctx->cts, &ct, ihclr016, 16);
-	process(&ctx->cts, &ct, ihclr024, 24);
-	process(&ctx->cts, &ct, ihclr032, 32);
-	process(&ctx->cts, &ct, ihclr064, 64);
+	for (i = 0; i < 8; ++i)
+	{
+		ct.color[i].r = (float)(hclr008[i].r / 255.0);
+		ct.color[i].g = (float)(hclr008[i].g / 255.0);
+		ct.color[i].b = (float)(hclr008[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
+	}
+	ct.nColors = 8;
+	ds_ctbl_add_color_table(&ctx->cts, &ct);
+	for (i = 0; i < 16; ++i)
+	{
+		ct.color[i].r = (float)(hclr016[i].r / 255.0);
+		ct.color[i].g = (float)(hclr016[i].g / 255.0);
+		ct.color[i].b = (float)(hclr016[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
+	}
+	ct.nColors = 16;
+	ds_ctbl_add_color_table(&ctx->cts, &ct);
+	for (i = 0; i < 32; ++i)
+	{
+		ct.color[i].r = (float)(hclr032[i].r / 255.0);
+		ct.color[i].g = (float)(hclr032[i].g / 255.0);
+		ct.color[i].b = (float)(hclr032[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
+	}
+	ct.nColors = 32;
+	ds_ctbl_add_color_table(&ctx->cts, &ct);
+	for (i = 0; i < 64; ++i)
+	{
+		ct.color[i].r = (float)(hclr064[i].r / 255.0);
+		ct.color[i].g = (float)(hclr064[i].g / 255.0);
+		ct.color[i].b = (float)(hclr064[i].b / 255.0);
+		ct.color[i].a = (float)1.0;
+	}
+	ct.nColors = 64;
+	ds_ctbl_add_color_table(&ctx->cts, &ct);
 }
 
 //-------------------------------------------------------------------------
@@ -349,31 +311,37 @@ int ds_ctbl_add_color_table(DS_COLOR_TABLE_SET *cts, DS_COLOR_TABLE *ct)
 	// Add a color table to the color table set 
 	// Will search all existing tables to determine if table
 	// already exists - if true will replace existing table
-	DS_COLOR_TABLE	*p = 0;
-	int				i;
+	DS_COLOR_TABLE	*p;
+	int			i;
 
-	avl_find(cts->avl, (void*)ct, (void*)&p);
-
-//	p = cts->match;
-
-	if ( p )
-	{	// copy data to replace current table of same size
-		for (i = 0; i < ct->nColors; ++i)
-			p->color[i] = ct->color[i]; // copy color
-		return 0;
-	}
-	else
+	p = (DS_COLOR_TABLE*)cts->head;
+	while (p)
 	{
-		p = (DS_COLOR_TABLE*)malloc(sizeof(DS_COLOR_TABLE));
-		p->color = (DS_COLOR*)malloc(sizeof(DS_COLOR) * ct->nColors);
-		p->nColors = ct->nColors;
-		p->next = 0;
-
-		for (i = 0; i < ct->nColors; ++i)
-			p->color[i] = ct->color[i];
-
-		avl_insert(cts->avl, (void*)p);
+		if (p->nColors == ct->nColors) // replace 
+		{	// copy data
+			for (i = 0; i < ct->nColors; ++i)
+				p->color[i] = ct->color[i]; // copy color
+			return 0;
+		}
+		p = (DS_COLOR_TABLE*)p->next;
 	}
+
+	++cts->nTables;
+	p = (DS_COLOR_TABLE*)malloc(sizeof(DS_COLOR_TABLE));
+	p->color = (DS_COLOR*)malloc(sizeof(DS_COLOR) * ct->nColors);
+	p->nColors = ct->nColors;
+	p->next = 0; 
+
+	for (i = 0; i < ct->nColors; ++i)
+		p->color[i] = ct->color[i];
+
+	if (!cts->head)
+		cts->head = (void*)p;
+
+	if (cts->tail)
+		((DS_COLOR_TABLE*)cts->tail)->next = (void*)p;
+
+	cts->tail = (void*)p;
 	return 0;
 }
 
@@ -381,13 +349,47 @@ int ds_ctbl_add_color_table(DS_COLOR_TABLE_SET *cts, DS_COLOR_TABLE *ct)
 DS_COLOR_TABLE *ds_ctbl_get_color_table(DS_COLOR_TABLE_SET *cts, int nColors)
 //-------------------------------------------------------------------------
 {
-	cts->match = 0;
-	cts->nColors = nColors;
-
 	// Find the best matching color table based on the number of colors needed
-	avl_traverse_rtl(cts->avl, (void*)cts, compare2); // Traverse the tree from right to left - if user function returns non-zero traversal is stopped and value returned
+	// Returns a pointer to color table
+	//
+	DS_COLOR_TABLE	*p, *lp=0, *hp=0;
+	int				delta, hi, lo;
 
-	return cts->match;
+	p = (DS_COLOR_TABLE*)cts->head;
+	hi = 100000;
+	lo = 100000;
+
+	while (p) // check every table
+	{
+		delta = p->nColors - nColors;
+		if (!delta) // match
+			return p;
+		else if (delta < 0) // not enough colors
+		{
+			delta *= -1; // change sign
+			if (delta < lo)
+			{
+				lp = p;
+				lo = delta;
+			}
+		}
+		else // too many colors
+		{
+			if (delta < hi)
+			{
+				hp = p; // save pointer
+				hi = delta;
+			}
+		}
+		p = (DS_COLOR_TABLE*)p->next;
+	}
+
+	if (hp)
+		return hp; // best fit that is available with more colors
+	else if (lp)
+		return lp; // best fit with less colors 
+	else
+		return 0; // no color table available   
 }
 
 //--------------------------------------------------------------------------------
@@ -569,7 +571,6 @@ int ds_ctbl_process_color_table_file(DS_COLOR_TABLE_SET *cts, char *filename)
 		}
 	}
 	fclose(fp);
-
 	return 0; // success
 }
 
@@ -577,19 +578,19 @@ int ds_ctbl_process_color_table_file(DS_COLOR_TABLE_SET *cts, char *filename)
 int ds_ctbl_output_color_table_file(DS_COLOR_TABLE_SET *cts, char *filename)
 //-------------------------------------------------------------------------
 {
-	int				nTables, nLevels;
+	FILE			*fp;
+	DS_COLOR_TABLE	*ct;
+	int				i;
 
 	if (!strlen(filename))
 		return 1; // empty file
 
-	avl_info(cts->avl, &nTables, &nLevels);
-		
-	if (!nTables)
+	if (!cts->nTables)
 		return 0; 
 
-	fopen_s(&cts->fp, filename, "w"); // open for write
+	fopen_s(&fp, filename, "w"); // open for write
 
-	if (!cts->fp)
+	if (!fp)
 	{
 		char buffer[128];
 		sprintf(buffer, "Color table output file <%s> failed to open.", filename);
@@ -597,13 +598,19 @@ int ds_ctbl_output_color_table_file(DS_COLOR_TABLE_SET *cts, char *filename)
 		return 1; // failed to open file
 	}
 
-	if (nTables)
-		fprintf(cts->fp, "DS_COLOR\n// AUTO DUMP WITH DSS CREATION\n");
+	if (cts->nTables)
+		fprintf(fp, "DS_COLOR\n// AUTO DUMP WITH DSS CREATION\n");
 
-	// Find the best matching color table based on the number of colors needed
-	avl_traverse_rtl(cts->avl, (void*)cts, output_table); // Traverse the tree from right to left - if user function returns non-zero traversal is stopped and value returned
-
-	fclose(cts->fp);
-	cts->fp = 0;
-	return 0;
+	ct = (DS_COLOR_TABLE *)cts->head;
+	while (ct)
+	{
+		fprintf(fp, "\n// %d entry\n", ct->nColors);
+		for (i = 0; i < ct->nColors; ++i)
+		{
+			// write color
+			fprintf(fp,"#%02x%02x%02x\n", (int)(ct->color[i].r * 255), (int)(ct->color[i].g * 255), (int)(ct->color[i].b * 255));
+		}
+		ct = (DS_COLOR_TABLE *)ct->next;
+	}
+	fclose(fp);
 }

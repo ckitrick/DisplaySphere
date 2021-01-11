@@ -213,9 +213,11 @@ void ds_pre_init(DS_CTX *ctx)
 	ds_build_dsf(&ctx->curDir, ctx->currentDir, 0);
 	GetCurrentDirectory(512, ctx->captureDir);
 	ds_build_dsf(&ctx->capDir, ctx->captureDir, 0);
+//	ds_build_dsf(&ctx->clrTbl, "", 0);
 
 	ctx->drawAdj.axiiFlag = 0;
 	ctx->drawAdj.fogFlag = 1;
+	ctx->drawAdj.normalizeFlag = 0;
 	ctx->drawAdj.projection = GEOMETRY_PROJECTION_PERPSECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
 	ctx->drawAdj.stereoFlag = 0;
 	ctx->drawAdj.stereoCrossEyeFlag = 1;
@@ -319,8 +321,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0;
 
 	// initialize color table set
-	ctx->cts.nTables = 0;
-	ctx->cts.head = ctx->cts.tail = 0;
+	ctx->cts.avl = 0;
 	ds_clr_default_color_tables(ctx); // builds 4 tables (8,16,32,64)
 
 	// initialize the render vertex
@@ -374,18 +375,18 @@ void ds_pre_init(DS_CTX *ctx)
 
 								 // default: face, edge, and vertex color control
 		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
-		gio->cAttr.face.color.r = (float)0;
-		gio->cAttr.face.color.g = (float)0.8;
-		gio->cAttr.face.color.b = (float)0;
-		gio->cAttr.face.color.a = (float)1.0;
+		gio->cAttr.face.color.r = COLOR_FACE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.face.color.g = COLOR_FACE_OVERRIDE_GRN; //(float)0.8;
+		gio->cAttr.face.color.b = COLOR_FACE_OVERRIDE_BLU; //(float)0;
+		gio->cAttr.face.color.a = COLOR_FACE_OVERRIDE_ALP; //(float)1.0;
 		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.edge.color.r = (float)0;
-		gio->cAttr.edge.color.g = (float)0;
-		gio->cAttr.edge.color.b = (float)0.8;
+		gio->cAttr.edge.color.r = COLOR_EDGE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.edge.color.g = COLOR_EDGE_OVERRIDE_GRN; //(float)0;
+		gio->cAttr.edge.color.b = COLOR_EDGE_OVERRIDE_BLU; //(float)0.8;
 		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.vertex.color.r = (float)(214 / 255.0);
-		gio->cAttr.vertex.color.g = (float)(205 / 255.0);
-		gio->cAttr.vertex.color.b = (float)(41 / 255.0);
+		gio->cAttr.vertex.color.r = COLOR_VERTEX_OVERRIDE_RED; //(float)(214 / 255.0);
+		gio->cAttr.vertex.color.g = COLOR_VERTEX_OVERRIDE_GRN; //(float)(205 / 255.0);
+		gio->cAttr.vertex.color.b = COLOR_VERTEX_OVERRIDE_BLU; //(float)(41 / 255.0);
 		// inherit the global default
 		gio->faceDefault = ctx->clrCtl.face.defaultColor;
 
@@ -404,6 +405,7 @@ void ds_pre_init(DS_CTX *ctx)
 		gio->lFlags.edge   = 0;
 		gio->lFlags.vertex = 0;
 	}
+	ctx->dssStateFlag = 0;
 
 	ds_start_up_initialization(ctx);
 }
@@ -419,6 +421,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->drawAdj.axiiFlag = 0;
 	ctx->drawAdj.axiiLabelFlag = 0;
 	ctx->drawAdj.fogFlag = 1;
+	ctx->drawAdj.normalizeFlag = 0;
 	ctx->drawAdj.projection = GEOMETRY_PROJECTION_PERPSECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
 	ctx->drawAdj.stereoFlag = 0;
 	ctx->drawAdj.stereoCrossEyeFlag = 1;
@@ -594,20 +597,21 @@ void ds_pre_init2(DS_CTX *ctx)
 
 		gio->vAttr.scale = 0.07; // default: vertex scale
 
-								 // default: face, edge, and vertex color control
+		// default: face, edge, and vertex color control
 		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
-		gio->cAttr.face.color.r = (float)0;
-		gio->cAttr.face.color.g = (float)0.8;
-		gio->cAttr.face.color.b = (float)0;
-		gio->cAttr.face.color.a = (float)1.0;
+		gio->cAttr.face.color.r = COLOR_FACE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.face.color.g = COLOR_FACE_OVERRIDE_GRN; //(float)0.8;
+		gio->cAttr.face.color.b = COLOR_FACE_OVERRIDE_BLU; //(float)0;
+		gio->cAttr.face.color.a = COLOR_FACE_OVERRIDE_ALP; //(float)1.0;
 		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.edge.color.r = (float)0;
-		gio->cAttr.edge.color.g = (float)0;
-		gio->cAttr.edge.color.b = (float)0.8;
+		gio->cAttr.edge.color.r = COLOR_EDGE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.edge.color.g = COLOR_EDGE_OVERRIDE_GRN; //(float)0;
+		gio->cAttr.edge.color.b = COLOR_EDGE_OVERRIDE_BLU; //(float)0.8;
 		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.vertex.color.r = (float)(214 / 255.0);
-		gio->cAttr.vertex.color.g = (float)(205 / 255.0);
-		gio->cAttr.vertex.color.b = (float)(41 / 255.0);
+		gio->cAttr.vertex.color.r = COLOR_VERTEX_OVERRIDE_RED; //(float)(214 / 255.0);
+		gio->cAttr.vertex.color.g = COLOR_VERTEX_OVERRIDE_GRN; //(float)(205 / 255.0);
+		gio->cAttr.vertex.color.b = COLOR_VERTEX_OVERRIDE_BLU; //(float)(41 / 255.0);
+
 		// inherit the global default
 		gio->faceDefault = ctx->clrCtl.face.defaultColor;
 
@@ -626,6 +630,7 @@ void ds_pre_init2(DS_CTX *ctx)
 		gio->lFlags.edge = 0;
 		gio->lFlags.vertex = 0;
 	}
+	ctx->dssStateFlag = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -740,7 +745,9 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 	ds_set_render_quality(ctx);
 
 	// process color table if defined
-	ds_ctbl_process_color_table_file(&ctx->cts, ctx->clrCtl.user_color_table);
+	if ( !ds_ctbl_process_color_table_file( &ctx->cts, ctx->clrCtl.user_color_table) )
+		// save file information 
+		ds_build_dsf(&ctx->clrTbl, ctx->clrCtl.user_color_table, 0);
 
 	// label re-initialization if the font has changed (update offsets)
 	ds_label_update(&ctx->label.face);
@@ -796,6 +803,7 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 		free(gio);
 	}
 	ctx->gobjAddFlag = 0; // add
+	ctx->dssStateFlag = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -908,6 +916,11 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 
 	ds_set_render_quality(ctx);
 
+	// process color table if defined
+	if (!ds_ctbl_process_color_table_file(&ctx->cts, ctx->clrCtl.user_color_table))
+		// save file information 
+		ds_build_dsf(&ctx->clrTbl, ctx->clrCtl.user_color_table, 0);
+
 	// label re-initialization if the font has changed (update offsets)
 	ds_label_update(&ctx->label.face);
 	ds_label_update(&ctx->label.edge);
@@ -960,4 +973,12 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 		ctx->gobjAddFlag = 1;
 	}
 	ctx->gobjAddFlag = 0; // add
+
+	if (ctx->dssStateFlag)
+	{
+		ctx->dssStateFlag = 0;
+//		strcpy(ctx->curWorkingDir, ctx->currentDir);
+		SetCurrentDirectory(ctx->currentDir) ? 0 : 1;
+		GetCurrentDirectory(512, ctx->currentDir);
+	}
 }

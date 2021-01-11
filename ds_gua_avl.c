@@ -1898,15 +1898,15 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 		ocf[i] = 0;
 		if (n >= of[i].nVtx + 1 + 3) // color 
 		{
+			j = of[i].nVtx + 1;
 			if (!colorFormat)
 			{
-				if (strchr(word[5].buffer, '.') || strchr(word[6].buffer, '.') || strchr(word[7].buffer, '.'))
+				if (strchr(word[j+0].buffer, '.') || strchr(word[j+1].buffer, '.') || strchr(word[j+2].buffer, '.'))
 					colorFormat = COLOR_FORMAT_ZERO_TO_ONE;
 				else
 					colorFormat = COLOR_FORMAT_255;
 			}
 			ocf[i] = 1; // flag indicating that color was explicitly defined
-			j = of[i].nVtx + 1;
 			switch (colorFormat) {
 			case COLOR_FORMAT_ZERO_TO_ONE:
 				of[i].color.r = (float)atof(word[j+0].buffer);

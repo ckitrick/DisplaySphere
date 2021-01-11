@@ -13,7 +13,7 @@
 
 #define PROGRAM_NAME					"DisplaySphere" 
 #define PROGRAM_VERSION_MAJOR			0	 
-#define PROGRAM_VERSION_MINOR			98 
+#define PROGRAM_VERSION_MINOR			986 
 #define PROGRAM_EXE_LOCATION			"ProgramFiles(x86)" // environment variable
 //#define PROGRAM_DATA_LOCATION			"USERPROFILE"		// sample data location
 #define PROGRAM_DATA_LOCATION			"PUBLIC"			// sample data location
@@ -60,6 +60,26 @@
 
 #define COLOR_FORMAT_ZERO_TO_ONE		1
 #define COLOR_FORMAT_255				2
+
+#define COLOR_FACE_DEFAULT_RED			(float)1.0	//222 201 100
+#define COLOR_FACE_DEFAULT_GRN			(float)0.0
+#define COLOR_FACE_DEFAULT_BLU			(float)0.0
+
+// greenish - 0x90e168
+#define COLOR_FACE_OVERRIDE_RED			(float)(((0x90e168>>16)&0xff)/255.0) //	144,225,104 // green
+#define COLOR_FACE_OVERRIDE_GRN			(float)(((0x90e168>> 8)&0xff)/255.0)
+#define COLOR_FACE_OVERRIDE_BLU			(float)(((0x90e168>> 0)&0xff)/255.0)
+#define COLOR_FACE_OVERRIDE_ALP			(float)1.0
+
+// purplish - 0xdbb1cf
+#define COLOR_EDGE_OVERRIDE_RED			(float)(((0xdbb1cf>>16)&0xff)/255.0) // purple
+#define COLOR_EDGE_OVERRIDE_GRN			(float)(((0xdbb1cf>> 8)&0xff)/255.0)
+#define COLOR_EDGE_OVERRIDE_BLU			(float)(((0xdbb1cf>> 0)&0xff)/255.0)
+
+// bluish - 0x99d8c8
+#define COLOR_VERTEX_OVERRIDE_RED		(float)(((0x99d8c8>>16)&0xff)/255.0) // blue
+#define COLOR_VERTEX_OVERRIDE_GRN		(float)(((0x99d8c8>> 8)&0xff)/255.0)
+#define COLOR_VERTEX_OVERRIDE_BLU		(float)(((0x99d8c8>> 0)&0xff)/255.0)
 
 #include <geoutil.h>
 #include "ds_color.h"
@@ -424,6 +444,7 @@ typedef struct {
 	char					*internalDSS;
 	int						ac;					// number of arguments to program
 	int						relativeObjPathFlag;
+	int						dssStateFlag;
 	int						matrixFlag;
 	DS_RENDER_VERTEX		renderVertex;
 	int						gobjAddFlag;		// allow objects to be added rather than be replaced
@@ -462,6 +483,7 @@ typedef struct {
 	DS_FILE					pgmData;
 	DS_FILE					curDir;
 	DS_FILE					capDir;
+	DS_FILE					clrTbl;
 	DS_LABELS				label;
 } DS_CTX;
 

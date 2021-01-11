@@ -10,7 +10,7 @@
 /*
 	File handles the program main functionality and control.
 */
-
+//#define  WGL_WGLEXT_PROTOTYPES
 #include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
@@ -408,6 +408,14 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			ds_pre_init2(ctx);
 			SetWindowText(ctx->mainWindow, "Display Sphere");
 			ds_post_init2(ctx);
+			{
+				RECT	window;
+				GetWindowRect(hWnd, &window);
+				if ((ctx->window.width != window.right - window.left) || (ctx->window.height != window.bottom - window.top))
+				{
+					MoveWindow(hWnd, window.left, window.top, ctx->window.width + WINDOW_SIZE_OFFSET_WIDTH, ctx->window.height + WINDOW_SIZE_OFFSET_HEIGHT, 1);// need to add extra
+				}
+			}
 			InvalidateRect(hWnd, 0, 0);
 			break;
 
@@ -478,8 +486,22 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		switch (wParam) {
 		case VK_LEFT:		ds_update3(ctx, -1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
 		case VK_RIGHT:		ds_update3(ctx, 1, 0, 0); InvalidateRect(hWnd, 0, 0); break;
-		case VK_UP:			ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0); break;
-		case VK_DOWN:		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+
+//		case VK_UP:			ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0); break;
+//		case VK_DOWN:		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+		case VK_UP:		
+			if (GetKeyState(VK_SHIFT) & 0x1000) // check high order bit to see if key is down
+				ds_update2(ctx, 3, 1, 0, 0);
+			else 
+				ds_update3(ctx, 0, -1, 0); InvalidateRect(hWnd, 0, 0);
+			break;
+		case VK_DOWN://		ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0); break;
+			if (GetKeyState(VK_SHIFT) & 0x1000) // check high order bit to see if key is down
+				ds_update2(ctx, 3, -1, 0, 0);
+			else
+				ds_update3(ctx, 0, 1, 0); InvalidateRect(hWnd, 0, 0);
+			break;
+
 		case VK_PRIOR:		ds_update3(ctx, 0, 0, 1); InvalidateRect(hWnd, 0, 0); break;
 		case VK_NEXT:		ds_update3(ctx, 0, 0, -1); InvalidateRect(hWnd, 0, 0); break;
 		case 'O':
@@ -626,6 +648,16 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			InvalidateRect(hWnd, 0, 0);
 		}
 		break; 
+
+	case WM_MOUSEWHEEL:
+		state = PAN | ROTATE;
+		omx = mx;
+		my = omy = 0;
+		mx += GET_WHEEL_DELTA_WPARAM(wParam)/10;
+		ds_update(ctx, state, omx, mx, omy, my);
+		InvalidateRect(hWnd, 0, 0);
+		state = 0;
+		break;
 
     case WM_PALETTECHANGED:
 		if ( hWnd == (HWND)wParam )
@@ -916,9 +948,17 @@ static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 						}
 						else if (!strcmp(array[0], "DS_COLOR"))
 						{
+							int status;
 							ctx->gobjAddFlag = 0;
 							fclose(fp);
-							return ds_ctbl_process_color_table_file(&ctx->cts, buffer);
+							if (!ds_ctbl_process_color_table_file( &ctx->cts, buffer))
+							{
+								// save file information 
+								ds_build_dsf(&ctx->clrTbl, buffer, 0);
+								return 0;
+							}
+							else
+								return 1;
 						}
 					}
 				}
@@ -1093,10 +1133,10 @@ HWND ds_create_opengl_window(DS_CTX *ctx, char* title, int x, int y, int width, 
 		WGL_DOUBLE_BUFFER_ARB,		GL_TRUE,						// 4, 5
 		WGL_PIXEL_TYPE_ARB,			WGL_TYPE_RGBA_ARB,				// 6, 7
 		WGL_ACCELERATION_ARB,		WGL_FULL_ACCELERATION_ARB,		// 8, 9 
-		WGL_COLOR_BITS_ARB,			32,								// 10, 11
+		WGL_COLOR_BITS_ARB,			24,								// 10, 11
 		WGL_ALPHA_BITS_ARB,			8,								// 12
 		WGL_DEPTH_BITS_ARB,			24,								// 14
-		WGL_STENCIL_BITS_ARB,		8,								// 16
+		WGL_STENCIL_BITS_ARB,		0,								// 16
 		WGL_SAMPLE_BUFFERS_ARB,		GL_TRUE,						// 18, 19 
 		WGL_SAMPLES_ARB, ctx->opengl.samplesPerPixel,				// 20, 21
 		0															// 22
@@ -1276,7 +1316,7 @@ int ds_capture_image(HWND hWnd)
 		n = w * h;
 		for (i = 0; i < n; ++i)
 		{
-			gray = (int)(*r * 0.3 + *g * 0.58 + *b * 0.11);
+			gray = (int)(*r * 0.3 + *g * 0.59 + *b * 0.11);
 			*r = *b = *g = gray;
 			r += 4;
 			g += 4;

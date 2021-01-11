@@ -30,6 +30,7 @@
 #include <mem.h>
 #include "ds_file.h"
 #include "ds_gua.h"
+#include "ds_color.h"
 
 //-----------------------------------------------------------------------------
 int ds_build_url(DS_CTX *ctx, char *url)
@@ -129,7 +130,7 @@ void ds_filename_split(char *name, int *array, int *count)
 			flag = 0;
 		}
 	}
-
+/*
 	// clean up unneccessary pieces
 	for (i = *count - 1; i >= 0; --i)
 	{
@@ -155,6 +156,7 @@ void ds_filename_split(char *name, int *array, int *count)
 			*count -= 2;
 		}
 	}
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -218,6 +220,56 @@ void ds_cd_relative_filename (DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char 
 }
 
 //-----------------------------------------------------------------------------
+void ds_cd_relative_filename2(DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *newFilename)
+//-----------------------------------------------------------------------------
+{
+	// create new filename based on its relative location to the base directory path
+	int		i, j = 0, k, l = 0;
+
+	if (ctx->relativeObjPathFlag)
+	{
+		// determine where the base path and file path deviate
+		int		min = base->count;
+
+		if (min > file->count)
+			min = file->count;
+
+		for (i = j = 0; i < min; ++i, ++j)
+		{
+			if (stricmp(&base->splitName[base->word[i]], &file->splitName[file->word[i]]))
+				break;
+		}
+
+		if (j)
+		{
+			k = base->count - j;
+			if (!k)
+			{
+			}
+			else
+			{
+				for (i = 0; i < k; ++i)
+				{
+//					strcpy(&newFilename[l], "/../");
+					strcpy(&newFilename[l], "../");
+					l += 3;
+				}
+			}
+		}
+	}
+	for (i = j; i < file->count; ++i)
+	{
+		strcpy(&newFilename[l], &file->splitName[file->word[i]]);
+		l += strlen(&file->splitName[file->word[i]]);
+		if (i < file->count - 1)
+		{
+			strcpy(&newFilename[l], "/");
+			l += 1;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
 DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 //-----------------------------------------------------------------------------
 {
@@ -248,6 +300,9 @@ DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 	dsf->word		= 0;
 	dsf->fp			= 0;
 	dsf->splitName	= 0;
+
+	if (!strlen(buffer)) // nothing more to do
+		return dsf;
 
 	// process any embedded environment variables 
 	ds_filename_env_var(buffer, string);
@@ -405,7 +460,8 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 {
 	RECT		before;
 	int			w, h, stereoFlag = ctx->drawAdj.stereoFlag;
-	char		curArg[128], buffer[128];
+	char		curArg[128], buffer[128], curDir[512];
+	static DS_FILE		base;
 
 	GetWindowRect(ctx->mainWindow, &before);
 	w = before.right - before.left - WINDOW_SIZE_OFFSET_WIDTH;
@@ -413,6 +469,15 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 	curArg[0] = 0;
 
 	ctx->errorInfo.count = 0;
+	/*
+		set cur dir to filename location
+		DS_FILE	base;
+		ds_dsf_file (
+	*/	
+	ds_build_dsf(&base, filename, 1 ); // get path 
+	GetCurrentDirectory(512, curDir);
+	SetCurrentDirectory(base.fullName);
+
 	if (ds_restore_state(ctx, filename, &ctx->errorInfo))
 	{
 		int		i;
@@ -426,6 +491,7 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 		}
 		strcat(buffer, ">");
 		MessageBox(NULL, buffer, "State Restoration", MB_OK);
+		SetCurrentDirectory(curDir);
 		return 1;
 	}
 	else
@@ -456,6 +522,7 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 		}
 		InvalidateRect(ctx->mainWindow, 0, 0);
 	}
+	SetCurrentDirectory(curDir);
 	return 0;
 }
 
@@ -549,8 +616,12 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 	}
 	else if (type == 1) // color tables 
 	{
-		if (ds_ctbl_process_color_table_file(&ctx->cts, ctx->filename))
+		if (ds_ctbl_process_color_table_file( &ctx->cts, ctx->filename))
 			MessageBox(NULL, "Color table file read failed.", 0, MB_OK);
+		else
+			// save file information 
+			ds_build_dsf(&ctx->clrTbl, ctx->filename, 0);
+
 	}
 	else if (type == 2) // sat tables 
 	{

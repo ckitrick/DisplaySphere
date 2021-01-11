@@ -36,6 +36,7 @@
 #include "ds_cmdline_lib.h"
 
 enum OPTION { // need to be in the same order as the options
+	OP_ACTIVE,
 	OP_AXIS,
 	OP_AXIS_LABEL,
 	OP_CAPTURE_DIRECTORY,
@@ -149,6 +150,7 @@ ARGUMENT_SET	set_orientation[] = {
 };
 
 ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
+	"-active",				"-act",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set current object to be active",
 	"-axis",				"-ax",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable axis",
 	"-axis_label",			"-axl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display axis labels",
 	"-capture_directory",	"-capd",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set capture directory",
@@ -221,6 +223,7 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 };
 
 ARGUMENT_SUBSTITUTE arg_main_substitute[]={
+/*	OP_CLR_BACKGROUND,		*/  "-act",			"-act",
 /*	OP_CLR_BACKGROUND,		*/  "-ax",			"-axis",
 /*	OP_CLR_BACKGROUND,		*/  "-axl",			"-axis_label",
 /*	OP_CD,					*/  "-capd",		"-capture_directory",
@@ -330,6 +333,7 @@ int ds_filename_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 	arg_main[OP_CLR_F_SET].addr		= (void*)&ctx->curInputObj->cAttr.face.color;
 	arg_main[OP_CLR_V_SET].addr		= (void*)&ctx->curInputObj->cAttr.vertex.color;
 	arg_main[OP_EDGE_PARAM].addr	= (void*)&ctx->curInputObj->eAttr.width;
+	arg_main[OP_ACTIVE].addr		= (void*)&ctx->curInputObj->active;
 	arg_main[OP_INACTIVE].addr		= (void*)&ctx->curInputObj->active;
 	arg_main[OP_VERTEX_SCALE].addr	= (void*)&ctx->curInputObj->vAttr.scale;
 	arg_main[OP_CLR_T_ON].addr		= (void*)&ctx->curInputObj->tAttr.onFlag;
@@ -348,7 +352,7 @@ static int ds_font_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 //-----------------------------------------------------------------------------
 {
 	//	int		i;
-	DS_CTX		*ctx;
+//	DS_CTX		*ctx;
 	DS_LABEL	*label;
 
 //	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
@@ -635,7 +639,7 @@ static int ds_current_directory_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 {
 	char				*p; // c, *p;
 	DS_CTX				*ctx;
-	int					status; 
+	int					status = 0; 
 
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
@@ -647,13 +651,13 @@ static int ds_current_directory_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 	{
 		ds_build_dsf(&ctx->curDir, p, 0);
 		strcpy(ctx->currentDir, ctx->curDir.fullName);
-//		ds_build_dsf(&ctx->curDir, ctx->currentDir, 0);
 
 		strcpy(ctx->curWorkingDir, p);
-		status = SetCurrentDirectory(ctx->currentDir) ? 0 : 1;
-	//	status = SetCurrentDirectory(ctx->curWorkingDir) ? 0 : 1;
-	//	GetCurrentDirectory(512, ctx->curWorkingDir);
-		GetCurrentDirectory(512, ctx->currentDir);
+		if (!ctx->dssStateFlag) // don't change current directory during restore
+		{
+			status = SetCurrentDirectory(ctx->currentDir) ? 0 : 1;
+			GetCurrentDirectory(512, ctx->currentDir);
+		}
 		return status;
 	}
 	else
@@ -823,7 +827,10 @@ ds_command_line_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 			continue; // comment line
 
 		if (!strcmp(array[0], "DS_STATE")) // File type
+		{
+			ctx->dssStateFlag = 1; // trap this case so we delay change cur directory to after objects are processed
 			continue; // header
+		}
 
 		if (!strcmp(array[0], "-command_line") || !strcmp(array[0], "-cl")) // simple check to avoid recursive condition
 			continue;
@@ -892,7 +899,7 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_CLIP].data			= (void*)ctx;									// 
 	arg[OP_CLR_F_DEFAULT].addr	= (void*)&ctx->clrCtl.face.defaultColor;	// treat as float array
 	arg[OP_CLR_BACKGROUND].addr = (void*)&ctx->clrCtl.bkgClear;					// treat as float array
-	arg[OP_CLR_TABLE].addr		= (void*)&ctx->clrCtl.user_color_table;			// filename
+	arg[OP_CLR_TABLE].addr		= (void*)ctx->clrCtl.user_color_table;			// filename
 	arg[OP_COMMAND_LINE].addr	= (void*)&ds_command_line_arg_handler;		// NEED FUNCTION
 	arg[OP_COMMAND_LINE].data	= (void*)ctx;
 	//	arg[OP_GEOMETRY].addr		= 0; // need to be parsed
@@ -986,6 +993,7 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_CLR_F_USE].addr		= (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
 	arg[OP_CLR_F_USE].data		= (void*)ctx;
 
+	arg[OP_ACTIVE].addr			= (void*)&ctx->defInputObj.active; //&gio->active;
 	arg[OP_INACTIVE].addr		= (void*)&ctx->defInputObj.active; //&gio->active;
 
 	arg[OP_LABEL_EDGE_ON].addr    = (void*)&ctx->defInputObj.lFlags.edge;				// need to set index & flag correctly afterwards
@@ -1039,13 +1047,13 @@ int ds_restore_state(DS_CTX *ctx, char *filename, DS_ERROR *errInfo)
 
 	ds_pre_init2(ctx); // reset everything to the default and delete any existing objects
 	cmd_line_init(ctx); // re-initialize any pointers
-	ds_command_line_arg_handler(&set_main[0].argument[0], &currentArgIndex, 2, av, &error, &argIndex, errInfo); // process 
+	ds_command_line_arg_handler(&set_main[0].argument[OP_COMMAND_LINE], &currentArgIndex, 2, av, &error, &argIndex, errInfo); // process 
 	ds_post_init2(ctx); // post command line updates
 	return error;
 }
 
 //-----------------------------------------------------------------------------
-int ds_save_object_state(DS_CTX *ctx, FILE *fp, DS_GEO_OBJECT *gobj)
+int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *gobj)
 //-----------------------------------------------------------------------------
 {
 	if (gobj->filename)
@@ -1067,7 +1075,8 @@ int ds_save_object_state(DS_CTX *ctx, FILE *fp, DS_GEO_OBJECT *gobj)
 		}
 */ 
 //		ds_cd_relative_filename( &ctx->executable, gobj->dsf, relativeFilename);
-		ds_cd_relative_filename(ctx, &ctx->pgmData, gobj->dsf, relativeFilename);
+//		ds_cd_relative_filename(ctx, &ctx->pgmData, gobj->dsf, relativeFilename);
+		ds_cd_relative_filename2(ctx, base, gobj->dsf, relativeFilename);
 
 		fprintf(fp, "# Object settings for <%s>\n", gobj->dsf->nameOnly );
 		fprintf(fp, "-o \"%s\"\n", relativeFilename);
@@ -1077,12 +1086,16 @@ int ds_save_object_state(DS_CTX *ctx, FILE *fp, DS_GEO_OBJECT *gobj)
 		fprintf(fp, "# Default object settings\n");
 	}
 	if (!gobj->active) fprintf(fp, "-inactive\n");
+	else fprintf(fp, "-active\n");
 
-	fprintf(fp, "-draw ");
-	if (gobj->drawWhat & GEOMETRY_DRAW_TRIANGLES	) fprintf(fp, "f" );
-	if (gobj->drawWhat & GEOMETRY_DRAW_EDGES 		) fprintf(fp, "e" );
-	if (gobj->drawWhat & GEOMETRY_DRAW_VERTICES		) fprintf(fp, "v" );
-	fprintf(fp, "\n");
+	if (gobj->drawWhat != GEOMETRY_DRAW_NONE)
+	{
+		fprintf(fp, "-draw ");
+		if (gobj->drawWhat & GEOMETRY_DRAW_TRIANGLES) fprintf(fp, "f");
+		if (gobj->drawWhat & GEOMETRY_DRAW_EDGES)     fprintf(fp, "e");
+		if (gobj->drawWhat & GEOMETRY_DRAW_VERTICES)  fprintf(fp, "v");
+		fprintf(fp, "\n");
+	}
 
 	fprintf(fp, "-clr_f_use ");
 	switch(gobj->cAttr.face.state) {
@@ -1154,6 +1167,31 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 {
 	FILE	*fp;
 	char	*p;
+	int		clrTblFlag = 1;
+	char	clrTblFilename[512];
+	static DS_FILE	base, file;
+
+	// build DSF for DSS file
+	ds_build_dsf(&base, filename, 1); // just the path
+	ds_build_dsf(&file, filename, 0); // full name
+	ctx->relativeObjPathFlag = 1; // always force
+	if (ctx->clrTbl.fullName) // color table has been updated so dump current tables
+	{
+		if (filename)
+		{
+			int		i = strlen(filename);
+			if (i > 4)
+			{
+				if (strcmp(&filename[i - 4], ".dsc"))
+					strcpy(&filename[i - 4], ".dsc");
+			}
+		}
+		static DS_FILE	clrTblFile = { 0,0,0,0,0,0,0 };
+		char			newFilename[512];
+		ds_build_dsf(&clrTblFile, clrTblFilename, 0); // full name
+		ds_cd_relative_filename2(ctx, &base, &clrTblFile, newFilename);
+		clrTblFlag = ds_ctbl_output_color_table_file(&ctx->cts, newFilename);
+	}
 
 	if (filename)
 	{
@@ -1194,14 +1232,30 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	{
 		char	relativePath[1024];
 		//	-cd
-		ds_build_dsf(&ctx->curDir, ctx->currentDir, 0); // update DSF
-		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->curDir, relativePath);
-		fprintf(fp, "-cd \"%s\"\n", relativePath);
+//		ds_build_dsf(&ctx->curDir, ctx->currentDir, 0); // update DSF
+//		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->curDir, relativePath);
+//		fprintf(fp, "-cd \"%s\"\n", relativePath);
 
 		//	-capd
-		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->capDir, relativePath);
+//		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->capDir, relativePath);
+		ds_cd_relative_filename2(ctx, &base, &ctx->capDir, relativePath);
 		fprintf(fp, "-capture_directory \"%s\"\n", relativePath);
 	}
+//	{
+//		char	relativePath[1024];
+//
+//		//	-capd
+//		ds_cd_relative_filename2(ctx, &base, &ctx->capDir, relativePath);
+//		fprintf(fp, "-capture_directory \"%s\"\n", relativePath);
+//		if (ctx->relativeObjPathFlag)
+//		{
+//			char	relativePath[1024];
+//			//	-cd
+//			ds_cd_relative_filename2(ctx, &base, &ctx->curDir, relativePath);
+//			fprintf(fp, "-cd \"%s\"\n", relativePath);
+//		}
+//
+//	}
 
 //- axis
 	if (ctx->drawAdj.axiiFlag) fprintf(fp, "-axis\n");
@@ -1213,6 +1267,8 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	//- clr_backgound
 	fprintf(fp, "-clr_background %5.3f %5.3f %5.3f\n", ctx->clrCtl.bkgClear.r, ctx->clrCtl.bkgClear.g, ctx->clrCtl.bkgClear.b);
 	//- clr_table
+	if ( !clrTblFlag )
+		fprintf(fp, "-clr_table \"%s\"\n", clrTblFilename );
 
 	//- geometry
 	switch (ctx->base_geometry.type) {
@@ -1356,17 +1412,16 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	{
 		DS_GEO_OBJECT			*obj;
 
-		ds_save_object_state(ctx, fp, (DS_GEO_OBJECT*)&ctx->defInputObj);
+		ds_save_object_state(ctx, &base, fp, (DS_GEO_OBJECT*)&ctx->defInputObj);
 
 		LL_SetHead(ctx->gobjectq);
 		while (obj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 		{
 //			gobj = (DS_GEO_INPUT_OBJECT*)obj;
-			ds_save_object_state(ctx, fp, obj);
+			ds_save_object_state(ctx, &base, fp, obj);
 		}
 	}
 
 	fclose(fp);
-
 	return 0;
 }
