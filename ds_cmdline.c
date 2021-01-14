@@ -679,8 +679,28 @@ static int ds_capture_directory_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 
 	if (strlen(p))
 	{
-		ds_build_dsf(&ctx->capDir, p, 0);
-		strcpy(ctx->captureDir, ctx->capDir.fullName);
+		char	buf1[1024], buf2[1024];
+		// Need to convert relative path to absolute path 
+		// CurDirectory should be the location of the .dss file 
+		// save CurDir
+		// set cur directory from provided relative path
+		// get cur directory as absolute and save
+		// reset curDir back to original
+		GetCurrentDirectory(1024, buf1);
+		if (SetCurrentDirectory(p))
+		{
+			GetCurrentDirectory(1024, buf2);
+			ds_build_dsf(&ctx->capDir, buf2, 0);
+			strcpy(ctx->captureDir, ctx->capDir.fullName);
+			SetCurrentDirectory(buf1);
+		}
+		else
+		{
+			sprintf(buf2, "Capture Directory <%s> not valid.", p);
+			MessageBox(ctx->mainWindow, buf2, "Capture Directory Error", MB_OK);
+		}
+//		ds_build_dsf(&ctx->capDir, p, 0);
+//		strcpy(ctx->captureDir, ctx->capDir.fullName);
 		return 0;
 	}
 	else
@@ -1074,9 +1094,7 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 			fprintf(fp, "\n");
 		}
 */ 
-//		ds_cd_relative_filename( &ctx->executable, gobj->dsf, relativeFilename);
-//		ds_cd_relative_filename(ctx, &ctx->pgmData, gobj->dsf, relativeFilename);
-		ds_cd_relative_filename2(ctx, base, gobj->dsf, relativeFilename);
+		ds_cd_relative_filename (ctx, base, gobj->dsf, relativeFilename);
 
 		fprintf(fp, "# Object settings for <%s>\n", gobj->dsf->nameOnly );
 		fprintf(fp, "-o \"%s\"\n", relativeFilename);
@@ -1085,8 +1103,13 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 	{
 		fprintf(fp, "# Default object settings\n");
 	}
-	if (!gobj->active) fprintf(fp, "-inactive\n");
-	else fprintf(fp, "-active\n");
+	if (gobj->filename)
+	{
+		if (!gobj->active) fprintf(fp, "-inactive\n");
+		else fprintf(fp, "-active\n");
+	}
+	else fprintf(fp, "-active\n"); // always active for default
+
 
 	if (gobj->drawWhat != GEOMETRY_DRAW_NONE)
 	{
@@ -1169,9 +1192,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	char	*p;
 	int		clrTblFlag = 1;
 	char	clrTblFilename[512];
-	static DS_FILE	base, file;
-
-	// build DSF for DSS file
+	static DS_FILE	base = { 0,0,0,0,0,0,0 }, file = { 0,0,0,0,0,0,0 }, clrTblFile = { 0,0,0,0,0,0,0 };
 	ds_build_dsf(&base, filename, 1); // just the path
 	ds_build_dsf(&file, filename, 0); // full name
 	ctx->relativeObjPathFlag = 1; // always force
@@ -1186,10 +1207,10 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 					strcpy(&filename[i - 4], ".dsc");
 			}
 		}
-		static DS_FILE	clrTblFile = { 0,0,0,0,0,0,0 };
+//		static DS_FILE	clrTblFile = { 0,0,0,0,0,0,0 };
 		char			newFilename[512];
 		ds_build_dsf(&clrTblFile, clrTblFilename, 0); // full name
-		ds_cd_relative_filename2(ctx, &base, &clrTblFile, newFilename);
+		ds_cd_relative_filename(ctx, &base, &clrTblFile, newFilename);
 		clrTblFlag = ds_ctbl_output_color_table_file(&ctx->cts, newFilename);
 	}
 
@@ -1232,30 +1253,11 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	{
 		char	relativePath[1024];
 		//	-cd
-//		ds_build_dsf(&ctx->curDir, ctx->currentDir, 0); // update DSF
-//		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->curDir, relativePath);
-//		fprintf(fp, "-cd \"%s\"\n", relativePath);
 
 		//	-capd
-//		ds_cd_relative_filename(ctx, &ctx->pgmData, &ctx->capDir, relativePath);
-		ds_cd_relative_filename2(ctx, &base, &ctx->capDir, relativePath);
+		ds_cd_relative_filename (ctx, &base, &ctx->capDir, relativePath); // capDir is already a path only
 		fprintf(fp, "-capture_directory \"%s\"\n", relativePath);
 	}
-//	{
-//		char	relativePath[1024];
-//
-//		//	-capd
-//		ds_cd_relative_filename2(ctx, &base, &ctx->capDir, relativePath);
-//		fprintf(fp, "-capture_directory \"%s\"\n", relativePath);
-//		if (ctx->relativeObjPathFlag)
-//		{
-//			char	relativePath[1024];
-//			//	-cd
-//			ds_cd_relative_filename2(ctx, &base, &ctx->curDir, relativePath);
-//			fprintf(fp, "-cd \"%s\"\n", relativePath);
-//		}
-//
-//	}
 
 //- axis
 	if (ctx->drawAdj.axiiFlag) fprintf(fp, "-axis\n");
@@ -1421,7 +1423,6 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 			ds_save_object_state(ctx, &base, fp, obj);
 		}
 	}
-
 	fclose(fp);
 	return 0;
 }

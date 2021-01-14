@@ -251,7 +251,7 @@ static void ds_fill_object_controls(HWND hWndDlg, int objID, DS_GEO_OBJECT *gobj
 }
 
 //-----------------------------------------------------------------------------
-void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, int *objID, int *bottom )
+void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, int *objID, int *bottom, int defaultObject )
 //-----------------------------------------------------------------------------
 {
 	int						i;
@@ -272,11 +272,14 @@ void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, 
 			*bottom = rect.bottom;
 		MapDialogRect(hWndDlg, &rect);
 
-		hEdit = CreateWindowExA(dsox->exStyle | WS_EX_TOOLWINDOW, (LPCSTR)dsox->className, (LPCSTR)dsox->text, dsox->style,
-			rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndDlg,
-			(HMENU)(dsox->id + *objID), GetModuleHandle(NULL), NULL);
-		if (hEdit)
-			SendMessage(hEdit, WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+		if (!defaultObject || ( defaultObject && i != 1)) // don't create window for default visible checkbox
+		{
+			hEdit = CreateWindowExA(dsox->exStyle | WS_EX_TOOLWINDOW, (LPCSTR)dsox->className, (LPCSTR)dsox->text, dsox->style,
+					rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndDlg,
+					(HMENU)(dsox->id + *objID), GetModuleHandle(NULL), NULL);
+			if (hEdit)
+				SendMessage(hEdit, WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
+		}
 	}
 	++*objID;
 }
@@ -339,13 +342,13 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 
 		// default object settings
 		memcpy(&gobj_def, &ctx->defInputObj, sizeof(DS_GEO_INPUT_OBJECT));
-		ds_draw_variable_controls(hWndDlg, s_hFont, yOffset, &objID, &bottom);
+		ds_draw_variable_controls(hWndDlg, s_hFont, yOffset, &objID, &bottom, 1);
 
 		// loop thru real objects
 		LL_SetHead(ctx->gobjectq);
 		while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 		{
-			ds_draw_variable_controls( hWndDlg, s_hFont, yOffset, &objID, &bottom);
+			ds_draw_variable_controls( hWndDlg, s_hFont, yOffset, &objID, &bottom, 0);
 		}
 		nObj = LL_GetLength(ctx->gobjectq) + 1; // add default
 		maxBottom = 0;

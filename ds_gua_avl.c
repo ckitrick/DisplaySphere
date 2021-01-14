@@ -1853,7 +1853,8 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	ocf = (int*)MALLOC(sizeof(int)*nf);				// array of color flags for all polygon faces
 
 	// vertex section 
-	for (i = 0; i < nv; ++i)
+//	for (i = 0; i < nv; ++i)
+	for (i = 0; i < nv; ) 
 	{
 		bp = fgets(buffer, 256, fp);
 		gua_parse(buffer, &n, word);
@@ -1861,7 +1862,11 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 		{
 			continue;
 		}
-		else if ( n >= 3 )
+//		else if (word[0].buffer[0] == '#')
+//		{
+//			continue;
+//		}
+		else if (n >= 3)
 		{
 			if (!decimal)
 			{
@@ -1873,21 +1878,29 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 			ov[i].y = atof(word[1].buffer);
 			ov[i].z = atof(word[2].buffer);
 			ov[i].w = 1;
+			++i; // increment count when valid data is processed
 		}	
 	}
 
 	// face section 
-	for (i = 0; i < nf; ++i)
+	for (i = 0; i < nf; ) 
 	{
 		bp = fgets(buffer, 256, fp);
 		gua_parse(buffer, &n, word);
-		if (!n ) // error
+		if (!n) // error
+		{
+			return 1;
+		}
+		else if (word[0].buffer[0] == '#')
+		{
 			continue;
+		}
 		of[i].nVtx = atoi(word[0].buffer);
 		if (n < of[i].nVtx + 1)
 			return 1; // errror
 		else if (of[i].nVtx > 32 || of[i].nVtx < 0)
 			return 1; // max 
+
 		of[i].vtx = gua_integer_array(tdb, of[i].nVtx);
 
 		for (j = 1, k=0; j < of[i].nVtx +1; ++j, ++k)
@@ -1926,6 +1939,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				break;
 			}
 		}
+		++i; // increment count when valid data is processed
 	}
 
 	if ( ctx->inputTrans.transformFlag ) // build transformation matrix

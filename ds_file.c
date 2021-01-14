@@ -160,7 +160,7 @@ void ds_filename_split(char *name, int *array, int *count)
 }
 
 //-----------------------------------------------------------------------------
-void ds_cd_relative_filename (DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char *newFilename)
+void ds_cd_relative_filenameXXX (DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char *newFilename)
 //-----------------------------------------------------------------------------
 {
 	// create new filename based on its relative location to the current directory path
@@ -220,29 +220,41 @@ void ds_cd_relative_filename (DS_CTX *ctx, DS_FILE *exec, DS_FILE *object, char 
 }
 
 //-----------------------------------------------------------------------------
-void ds_cd_relative_filename2(DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *newFilename)
+void ds_cd_relative_filenameX(DS_CTX *ctx, DS_FILE *base, int basePath, DS_FILE *file, int filePath, char *newFilename)
 //-----------------------------------------------------------------------------
 {
 	// create new filename based on its relative location to the base directory path
 	int		i, j = 0, k, l = 0;
+	int		baseCount, fileCount;
+
+	// choose how to compare DS_FILE by full name or just by path
+	baseCount = basePath ? base->count - 1 : base->count;
+	fileCount = filePath ? file->count - 1 : file->count;
 
 	if (ctx->relativeObjPathFlag)
 	{
 		// determine where the base path and file path deviate
-		int		min = base->count;
+		int		min = baseCount;
 
-		if (min > file->count)
-			min = file->count;
+		if (min > fileCount)
+			min = fileCount;
 
 		for (i = j = 0; i < min; ++i, ++j)
 		{
 			if (stricmp(&base->splitName[base->word[i]], &file->splitName[file->word[i]]))
 				break;
 		}
-
-		if (j)
+		if (j == min) // exclude a complete match
 		{
-			k = base->count - j;
+			if (filePath)
+				strcpy(newFilename, ".");
+			else
+				strcpy(newFilename, &file->splitName[file->word[file->count - 1]]);
+			return;
+		}
+		else if (j) //&& j != ( min - 1 )) // exclude a complete match
+		{
+			k = baseCount - j;
 			if (!k)
 			{
 			}
@@ -250,14 +262,14 @@ void ds_cd_relative_filename2(DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *n
 			{
 				for (i = 0; i < k; ++i)
 				{
-//					strcpy(&newFilename[l], "/../");
+					//					strcpy(&newFilename[l], "/../");
 					strcpy(&newFilename[l], "../");
 					l += 3;
 				}
 			}
 		}
 	}
-	for (i = j; i < file->count; ++i)
+	for (i = j; i < fileCount; ++i)
 	{
 		strcpy(&newFilename[l], &file->splitName[file->word[i]]);
 		l += strlen(&file->splitName[file->word[i]]);
@@ -266,6 +278,61 @@ void ds_cd_relative_filename2(DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *n
 			strcpy(&newFilename[l], "/");
 			l += 1;
 		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+void ds_cd_relative_filename (DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *newFilename)
+//-----------------------------------------------------------------------------
+{
+	// create new filename based on its relative location to the base directory path
+	//
+	int		i, j, k, l = 0;
+
+	if (ctx->relativeObjPathFlag)
+	{
+		// determine where the base path and file path deviate
+		int		min = base->count;
+
+		// set min to the shortest path from either 
+		if (min > file->count)
+			min = file->count;
+
+		// loop to find where paths deviate
+		for (i = j = 0; i < min; ++i, ++j)
+		{
+			if (stricmp(&base->splitName[base->word[i]], &file->splitName[file->word[i]]))
+				break; // stop if paths don't match (j equals index where the paths are no longer the same)
+		}
+
+		if ( k = base->count - j ) 
+		{
+			// add necessary change in path
+			for (i = 0; i < k; ++i)
+			{
+				strcpy(&newFilename[l], "../");
+				l += 3;
+			}
+		}
+	}
+
+	// add file and its path from where it deviates from base path
+	for (i = j; i < file->count; ++i)
+	{
+		strcpy(&newFilename[l], &file->splitName[file->word[i]]);
+		l += strlen(&file->splitName[file->word[i]]);
+		if (i < file->count - 1)
+		{
+			// always separate path components by standard backslash character
+			strcpy(&newFilename[l], "/");
+			l += 1;
+		}
+	}
+
+	// final check
+	if (!l) // nothing was built since there is a complete match
+	{
+		strcpy(newFilename, "."); // should only occur when both base and file are identical
 	}
 }
 
@@ -282,11 +349,11 @@ DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 	}
 	else
 	{
-		if (dsf->fullName)	free(dsf->fullName);
-		if (dsf->userName)	free(dsf->userName);
-		if (dsf->splitName) free(dsf->splitName);
-		if (dsf->word)		free(dsf->word);
-		if (dsf->fp)		fclose(dsf->fp);
+		if (dsf->fullName) { free(dsf->fullName); dsf->fullName = 0; }
+		if (dsf->userName) { free(dsf->userName); dsf->userName = 0; }
+		if (dsf->splitName) { free(dsf->splitName); dsf->splitName = 0; }
+		if (dsf->word) { free(dsf->word); dsf->word = 0; }
+		if (dsf->fp) { fclose(dsf->fp); dsf->fp = 0; }
 	}
 
 	int		i; // , j;
@@ -314,9 +381,11 @@ DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 	ds_filename_split(dsf->splitName, word, &dsf->count);
 	if (pathFlag)
 	{
-		if ( dsf->count)
-			dsf->fullName[word[dsf->count-1]-1] = 0; // truncate the string
-		--dsf->count; // remove the name of the file to just get the path
+		if (dsf->count > 1)
+		{
+			dsf->fullName[word[dsf->count - 1] - 1] = 0; // truncate the string
+			--dsf->count; // remove the name of the file to just get the path
+		}
 	}
 	if (dsf->count)
 	{
@@ -392,11 +461,11 @@ int ds_file_close(DS_CTX *ctx, DS_FILE *dsf)
 	if (!dsf)
 		return 1;
 
-	if (dsf->fp)		fclose(dsf->fp);
-	if (dsf->userName)	free(dsf->userName);
-	if (dsf->fullName)	free(dsf->fullName);
-	if (dsf->splitName)	free(dsf->splitName);
-	if (dsf->word)		free(dsf->word);
+	if (dsf->fp)		{ fclose(dsf->fp); dsf->fp = 0; }
+	if (dsf->userName)	{ free(dsf->userName); dsf->userName = 0; }
+	if (dsf->fullName)	{ free(dsf->fullName); dsf->fullName = 0; }
+	if (dsf->splitName) { free(dsf->splitName); dsf->splitName; }
+	if (dsf->word)		{ free(dsf->word); dsf->word = 0; }
 	
 	free(dsf);
 	return 0;

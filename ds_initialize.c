@@ -223,6 +223,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->drawAdj.stereoCrossEyeFlag = 1;
 	ctx->drawAdj.eyeSeparation = 2.5;
 
+	ctx->drawAdj.circleFlag = 0;
 	ctx->drawAdj.clipFlag = 0;
 	ctx->drawAdj.clipZValue = 0;
 	ctx->drawAdj.clipZIncrement = (float)0.01;
@@ -427,6 +428,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->drawAdj.stereoCrossEyeFlag = 1;
 	ctx->drawAdj.eyeSeparation = 2.5;
 
+	ctx->drawAdj.circleFlag = 0;
 	ctx->drawAdj.clipFlag = 0;
 	ctx->drawAdj.clipZValue = 0;
 	ctx->drawAdj.clipZIncrement = (float)0.01;
@@ -850,25 +852,7 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 	{
 		strcpy(ctx->png.basename, "image"); // default capture filename
 	}
-/*
-	if (strlen(ctx->png.basename)) // -capture option specified
-	{
-		if (!ctx->png.nFrames)
-		{
-			ctx->png.singleFlag = 1; // single capture
-			ctx->png.nFrames = 1;
-			captureMode = CAPTURE_IMAGE;
-		}
-		else
-		{
-			// movie
-			ctx->png.nFrames = ctx->png.nFrames < 0 ? ctx->png.nFrames * -1 : ctx->png.nFrames;
-			captureMode = CAPTURE_FILM;
-		}
-	}
-	else
-		strcpy(ctx->png.basename, "image"); // default capture filename
-*/
+
 	switch (captureMode) {
 	case CAPTURE_NONE: // no capture dependency - explicitly set bby user
 		if (ctx->drawAdj.spin.dx != 0 || ctx->drawAdj.spin.dy != 0 || ctx->drawAdj.spin.dz != 0 || ctx->drawAdj.spin.timerMSec > 0) //|| ctx->drawAdj.spin.timerMSec != 0)

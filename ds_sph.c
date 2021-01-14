@@ -1136,7 +1136,7 @@ HWND ds_create_opengl_window(DS_CTX *ctx, char* title, int x, int y, int width, 
 		WGL_COLOR_BITS_ARB,			24,								// 10, 11
 		WGL_ALPHA_BITS_ARB,			8,								// 12
 		WGL_DEPTH_BITS_ARB,			24,								// 14
-		WGL_STENCIL_BITS_ARB,		0,								// 16
+		WGL_STENCIL_BITS_ARB,		8,								// 16
 		WGL_SAMPLE_BUFFERS_ARB,		GL_TRUE,						// 18, 19 
 		WGL_SAMPLES_ARB, ctx->opengl.samplesPerPixel,				// 20, 21
 		0															// 22
@@ -1383,10 +1383,25 @@ int ds_capture_image(HWND hWnd)
 
 		if (ctx->png.stateSaveFlag) //dump a state file
 		{
+			DS_FILE	capDir = { 0,0,0,0,0,0,0 };
+			ds_build_dsf(&capDir, ctx->captureDir, 0);
+			int i, j;
+			for (i = j = 0; i < capDir.count; ++i)
+			{
+				strcpy(&outputFilename[j], &capDir.splitName[capDir.word[i]]);
+				j += strlen(&capDir.splitName[capDir.word[i]]);
+				outputFilename[j++] = '/';
+				outputFilename[j] = 0;
+			}
 			if (ctx->png.singleFlag) //do not add index
-				sprintf(outputFilename, "%s.dss", ctx->png.basename); // , ctx->png.curFrame++);
+				strcpy(outputFilename+j, "%s.dss", ctx->png.basename); // , ctx->png.curFrame++);
 			else
-				sprintf(outputFilename, "%s%05d.dss", ctx->png.basename, ctx->png.curFrame);
+				sprintf(outputFilename+j, "%s%05d.dss", ctx->png.basename, ctx->png.curFrame);
+
+//			if (ctx->png.singleFlag) //do not add index
+//				sprintf(outputFilename, "%s.dss", ctx->png.basename); // , ctx->png.curFrame++);
+//			else
+//				sprintf(outputFilename, "%s%05d.dss", ctx->png.basename, ctx->png.curFrame);
 
 			ds_save_state(ctx, outputFilename);
 		}

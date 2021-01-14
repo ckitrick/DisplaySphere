@@ -163,7 +163,7 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 //-----------------------------------------------------------------------------------
 {
 	static GLfloat mat_specular[4] = { (float)0.0, (float)0.5, (float)1.0, (float)1.0 };
-	static GLfloat mat_shininess = 100.0; //50
+	static GLfloat mat_shininess = 50; // 100.0; //50
 	static GLfloat light_position[4];// = { (float)0.5, (float)0.5, (float)2.0, (float)0.0 };
 	static GLfloat light_ambient[4] = { (float)0.1, (float)0.1, (float)0.1, (float)1.0 };
 	static GLfloat light_diffuse[4] = { (float)0.3, (float)0.3, (float)0.3, (float)1.0 };
