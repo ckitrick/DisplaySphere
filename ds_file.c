@@ -823,7 +823,9 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 
 	// memory allocated pointers 
 	gobj->filename	= 0; 
+	gobj->name[0]	= 0; // null terminated empty string
 	gobj->v_out		= 0;
+	gobj->n_out		= 0;
 	gobj->tri		= 0;
 	gobj->edge		= 0;
 	// assigned data/pointers
@@ -836,14 +838,16 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 	gobj->vIndex    = 0;
 
 	// inherit default settings
-	gobj->active	= ctx->defInputObj.active;
-	gobj->drawWhat	= ctx->defInputObj.drawWhat;
-	gobj->eAttr		= ctx->defInputObj.eAttr;
-	gobj->cAttr		= ctx->defInputObj.cAttr;
-	gobj->vAttr		= ctx->defInputObj.vAttr;
-	gobj->rAttr		= ctx->defInputObj.rAttr; 
-	gobj->tAttr		= ctx->defInputObj.tAttr;
-	gobj->lFlags	= ctx->defInputObj.lFlags;
+	gobj->active			= ctx->defInputObj.active;
+	gobj->drawWhat			= ctx->defInputObj.drawWhat;
+	gobj->eAttr				= ctx->defInputObj.eAttr;
+	gobj->cAttr				= ctx->defInputObj.cAttr;
+	gobj->vAttr				= ctx->defInputObj.vAttr;
+	gobj->rAttr				= ctx->defInputObj.rAttr; 
+	gobj->tAttr				= ctx->defInputObj.tAttr;
+	gobj->lFlags			= ctx->defInputObj.lFlags;
+	gobj->geo_type			= ctx->defInputObj.geo_type;
+	gobj->geo_orientation	= ctx->defInputObj.geo_orientation;
 
 	gobj->filename = malloc(strlen(dsf->nameOnly) + 1);
 	strcpy(gobj->filename, dsf->nameOnly);
@@ -858,6 +862,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 		{	// free up allocated memory
 			lgobj->filename ? free(lgobj->filename) : 0;
 			lgobj->v_out	? free(lgobj->v_out)	: 0;
+			lgobj->n_out	? free(lgobj->n_out)	: 0;
 			lgobj->tri		? free(lgobj->tri)		: 0;
 			lgobj->edge		? free(lgobj->edge)		: 0;
 			lgobj->vIndex   ? free(lgobj->vIndex)   : 0;

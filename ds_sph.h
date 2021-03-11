@@ -13,7 +13,7 @@
 
 #define PROGRAM_NAME					"DisplaySphere" 
 #define PROGRAM_VERSION_MAJOR			0	 
-#define PROGRAM_VERSION_MINOR			986 
+#define PROGRAM_VERSION_MINOR			987 
 #define PROGRAM_EXE_LOCATION			"ProgramFiles(x86)" // environment variable
 //#define PROGRAM_DATA_LOCATION			"USERPROFILE"		// sample data location
 #define PROGRAM_DATA_LOCATION			"PUBLIC"			// sample data location
@@ -48,6 +48,7 @@
 #define GEOMETRY_POLYMODE_FILL			0
 #define GEOMETRY_POLYMODE_LINE			1
 #define GEOMETRY_POLYMODE_POINT			2
+#define GEOMETRY_POLYMODE_CULL			3
 
 #define DS_COLOR_STATE_EXPLICIT			1
 #define DS_COLOR_STATE_AUTOMATIC		2
@@ -198,6 +199,7 @@ typedef struct {
 
 typedef struct {	// Triangle specific
 	int			*vtx;	// unique vertex IDs
+	int			*nml;	// unique normal IDs
 	int			id;		// unique ID auto generated 
 	int			nVtx;	// size of vertex array
 	DS_COLOR	color;	// explict color
@@ -205,6 +207,7 @@ typedef struct {	// Triangle specific
 
 typedef struct {	// General version 
 	int			*vtx;	// unique vertex IDs
+	int			*nml;	// unique normal IDs
 	int			id;		// unique ID auto generated 
 	int			nVtx;	// size of vertex array
 	DS_COLOR	color;	// explict color
@@ -257,10 +260,11 @@ typedef struct {
 
 typedef struct {
 	int	polymode[2]; //0 - front, 1 - back
-	int geometry; // icosa
-	int orientation;
-	int drawWhat;
-	int replication; // number depends on geometry
+	int cull[2]; // 0 - front, 1 - back
+//	int geometry; // icosa
+//	int orientation;
+//	int drawWhat;
+//	int replication; // number depends on geometry
 } DS_GEOMETRY_ADJUSTMENTS;
 
 typedef struct {
@@ -359,19 +363,22 @@ typedef struct {
 
 typedef struct {
 	int					samplesPerPixel;
-	DS_COLOR				clr;
+	DS_COLOR			clr;
 } DS_OPENGL;
 
 typedef struct {
 	int							active;
-	char						*filename;	// saved to compare with updates
-	int							drawWhat;	// what part of the object to draw F 1 E 2 V 4
-	DS_EDGE_ATTRIBUTES			eAttr;		// edge state for rendering
-	DS_VERTEX_ATTRIBUTES		vAttr;		// vertex scale
-	DS_COLOR_ATTRIBUTES			cAttr;		// face, edge, and vertex color control
-	DS_REPLICATION_ATTRIBUTES	rAttr;		// replication flags
-	DS_TRANSPARENCY_ATTRIBUTES	tAttr;		// transparency info
-	DS_LABEL_FLAGS				lFlags;		// label flags
+	char						*filename;		// saved to compare with updates
+	int							name[32];		// user specified name
+	int							drawWhat;		// what part of the object to draw F 1 E 2 V 4
+	DS_EDGE_ATTRIBUTES			eAttr;			// edge state for rendering
+	DS_VERTEX_ATTRIBUTES		vAttr;			// vertex scale
+	DS_COLOR_ATTRIBUTES			cAttr;			// face, edge, and vertex color control
+	DS_REPLICATION_ATTRIBUTES	rAttr;			// replication flags
+	DS_TRANSPARENCY_ATTRIBUTES	tAttr;			// transparency info
+	DS_LABEL_FLAGS				lFlags;			// label flags
+	int							geo_type;		// which of the base geometry
+	int							geo_orientation; // base orientation
 	DS_COLOR					faceDefault;
 } DS_GEO_INPUT_OBJECT;
 
@@ -379,6 +386,7 @@ typedef struct {
 //================= SAME STRUCTURE AS GEO_INPUT_OBJECT
 	int							active;
 	char						*filename;	// saved to compare with updates
+	int							name[32];	// user specified name
 	int							drawWhat;	// what part of the object to draw F 1 E 2 V 4
 	DS_EDGE_ATTRIBUTES			eAttr;		// edge state for rendering
 	DS_VERTEX_ATTRIBUTES		vAttr;		// vertex scale
@@ -386,9 +394,13 @@ typedef struct {
 	DS_REPLICATION_ATTRIBUTES	rAttr;		// replication flags
 	DS_TRANSPARENCY_ATTRIBUTES	tAttr;		// transparency info
 	DS_LABEL_FLAGS				lFlags;		// label flags
+	int							geo_type;	// which of the base geometry
+	int							geo_orientation; // base orientation
 											//=====================================================
 	MTX_VECTOR					*v_out;		// temp space for coordinate data to be used for transformations
+	MTX_VECTOR					*n_out;		// temp space for coordinate data to be used for transformations
 	GUT_POINT					*vtx;		// array of unique vertex coordinates
+	GUT_POINT					*nml;		// array of unique normal coordinates
 	DS_FACE						*tri;		// array of unique triangles/polygons
 	DS_EDGE						*edge;		// array of unique edges
 	int							nVtx,		// number of unique vertices in object
@@ -397,6 +409,8 @@ typedef struct {
 								nUTri,		// number of unique triangles by unique edge length sets
 								nUEdge;		// number of unique edges by length
 	int							*vIndex;	// array of all vertex indices for all faces/polygons
+	int							*nIndex;	// array of all normal indices for all faces/polygons
+	int							nmlFlag;	// indicates normals for each subface or normals per vertex
 	DS_COLOR_TABLE				*ctT,		// color table for triangles 
 								*ctE,		// color table for edges
 								*ctB;		// color table for edges & triangles 
@@ -407,6 +421,7 @@ typedef struct {
 typedef struct {
 	int						id;			// used to sort matrix
 	MTX_MATRIX				mtx;		// model matrix
+	MTX_MATRIX				nmtx;		// normal matrix
 } DS_MATRIX_SORT;
 
 typedef struct {
@@ -429,6 +444,20 @@ typedef struct {
 	MTX_MATRIX				*curMatrix;
 	DS_GEO_OBJECT			*curGeoObject;
 } DS_TRANSPARENCY;
+
+typedef struct {
+	int						useLightingFlag;
+	int						reverseColorFlag;
+	GUT_POINT				position;
+	int						ambientEnabled;
+	int						diffuseEnabled;
+	int						specularEnabled;
+	double					ambientPercent;
+	double					diffusePercent;
+	double					specularPercent;
+	double					matShininess;
+	double					matSpecular;
+} DS_LIGHTING;
 
 typedef struct {
 	DS_PROGRAM				program;
@@ -485,6 +514,7 @@ typedef struct {
 	DS_FILE					capDir;
 	DS_FILE					clrTbl;
 	DS_LABELS				label;
+	DS_LIGHTING				lighting;
 } DS_CTX;
 
 

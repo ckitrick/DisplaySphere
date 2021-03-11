@@ -62,7 +62,9 @@ enum OPTION { // need to be in the same order as the options
 	OP_FILM,
 	OP_GEOMETRY,
 	OP_GL_BACK,
+	OP_GL_BACK_CULL,
 	OP_GL_FRONT,
+	OP_GL_FRONT_CULL,
 	OP_HELP,
 	OP_HIRES,
 	OP_IMAGE,
@@ -82,6 +84,9 @@ enum OPTION { // need to be in the same order as the options
 	OP_LABEL_VERTEX_FONT,
 	OP_LABEL_VERTEX_ON,
 	OP_LIGHT,
+	OP_LIGHT_PARAM,
+	OP_LIGHT_PARAM_STATE,
+	OP_MATERIAL,
 	OP_NO_FOG,
 	OP_NO_IMAGE_STATE_SAVE,
 	OP_NO_LIGHTING,
@@ -175,7 +180,9 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 	"-film",				"-film",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, (void*)addr_film,		"enable film mode ( #frames, base_filename )",
 	"-geometry",			"-geo",		0,	1,					(int*)ATYPE_SUB_ARGUMENT,	(int*)0, (void*)&set_geometry,	"set base geometry (icosa|octa|cube|tetra)",
 	"-gl_back",				"-glb",		0,	1,					(int*)ATYPE_SUB_ARGUMENT,	(int*)0, (void*)&set_back,		"set OpenGL mode for back facing polygons (fill|line|point)",
+	"-gl_back_cull",		"-glbc",	0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable/disable culling for back facing polygons (0|1)",
 	"-gl_front",			"-glf",		0,	1,					(int*)ATYPE_SUB_ARGUMENT,	(int*)0, (void*)&set_front,		"set OpenGL mode for front facing polygons (fill|line|point)",
+	"-gl_front_cull",		"-glfc",	0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable/disable culling for front facing polygons (0|1)",
 	"-help",				"-help",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"display command line options",
 	"-hires",				"-hi",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable high resolution rendering for edges and vertices",
 	"-image",				"-im",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"enable image capture mode (filename)",
@@ -195,6 +202,9 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 	"-label_v_font",		"-lvf",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the vertex label font",
 	"-label_v_on",			"-lvo",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's vertex label",
 	"-light",				"-li",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_DOUBLE,			(int*)0, 0,						"change the position of the light (x, y, z)",
+	"-light_param",			"-lip",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set light ambient, diffuse, specular",
+	"-light_param_state",	"-lips",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set light ambient, diffuse, specular",
+	"-material",			"-mat",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set material specular and shininess",
 	"-no_fog",				"-nf",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"disable fog",
 	"-no_image_state_save",	"-nimss",	0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"disable image capture mode to save state at same time(filename)",
 	"-no_lighting",			"-nl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"disable lighting",
@@ -248,7 +258,9 @@ ARGUMENT_SUBSTITUTE arg_main_substitute[]={
 /*	OP_FILM,				*/  "-film",		"-film",
 /*	OP_GEOMETRY,			*/  "-geo",			"-geometry",
 /*	OP_GL_BACK,				*/  "-glb",			"-gl_back",
+/*	OP_GL_BACK,				*/  "-glbc",		"-gl_back_cull",
 /*	OP_GL_FRONT,			*/  "-glf",			"-gl_front",
+/*	OP_GL_FRONT,			*/  "-glfc",		"-gl_front_cull",
 /*	OP_HELP,				*/  "-help",		"-help",
 /*	OP_HIRES,				*/  "-hi",			"-hires",
 /*	OP_IMAGE,				*/  "-ibn",			"-image_basename",
@@ -265,9 +277,12 @@ ARGUMENT_SUBSTITUTE arg_main_substitute[]={
 /*--------------------------*/	"-lff",			"-label_f_font",
 /*--------------------------*/	"-lfo",			"-label_f_on",
 /*	OP_LIGHT,				*/  "-li",			"-light",
+/*	OP_LIGHT,				*/  "-lip",			"-light_param",
+/*	OP_LIGHT,				*/  "-lips",		"-light_param_state",
 /*--------------------------*/	"-lvc",			"-label_v_clr",
 /*--------------------------*/	"-lvf",			"-label_v_font",
 /*--------------------------*/	"-lvo",			"-label_v_on",
+/*--------------------------*/  "-mat",			"-material",
 /*	OP_NO_FOG,				*/  "-nf",			"-no_fog",
 /*	OP_NO_IMAGE_STATE_SAVE,	*/  "-nimss",		"-no_image_state_save",
 /*	OP_NO_LIGHTING,			*/  "-nl",			"-no_lighting",
@@ -344,6 +359,20 @@ int ds_filename_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 	arg_main[OP_LABEL_FACE_ON].addr   = (void*)&ctx->curInputObj->lFlags.face;				// need to set index & flag correctly afterwards
 	arg_main[OP_LABEL_VERTEX_ON].addr = (void*)&ctx->curInputObj->lFlags.vertex;			// need to set index & flag correctly afterwards
 
+//	arg_main[OP_GEOMETRY].addr		  = (void*)&ctx->curInputObj->geo_type;
+//	arg_main[OP_ORIENTATION].addr     = (void*)&ctx->curInputObj->geo_orientation;
+
+	ARGUMENT	*arg2;
+	arg2 = arg_geometry;											//"-geometry" set base geometry
+	arg2[0].addr = (void*)&ctx->curInputObj->geo_type; //cube
+	arg2[1].addr = (void*)&ctx->curInputObj->geo_type; //icos
+	arg2[2].addr = (void*)&ctx->curInputObj->geo_type; //octa
+	arg2[3].addr = (void*)&ctx->curInputObj->geo_type; //tetra
+	arg2 = arg_orientation;											//"-orientation
+	arg2[0].addr = (void*)&ctx->curInputObj->geo_orientation;
+	arg2[1].addr = (void*)&ctx->curInputObj->geo_orientation;
+	arg2[2].addr = (void*)&ctx->curInputObj->geo_orientation;
+
 	return 0;
 }
 
@@ -366,6 +395,74 @@ static int ds_font_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 	else if (!stricmp(av[*currentArgIndex], "T24")) label->font = GLUT_BITMAP_TIMES_ROMAN_24;
 
 	++*currentArgIndex; // move forward by one
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+static int ds_material_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
+//-----------------------------------------------------------------------------
+{
+	DS_CTX					*ctx;
+
+	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
+	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
+
+	if (*currentArgIndex + 1 >= maxNArgs) { ++*error; return 1; }//not enough arguments
+
+	ctx->lighting.matSpecular = atof(av[(*currentArgIndex)++]);
+	ctx->lighting.matShininess = atof(av[(*currentArgIndex)++]);
+
+	if (ctx->lighting.matSpecular < 0.0) ctx->lighting.matSpecular = 0.0;
+	else if (ctx->lighting.matSpecular > 1.0) ctx->lighting.matSpecular = 1.0;
+
+	if (ctx->lighting.matShininess < 0.0) ctx->lighting.matShininess = 0.0;
+	else if (ctx->lighting.matShininess > 128.0) ctx->lighting.matShininess = 128.0;
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+static int ds_light_param_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
+//-----------------------------------------------------------------------------
+{
+	DS_CTX					*ctx;
+
+	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
+	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
+
+	if (*currentArgIndex + 2 >= maxNArgs) { ++*error; return 1; }//not enough arguments
+
+	ctx->lighting.ambientPercent  = atof(av[(*currentArgIndex)++]);
+	ctx->lighting.diffusePercent  = atof(av[(*currentArgIndex)++]);
+	ctx->lighting.specularPercent = atof(av[(*currentArgIndex)++]);
+
+	if (ctx->lighting.ambientPercent < 0.0) ctx->lighting.ambientPercent = 0.0;
+	else if (ctx->lighting.ambientPercent > 1.0) ctx->lighting.ambientPercent = 1.0;
+
+	if (ctx->lighting.diffusePercent < 0.0) ctx->lighting.diffusePercent = 0.0;
+	else if (ctx->lighting.diffusePercent > 1.0) ctx->lighting.diffusePercent = 1.0;
+
+	if (ctx->lighting.specularPercent < 0.0) ctx->lighting.specularPercent = 0.0;
+	else if (ctx->lighting.specularPercent > 1.0) ctx->lighting.specularPercent = 1.0;
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+static int ds_light_param_state_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
+//-----------------------------------------------------------------------------
+{
+	DS_CTX					*ctx;
+
+	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
+	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
+
+	if (*currentArgIndex + 2 >= maxNArgs) { ++*error; return 1; }//not enough arguments
+
+	ctx->lighting.ambientEnabled  = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
+	ctx->lighting.diffuseEnabled  = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
+	ctx->lighting.specularEnabled = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
 
 	return 0;
 }
@@ -890,15 +987,15 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[0].addr = (void*)&ctx->geomAdj.polymode[0];
 	arg[1].addr = (void*)&ctx->geomAdj.polymode[0];
 	arg[2].addr = (void*)&ctx->geomAdj.polymode[0];
-	arg = arg_geometry;											//"-geometry" set base geometry
-	arg[0].addr = (void*)&ctx->base_geometry.type; //cube
-	arg[1].addr = (void*)&ctx->base_geometry.type; //icos
-	arg[2].addr = (void*)&ctx->base_geometry.type; //octa
-	arg[3].addr = (void*)&ctx->base_geometry.type; //tetra
-	arg = arg_orientation;											//"-orientation
-	arg[0].addr = (void*)&ctx->geomAdj.orientation;
-	arg[1].addr = (void*)&ctx->geomAdj.orientation;
-	arg[2].addr = (void*)&ctx->geomAdj.orientation;
+//	arg = arg_geometry;											//"-geometry" set base geometry
+//	arg[0].addr = (void*)&ctx->base_geometry.type; //cube
+//	arg[1].addr = (void*)&ctx->base_geometry.type; //icos
+//	arg[2].addr = (void*)&ctx->base_geometry.type; //octa
+//	arg[3].addr = (void*)&ctx->base_geometry.type; //tetra
+//	arg = arg_orientation;											//"-orientation
+//	arg[0].addr = (void*)&ctx->geomAdj.orientation;
+//	arg[1].addr = (void*)&ctx->geomAdj.orientation;
+//	arg[2].addr = (void*)&ctx->geomAdj.orientation;
 	
 	addr_film[0] = (void*)ctx->png.basename;			// need to set index & flag correctly afterwards
 	addr_film[1] = (void*)&ctx->png.nFrames;			// need to set index & flag correctly afterwards
@@ -922,9 +1019,8 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_CLR_TABLE].addr		= (void*)ctx->clrCtl.user_color_table;			// filename
 	arg[OP_COMMAND_LINE].addr	= (void*)&ds_command_line_arg_handler;		// NEED FUNCTION
 	arg[OP_COMMAND_LINE].data	= (void*)ctx;
-	//	arg[OP_GEOMETRY].addr		= 0; // need to be parsed
-//	arg[OP_GL_BACK].addr		= 0
-//	arg[OP_GL_FRONT].addr		= 0
+	arg[OP_GL_BACK_CULL].addr	= (void*)&ctx->geomAdj.cull[1];
+	arg[OP_GL_FRONT_CULL].addr	= (void*)&ctx->geomAdj.cull[0];
 	arg[OP_HELP].addr			= (void*)&ds_help_arg_handler;				// NEED FUNCTION
 	arg[OP_HELP].data			= (void*)ctx;
 	arg[OP_HIRES].addr			= (void*)&ctx->drawAdj.hiResFlag;				// -high resolution
@@ -947,12 +1043,18 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_LABEL_VERTEX_FONT].addr = (void*)&ds_font_arg_handler; //&gio->active;
 	arg[OP_LABEL_VERTEX_FONT].data = (void*)&ctx->label.vertex;
 
-	arg[OP_LIGHT].addr			= (void*)&ctx->clrCtl.light;					// -light
+	arg[OP_LIGHT].addr				= (void*)&ctx->clrCtl.light;					// -light
+	arg[OP_LIGHT_PARAM].addr		= (void*)&ds_light_param_arg_handler;
+	arg[OP_LIGHT_PARAM].data		= (void*)ctx;									// 
+	arg[OP_LIGHT_PARAM_STATE].addr	= (void*)&ds_light_param_state_arg_handler;
+	arg[OP_LIGHT_PARAM_STATE].data	= (void*)ctx;									// 
+	arg[OP_MATERIAL].addr			= (void*)&ds_material_arg_handler;
+	arg[OP_MATERIAL].data			= (void*)ctx;									// 
+
 	arg[OP_NO_FOG].addr			= (void*)&ctx->drawAdj.fogFlag;					// -nofog
 	arg[OP_NO_IMAGE_STATE_SAVE].addr = (void*)&ctx->png.stateSaveFlag;				// need to set index & flag correctly afterwards
 	arg[OP_NO_LIGHTING].addr	= (void*)&ctx->clrCtl.useLightingFlag;			// -nolighting
 	arg[OP_NORMALIZE].addr		= (void*)&ctx->drawAdj.normalizeFlag;			// -normal
-//	arg[OP_ORIENTATION].addr	= 0;
 	arg[OP_ORTHOGRAPHIC].addr	= (void*)&ctx->drawAdj.projection;				// change default
 	arg[OP_ROP].addr			= (void*)&ctx->relativeObjPathFlag;				// change relative path
 	arg[OP_SPP].addr			= (void*)&ctx->opengl.samplesPerPixel;			// -spp
@@ -1026,7 +1128,20 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_REPLICATE].addr		= (void*)&ds_obj_replicate_arg_handler; // NEED FUNCTION
 	arg[OP_REPLICATE].data		= (void*)ctx;
 
-	arg[OP_VERTEX_SCALE].addr = (void*)&ctx->curInputObj->vAttr.scale; //&gio->vAttr.scale;
+	arg[OP_VERTEX_SCALE].addr	= (void*)&ctx->curInputObj->vAttr.scale; //&gio->vAttr.scale;
+
+//	arg[OP_GEOMETRY].addr		= 0; // need to be parsed
+//	arg[OP_ORIENTATION].addr	= 0;
+
+	arg = arg_geometry;											//"-geometry" set base geometry
+	arg[0].addr = (void*)&ctx->defInputObj.geo_type; //cube
+	arg[1].addr = (void*)&ctx->defInputObj.geo_type; //icos
+	arg[2].addr = (void*)&ctx->defInputObj.geo_type; //octa
+	arg[3].addr = (void*)&ctx->defInputObj.geo_type; //tetra
+	arg = arg_orientation;											//"-orientation
+	arg[0].addr = (void*)&ctx->defInputObj.geo_orientation;
+	arg[1].addr = (void*)&ctx->defInputObj.geo_orientation;
+	arg[2].addr = (void*)&ctx->defInputObj.geo_orientation;
 
 	return 0;
 }
@@ -1167,6 +1282,29 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 	if (gobj->lFlags.face)   fprintf(fp, "-label_f_on\n");
 	if (gobj->lFlags.vertex) fprintf(fp, "-label_v_on\n");
 
+	{
+		//- geometry
+		char	*p;
+		switch (gobj->geo_type) {
+		case GEOMETRY_CUBEHEDRON:	p = arg_geometry[0].text; break;
+		case GEOMETRY_ICOSAHEDRON:	p = arg_geometry[1].text; break;
+		case GEOMETRY_OCTAHEDRON:	p = arg_geometry[2].text; break;
+		case GEOMETRY_TETRAHEDRON:	p = arg_geometry[3].text; break;
+		default:					p = arg_geometry[0].text;
+		}
+		fprintf(fp, "-geometry %s\n", p);
+
+		//- orientation
+		switch (gobj->geo_orientation) {
+		case GEOMETRY_ORIENTATION_EDGE:		p = arg_orientation[0].text; break;
+		case GEOMETRY_ORIENTATION_FACE:		p = arg_orientation[1].text; break;
+		case GEOMETRY_ORIENTATION_VERTEX:	p = arg_orientation[2].text; break;
+		default:							p = arg_orientation[0].text;
+		}
+		fprintf(fp, "-orientation %s\n", p);
+	}
+
+
 	return 0;
 }
 
@@ -1272,14 +1410,14 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	if ( !clrTblFlag )
 		fprintf(fp, "-clr_table \"%s\"\n", clrTblFilename );
 
-	//- geometry
-	switch (ctx->base_geometry.type) {
-	case GEOMETRY_CUBEHEDRON:	p = arg_geometry[0].text; break;
-	case GEOMETRY_ICOSAHEDRON:	p = arg_geometry[1].text; break;
-	case GEOMETRY_OCTAHEDRON:	p = arg_geometry[2].text; break;
-	case GEOMETRY_TETRAHEDRON:	p = arg_geometry[3].text; break;
-	}
-	fprintf(fp, "-geometry %s\n", p);
+//	//- geometry
+//	switch (ctx->base_geometry.type) {
+//	case GEOMETRY_CUBEHEDRON:	p = arg_geometry[0].text; break;
+//	case GEOMETRY_ICOSAHEDRON:	p = arg_geometry[1].text; break;
+//	case GEOMETRY_OCTAHEDRON:	p = arg_geometry[2].text; break;
+//	case GEOMETRY_TETRAHEDRON:	p = arg_geometry[3].text; break;
+//	}
+//	fprintf(fp, "-geometry %s\n", p);
 
 	//- gl_back
 	switch (ctx->geomAdj.polymode[1]) {
@@ -1287,7 +1425,8 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	case GEOMETRY_POLYMODE_LINE:	p = arg_back[1].text; break;
 	case GEOMETRY_POLYMODE_POINT:	p = arg_back[2].text; break;
 	}
-	fprintf(fp, "-gl_back %s\n", p);
+	fprintf(fp, "-gl_back %s\n", p); 
+	if (ctx->geomAdj.cull[1]) fprintf(fp, "-gl_back_cull\n");
 
 	//- gl_front
 	switch (ctx->geomAdj.polymode[0]) {
@@ -1296,6 +1435,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	case GEOMETRY_POLYMODE_POINT:	p = arg_front[2].text; break;
 	}
 	fprintf(fp, "-gl_front %s\n", p);
+	if (ctx->geomAdj.cull[0]) fprintf(fp, "-gl_front_cull\n");
 
 	// open tool windows
 	if (ctx->attrControl && ctx->objControl)
@@ -1317,7 +1457,12 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 
 	//- light
 	//- light
-	fprintf(fp, "-light %f %f %f\n", ctx->clrCtl.light.x, ctx->clrCtl.light.y, ctx->clrCtl.light.z );
+	fprintf(fp, "-light %f %f %f\n", ctx->lighting.position.x, ctx->lighting.position.y, ctx->lighting.position.z );
+	fprintf(fp, "-light_param %f %f %f\n", ctx->lighting.ambientPercent, ctx->lighting.diffusePercent, ctx->lighting.specularPercent);
+	fprintf(fp, "-light_param_state %d %d %d\n", ctx->lighting.ambientEnabled, ctx->lighting.diffuseEnabled, ctx->lighting.specularEnabled);
+
+	// material 
+	fprintf(fp, "-material %f %.0f\n", ctx->lighting.matSpecular, ctx->lighting.matShininess);
 
 	//- no_fog
 	if (!ctx->drawAdj.fogFlag) fprintf(fp, "-no_fog\n");
@@ -1328,13 +1473,13 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	//- normalize
 	if (ctx->drawAdj.normalizeFlag) fprintf(fp, "-normalize\n");
 
-	//- orientation
-	switch (ctx->geomAdj.orientation) {
-	case GEOMETRY_ORIENTATION_EDGE:   p = arg_orientation[0].text; break;
-	case GEOMETRY_ORIENTATION_FACE:   p = arg_orientation[1].text; break;
-	case GEOMETRY_ORIENTATION_VERTEX: p = arg_orientation[2].text; break;
-	}
-	fprintf(fp, "-orientation %s\n", p);
+//	//- orientation
+//	switch (ctx->geomAdj.orientation) {
+//	case GEOMETRY_ORIENTATION_EDGE:   p = arg_orientation[0].text; break;
+//	case GEOMETRY_ORIENTATION_FACE:   p = arg_orientation[1].text; break;
+//	case GEOMETRY_ORIENTATION_VERTEX: p = arg_orientation[2].text; break;
+//	}
+//	fprintf(fp, "-orientation %s\n", p);
 
 	//- orthographic
 	if (ctx->drawAdj.projection == GEOMETRY_PROJECTION_ORTHOGRAPHIC ) fprintf(fp, "-orthographic\n");

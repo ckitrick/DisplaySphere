@@ -552,15 +552,15 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			SendMessage(ctx->mainWindow, WM_COMMAND, ID_SHOW_TOGGLE, 0); break;
 		case 'N':
 		case 'n': ctx->drawAdj.normalizeFlag = ctx->drawAdj.normalizeFlag ? 0 : 1; break; //global_normalize = ctx->global_normalize ? 0 : 1; break;			/* n key */
-		case 'O':
-		case 'o': // change base geometry orientation
-			switch (ctx->geomAdj.orientation) {
-			case GEOMETRY_ORIENTATION_FACE: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_EDGE; break;
-			case GEOMETRY_ORIENTATION_EDGE: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_VERTEX; break;
-			case GEOMETRY_ORIENTATION_VERTEX: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_FACE; break;
-			}
-			ds_file_set_window_text(hWnd, ctx->filename);
-			break;
+//		case 'O':
+//		case 'o': // change base geometry orientation
+//			switch (ctx->geomAdj.orientation) {
+//			case GEOMETRY_ORIENTATION_FACE: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_EDGE; break;
+//			case GEOMETRY_ORIENTATION_EDGE: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_VERTEX; break;
+//			case GEOMETRY_ORIENTATION_VERTEX: ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_FACE; break;
+//			}
+//			ds_file_set_window_text(hWnd, ctx->filename);
+//			break;
 		case 'P':
 		case 'p': ctx->drawAdj.projection = !ctx->drawAdj.projection; ds_reshape(hWnd, ctx->window.width, ctx->window.height); break;	/* p key - switch from perspective to orthographic projection */
 		case 'R':

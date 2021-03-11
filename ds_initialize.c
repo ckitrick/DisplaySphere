@@ -262,8 +262,10 @@ void ds_pre_init(DS_CTX *ctx)
 
 	ctx->geomAdj.polymode[0]	= GEOMETRY_POLYMODE_FILL;
 	ctx->geomAdj.polymode[1]	= GEOMETRY_POLYMODE_FILL;
+	ctx->geomAdj.cull[0]		= 0; // front cull 
+	ctx->geomAdj.cull[1]		= 0; // back cull
 
-	ctx->geomAdj.orientation	= GEOMETRY_ORIENTATION_FACE;
+//	ctx->geomAdj.orientation	= GEOMETRY_ORIENTATION_FACE;
 
 	// edge attributes
 	ctx->eAttr.type				= GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
@@ -274,7 +276,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->eAttr.minLength		= 100000000;
 
 	// draw attributes
-	ctx->geomAdj.drawWhat		= GEOMETRY_DRAW_TRIANGLES;
+//	ctx->geomAdj.drawWhat		= GEOMETRY_DRAW_TRIANGLES;
 
 	// color control
 	ctx->clrCtl.useLightingFlag				= 1;
@@ -354,6 +356,24 @@ void ds_pre_init(DS_CTX *ctx)
 		ds_label_set(&ctx->label.vertex, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
 	}
 
+	// lighting initialization
+	ctx->lighting.useLightingFlag	= 1;
+	ctx->lighting.ambientEnabled	= 1;
+	ctx->lighting.diffuseEnabled	= 1;
+	ctx->lighting.specularEnabled	= 0;
+//	ctx->lighting.matShininessEnabled = 1;
+	ctx->lighting.ambientPercent	= 0.05;
+	ctx->lighting.diffusePercent	= 0.7;
+	ctx->lighting.specularPercent	= 0.3;
+	ctx->lighting.matShininess      = 128.0;
+	ctx->lighting.matSpecular		= 1.0;
+//	ctx->lighting.cutoffAngle		= 60.0;
+//	ctx->lighting.exponent			= 2.0;
+	ctx->lighting.position.x		= 1.3;
+	ctx->lighting.position.y		= 1.3;
+	ctx->lighting.position.z		= 6.0;
+	ctx->lighting.position.w		= 1.0;
+
 	ctx->gobjectq = LL_Create();
 	ctx->inputObjq = LL_Create();
 	{
@@ -405,6 +425,10 @@ void ds_pre_init(DS_CTX *ctx)
 		gio->lFlags.face   = 0;
 		gio->lFlags.edge   = 0;
 		gio->lFlags.vertex = 0;
+
+		// geometry	
+		gio->geo_type			= GEOMETRY_ICOSAHEDRON;
+		gio->geo_orientation	= GEOMETRY_ORIENTATION_FACE;
 	}
 	ctx->dssStateFlag = 0;
 
@@ -494,10 +518,12 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->png.stateSaveFlag	= 1;
 	ctx->png.bwFlag			= 0;
 
-	ctx->geomAdj.polymode[0] = GEOMETRY_POLYMODE_FILL;
-	ctx->geomAdj.polymode[1] = GEOMETRY_POLYMODE_FILL;
+	ctx->geomAdj.polymode[0]	= GEOMETRY_POLYMODE_FILL;
+	ctx->geomAdj.polymode[1]	= GEOMETRY_POLYMODE_FILL;
+	ctx->geomAdj.cull[0]		= 0; // front cull 
+	ctx->geomAdj.cull[1]		= 0; // back cull
 
-	ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_FACE;
+//	ctx->geomAdj.orientation = GEOMETRY_ORIENTATION_FACE;
 
 	// edge attributes
 	ctx->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
@@ -508,7 +534,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->eAttr.minLength = 100000000;
 
 	// draw attributes
-	ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
+//	ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
 
 	// color control
 	ctx->clrCtl.useLightingFlag = 1;
@@ -581,6 +607,25 @@ void ds_pre_init2(DS_CTX *ctx)
 		ds_label_set(&ctx->label.vertex, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
 	}
 
+	// lighting initialization
+	// lighting initialization
+	ctx->lighting.useLightingFlag	= 1;
+	ctx->lighting.ambientEnabled	= 1;
+	ctx->lighting.diffuseEnabled	= 1;
+	ctx->lighting.specularEnabled	= 0;
+//	ctx->lighting.matShininessEnabled = 1;
+	ctx->lighting.ambientPercent	= 0.05;
+	ctx->lighting.diffusePercent	= 0.7;
+	ctx->lighting.specularPercent	= 0.3;
+	ctx->lighting.matShininess      = 128.0;
+	ctx->lighting.matSpecular		= 1.0;
+//	ctx->lighting.cutoffAngle		= 60.0;
+//	ctx->lighting.exponent			= 2.0;
+	ctx->lighting.position.x		= 1.3;
+	ctx->lighting.position.y		= 1.3;
+	ctx->lighting.position.z		= 6.0;
+	ctx->lighting.position.w		= 1.0;
+
 	{
 		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
 		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
@@ -631,6 +676,10 @@ void ds_pre_init2(DS_CTX *ctx)
 		gio->lFlags.face = 0;
 		gio->lFlags.edge = 0;
 		gio->lFlags.vertex = 0;
+
+		// geometry	
+		gio->geo_type			= GEOMETRY_ICOSAHEDRON;
+		gio->geo_orientation	= GEOMETRY_ORIENTATION_FACE;
 	}
 	ctx->dssStateFlag = 0;
 }
@@ -648,12 +697,11 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 		CAPTURE_FILM,
 	};
 
-	if (!ctx->base_geometry.type)
-		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
+//	if (!ctx->base_geometry.type)
+//		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
 
-
-	if (!ctx->geomAdj.drawWhat)
-		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
+//	if (!ctx->geomAdj.drawWhat)
+//		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
 
 	if (!ctx->drawAdj.clipFlag) // not set by command line
 	{
@@ -787,14 +835,16 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 				ds_file_set_window_text(ctx->mainWindow, dsf->nameOnly);
 
 //				copy settings
-				gobj->drawWhat	= gio->drawWhat;
-				gobj->eAttr		= gio->eAttr;
-				gobj->cAttr		= gio->cAttr;
-				gobj->vAttr		= gio->vAttr;
-				gobj->rAttr		= gio->rAttr;
-				gobj->tAttr     = gio->tAttr;
-				gobj->lFlags    = gio->lFlags;
-				gobj->dsf		= dsf;
+				gobj->drawWhat			= gio->drawWhat;
+				gobj->eAttr				= gio->eAttr;
+				gobj->cAttr				= gio->cAttr;
+				gobj->vAttr				= gio->vAttr;
+				gobj->rAttr				= gio->rAttr;
+				gobj->tAttr				= gio->tAttr;
+				gobj->lFlags			= gio->lFlags;
+				gobj->geo_type			= gio->geo_type;
+				gobj->geo_orientation	= gio->geo_orientation;
+				gobj->dsf				= dsf;
 			}
 			else
 			{
@@ -821,12 +871,12 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 		CAPTURE_FILM,
 	};
 
-	if (!ctx->base_geometry.type)
-		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
+//	if (!ctx->base_geometry.type)
+//		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
 
 
-	if (!ctx->geomAdj.drawWhat)
-		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
+//	if (!ctx->geomAdj.drawWhat)
+//		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
 
 	if (!ctx->drawAdj.clipFlag) // not set by command line
 	{
@@ -938,15 +988,17 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 				ds_file_set_window_text(ctx->mainWindow, dsf->nameOnly);
 
 				//	copy settings
-				gobj->active   = gio->active;
-				gobj->drawWhat = gio->drawWhat;
-				gobj->eAttr    = gio->eAttr;
-				gobj->cAttr    = gio->cAttr;
-				gobj->vAttr    = gio->vAttr;
-				gobj->rAttr    = gio->rAttr;
-				gobj->tAttr    = gio->tAttr;
-				gobj->lFlags   = gio->lFlags;
-				gobj->dsf      = dsf;
+				gobj->active			= gio->active;
+				gobj->drawWhat			= gio->drawWhat;
+				gobj->eAttr				= gio->eAttr;
+				gobj->cAttr				= gio->cAttr;
+				gobj->vAttr				= gio->vAttr;
+				gobj->rAttr				= gio->rAttr;
+				gobj->tAttr				= gio->tAttr;
+				gobj->lFlags			= gio->lFlags;
+				gobj->geo_type			= gio->geo_type;
+				gobj->geo_orientation	= gio->geo_orientation;
+				gobj->dsf				= dsf;
 			}
 			else
 				ds_file_close(ctx, dsf);

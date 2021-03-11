@@ -162,23 +162,43 @@ void ds_display_control(DS_CTX *ctx)
 void ds_display ( DS_CTX *ctx, int swap, int clear )
 //-----------------------------------------------------------------------------------
 {
-	static GLfloat mat_specular[4] = { (float)0.0, (float)0.5, (float)1.0, (float)1.0 };
-	static GLfloat mat_shininess = 50; // 100.0; //50
-	static GLfloat light_position[4];// = { (float)0.5, (float)0.5, (float)2.0, (float)0.0 };
-	static GLfloat light_ambient[4] = { (float)0.1, (float)0.1, (float)0.1, (float)1.0 };
-	static GLfloat light_diffuse[4] = { (float)0.3, (float)0.3, (float)0.3, (float)1.0 };
-	static GLfloat light_specular[4] = { (float)0.0, (float)0.0, (float)0.0, (float)1.0 };
-	static GLdouble eqn[4] = { 0.0, 1.0, 0.0, 0.0 };
-	static GLdouble eqn2[4] = { 1.0, 0.0, 0.0, 0.0 };
-	static MTX_VECTOR clip_in = { 0.0, 0.0, 1.0, 0.0 }, clip_out;
-	static GLfloat	density = (float)0.9;
-	static GLfloat fogStart = 4.0, fogEnd = 4.5;
-	static GLfloat fogColor[4];
-	static GLfloat fogStartCoord[4] = { 0.0,0.0,0.0,1.0 };
-	static GUT_POINT		pt;
-	static GUT_PLANE		pl;
-	static GUT_VECTOR		n;
+	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glLight.xml
+	//
+	static MTX_MATRIX	mtx;
+	static GLfloat		light_position[4];
+	static GUT_POINT	light_pos;
+	static GLfloat		light_ambient[4]  = { (float)0.4, (float)0.4, (float)0.4, (float)1.0 };
+	static GLfloat		light_diffuse[4]  = { (float)0.8, (float)0.8, (float)0.8, (float)1.0 };
+	static GLfloat		light_specular[4] = { (float)0.5, (float)0.5, (float)0.5, (float)1.0 };
+	static GLfloat		mat_shininess = 50; // 100.0; //50
+	static GLfloat		mat_ambient[4] = { (float)0.0, (float)0.0, (float)0.0, (float)1.0 };
+	static GLfloat		mat_diffuse[4] = { (float)0.7, (float)0.7, (float)0.7, (float)1.0 };
+	static GLfloat		mat_specular[4] = { (float)1.0, (float)1.0, (float)1.0, (float)1.0 };
 
+	static GLdouble		eqn[4] = { 0.0, 1.0, 0.0, 0.0 };
+	static GLdouble		eqn2[4] = { 1.0, 0.0, 0.0, 0.0 };
+	static MTX_VECTOR	clip_in = { 0.0, 0.0, 1.0, 0.0 }, clip_out;
+	static GLfloat		density = (float)0.9;
+	static GLfloat		fogStart = 4.0, fogEnd = 4.5;
+	static GLfloat		fogColor[4];
+	static GLfloat		fogStartCoord[4] = { 0.0,0.0,0.0,1.0 };
+	static GUT_POINT	pt;
+	static GUT_PLANE	pl;
+	static GUT_VECTOR	n;
+
+	if (ctx->lighting.ambientEnabled)
+		light_ambient[0] = light_ambient[1] = light_ambient[2] = (float)ctx->lighting.ambientPercent;
+	else
+		light_ambient[0] = light_ambient[1] = light_ambient[2] = (float)0.0;
+	if (ctx->lighting.diffuseEnabled)
+		light_diffuse[0] = light_diffuse[1] = light_diffuse[2] = (float)ctx->lighting.diffusePercent;
+	else
+		light_diffuse[0] = light_diffuse[1] = light_diffuse[2] = (float)0.0;
+	if (ctx->lighting.specularEnabled)
+		light_specular[0] = light_specular[1] = light_specular[2] = (float)ctx->lighting.specularPercent;
+	else
+		light_specular[0] = light_specular[1] = light_specular[2] = (float)0.0;
+	mat_specular[0] = mat_specular[1] = mat_specular[2] = (float)ctx->lighting.matSpecular;
 
 	glShadeModel(GL_SMOOTH);          // Use Smooth shading ( This is the Default so we dont actually have to set it) 
 	if (ctx->drawAdj.fogFlag)//global_fog)
@@ -192,11 +212,8 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 		glFogfv(GL_FOG_COLOR, fogColor);
 		glFogf(GL_FOG_DENSITY, density);
 		// transform the start and end points of fog
-
 		fogStart = (float)( 4.0 - ctx->trans[2] );
 		fogEnd = (float)( 4.5 - ctx->trans[2] );
-//		fogStart = (float)(4.0);// -ctx->trans[2]);
-//		fogEnd = (float)(4.5); // -ctx->trans[2]);
 		glFogf(GL_FOG_START, fogStart);
 		glFogf(GL_FOG_END, fogEnd);
 		glHint(GL_FOG_HINT, GL_NICEST);
@@ -206,27 +223,40 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 		glDisable(GL_FOG);
 	}
 
+	mat_shininess = (float)ctx->lighting.matShininess;
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, &mat_shininess);
 	glDisable(GL_LIGHTING);
 	if (ctx->clrCtl.useLightingFlag)
 	{
 		glEnable(GL_LIGHTING);
-		light_position[0] = (float)ctx->clrCtl.light.x;
-		light_position[1] = (float)ctx->clrCtl.light.y;
-		light_position[2] = (float)ctx->clrCtl.light.z;
-		light_position[3] = 0; // ctx->clrCtl.light.w;
-		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-		glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-		glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+		mtx_create_translation_matrix(&mtx, (double)ctx->trans[0], (double)ctx->trans[1], (double)ctx->trans[2]);
+		mtx_vector_multiply(1, (MTX_VECTOR*)&ctx->lighting.position, (MTX_VECTOR*)&light_pos, &mtx); // transform the vertices once
+		light_position[0] = (float)light_pos.x;
+		light_position[1] = (float)light_pos.y;
+		light_position[2] = (float)light_pos.z;
+		light_position[3] = 1.0;
+		glLightfv(GL_LIGHT0, GL_POSITION,		light_position);
+		glLightfv(GL_LIGHT0, GL_AMBIENT,		light_ambient);
+		glLightfv(GL_LIGHT0, GL_DIFFUSE,		light_diffuse);
+		glLightfv(GL_LIGHT0, GL_SPECULAR,		light_specular);
 		glEnable(GL_LIGHT0);
 	}
 
-	glColorMaterial(GL_FRONT, GL_DIFFUSE);
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
-	glDepthFunc(GL_LESS);
-	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_DEPTH_TEST);	// Hidden surface removal
+	glFrontFace(GL_CCW);		// Counter clock-wise polygons face out
+	if (ctx->geomAdj.cull[0] || ctx->geomAdj.cull[1])
+	{
+		if (ctx->geomAdj.cull[0] && ctx->geomAdj.cull[1]) glCullFace(GL_FRONT_AND_BACK);
+		else if (ctx->geomAdj.cull[0]) glCullFace(GL_FRONT);
+		else glCullFace(GL_BACK);
+		glEnable(GL_CULL_FACE);
+	}
+	else
+		glDisable(GL_CULL_FACE);
 
 	if (ctx->drawAdj.clipFlag) //->clip.active )
 	{
@@ -251,38 +281,6 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 		glMultMatrixd((double*)&ctx->matrix);
 		glClipPlane(GL_CLIP_PLANE0, (const double*)&clip_in);
 		glPopMatrix();
-/* 
-{
-			MTX_MATRIX	a, b, c;
-//			mtx_set_unity(&a);
-			mtx_create_translation_matrix(&a, (double)ctx->trans[0], (double)ctx->trans[1], (double)ctx->trans[2]);
-
-//			mtx_multiply_matrix(a, &ctx->matrix, &c);
-			mtx_multiply_matrix(&ctx->matrix, &a, &b);
-//			mtx_multiply_matrix(&a, &ctx->matrix, &b);
-			mtx_vector_multiply(1, &clip_in, &clip_out, &b); // transform the vertices once
-//			glClipPlane(GL_CLIP_PLANE0, (const double*)&clip_out);
-			glPushMatrix();
-			glMatrixMode(GL_MODELVIEW);
-			glClipPlane(GL_CLIP_PLANE0, (const double*)&clip_out);
-			glPopMatrix();
-		}
-
-//		myx
-//		mtx_multiply_matrix(mp, &ctx->matrix, &mtx);
-//		mtx_multiply_matrix(&mtx, &rmtx, &tmtx);
-//		void mtx_vector_multiply( 1, (MTX_VECTOR *)&clip_in, (MTX_VECTOR *)&clip_out, MTX_MATRIX *m);
-
-
-////		glPushMatrix();
-////		glTranslatef(ctx->trans[0], ctx->trans[1], ctx->trans[2]);
-//		{
-//			glMatrixMode(GL_MODELVIEW);
-////			glMultMatrixd((double*)&ctx->matrix);
-//			glClipPlane(GL_CLIP_PLANE0, (const double*)&clip_in);
-//		}
-//		glPopMatrix();
-*/
 	}
 	else
 	{
@@ -294,25 +292,13 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 
 	if (clear)
 	{
-		//	glClearColor((float)ctx->clear.r, (float)ctx->clear.g, (float)ctx->clear.b, (float)0.0);
 		glClearColor((float)ctx->clrCtl.bkgClear.r, (float)ctx->clrCtl.bkgClear.g, (float)ctx->clrCtl.bkgClear.b, (float)0.0);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
-
-//	glEnable(GL_ALPHA_TEST);
-//	glEnable(GL_BLEND);
-//	glDepthMask(GL_FALSE);
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	glPushMatrix();
-//	glTranslatef(ctx->trans[0], ctx->trans[1], ctx->trans[2]);
-	{
-		glMatrixMode(GL_MODELVIEW);
-//		glMultMatrixd((double*)&ctx->matrix);
-	}
+	glMatrixMode(GL_MODELVIEW);
 
 	//--------------------------------------------------------------------
 	glDisable(GL_ALPHA_TEST);
@@ -330,12 +316,11 @@ void ds_display ( DS_CTX *ctx, int swap, int clear )
 	case GEOMETRY_POLYMODE_FILL:  glPolygonMode(GL_BACK, GL_FILL); break;
 	case GEOMETRY_POLYMODE_LINE:  glPolygonMode(GL_BACK, GL_LINE); break;
 	case GEOMETRY_POLYMODE_POINT: glPolygonMode(GL_BACK, GL_POINT); break;
-	default: glPolygonMode(GL_FRONT, GL_FILL);
+	default: glPolygonMode(GL_BACK, GL_FILL);
 	}
 
+	// draw the user defined objects
 	ds_draw_geometry(ctx);
-
-	//--------------------------------------------------------------------
 
 	glPopMatrix();
 	glFlush();
@@ -429,8 +414,7 @@ int ds_draw_circle_segment(GUT_POINT *a, GUT_POINT *b, GUT_POINT *c, GUT_VECTOR 
 			e.y = p[0]->y + v[0].j / distance[2];
 			e.z = p[0]->z + v[0].k / distance[2];
 			glBegin(GL_TRIANGLES);
-			glNormal3f((float)n->i * 3, (float)n->j * 3, (float)n->k * 3);
-//			glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
+			glNormal3f((float)n->i, (float)n->j, (float)n->k);
 			glColor4f((float)clr->r, (float)clr->g, (float)clr->b, (float)clr->a);
 			glVertex3f((float)p[0]->x, (float)p[0]->y, (float)p[0]->z);
 			glVertex3f((float)d.x, (float)d.y, (float)d.z);
@@ -455,7 +439,7 @@ void ds_draw_triangle(DS_CTX *ctx, GUT_POINT *a, GUT_POINT *b, GUT_POINT *c, DS_
 	gut_cross_product(&vab, &vbc, &normal);
 	gut_normalize_point((GUT_POINT*)&normal);
 
-	glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+	glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 	glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
 
 	glVertex3f((float)a->x, (float)a->y, (float)a->z);
@@ -469,11 +453,11 @@ void ds_draw_triangle_hex(DS_CTX *ctx, GUT_POINT *p, GUT_VECTOR *n, DS_COLOR *cl
 {
 	// determine face normal from cross product
 	glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
-	glNormal3f((float)n[i % nSeg].i * 3, (float)n[i % nSeg].j * 3, (float)n[i % nSeg].k * 3);
+	glNormal3f((float)n[i % nSeg].i, (float)n[i % nSeg].j, (float)n[i % nSeg].k);
 	glVertex3f((float)p[i].x, (float)p[i].y, (float)p[i].z);
-	glNormal3f((float)n[j % nSeg].i * 3, (float)n[j % nSeg].j * 3, (float)n[j % nSeg].k * 3);
+	glNormal3f((float)n[j % nSeg].i, (float)n[j % nSeg].j, (float)n[j % nSeg].k);
 	glVertex3f((float)p[j].x, (float)p[j].y, (float)p[j].z);
-	glNormal3f((float)n[k % nSeg].i * 3, (float)n[k % nSeg].j * 3, (float)n[k % nSeg].k * 3);
+	glNormal3f((float)n[k % nSeg].i, (float)n[k % nSeg].j, (float)n[k % nSeg].k);
 	glVertex3f((float)p[k].x, (float)p[k].y, (float)p[k].z);
 }
 
@@ -505,15 +489,15 @@ int ds_gl_render_vertex(DS_CTX *ctx, GUT_POINT *vtx, GUT_POINT *vs, GUT_POINT *v
 	glBegin(GL_TRIANGLES);
 	for (j = 0; j < nTri; ++j, ++vt)
 	{
-		glNormal3f((float)vs[vt->vtx[0]].x * 3, (float)vs[vt->vtx[0]].y * 3, (float)vs[vt->vtx[0]].z * 3);
+		glNormal3f((float)vs[vt->vtx[0]].x, (float)vs[vt->vtx[0]].y, (float)vs[vt->vtx[0]].z);
 		glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
 		glVertex3f((float)vd[vt->vtx[0]].x, (float)vd[vt->vtx[0]].y, (float)vd[vt->vtx[0]].z);// ++v;
 
-		glNormal3f((float)vs[vt->vtx[1]].x * 3, (float)vs[vt->vtx[1]].y * 3, (float)vs[vt->vtx[1]].z * 3);
+		glNormal3f((float)vs[vt->vtx[1]].x, (float)vs[vt->vtx[1]].y, (float)vs[vt->vtx[1]].z);
 		glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
 		glVertex3f((float)vd[vt->vtx[1]].x, (float)vd[vt->vtx[1]].y, (float)vd[vt->vtx[1]].z);// ++v;
 
-		glNormal3f((float)vs[vt->vtx[2]].x * 3, (float)vs[vt->vtx[2]].y * 3, (float)vs[vt->vtx[2]].z * 3);
+		glNormal3f((float)vs[vt->vtx[2]].x, (float)vs[vt->vtx[2]].y, (float)vs[vt->vtx[2]].z);
 		glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
 		glVertex3f((float)vd[vt->vtx[2]].x, (float)vd[vt->vtx[2]].y, (float)vd[vt->vtx[2]].z);// ++v;
 	}
@@ -717,7 +701,9 @@ int ds_blend_draw_face(DS_CTX *ctx, DS_FACE_SORT *fs)
 	int						reverseOrder = fs->reverseOrder;
 	int						j, k;
 	static MTX_VECTOR		*v;
+	static MTX_VECTOR		*nml;
 	static GUT_POINT		p[32];
+	static GUT_POINT		n[32];
 	GUT_VECTOR				normal, vab, vbc;
 
 	if (fs->queue) // there are more with the same Z value so process them first
@@ -729,12 +715,15 @@ int ds_blend_draw_face(DS_CTX *ctx, DS_FACE_SORT *fs)
 	}
 
 	v = gobj->v_out; // ppinter to array of object's vertices 
+	nml = gobj->n_out; // ppinter to array of object's normals 
 
 	if ( fs->ms->id != gobj->matrixID )
 	{
 		// redo the model matrix on the data
 		mtx_vector_multiply(gobj->nVtx, (MTX_VECTOR*)gobj->vtx, gobj->v_out, &fs->ms->mtx); // transform the vertices once
-		// update which matrix is associated with the transformed vertices
+		if( gobj->nmlFlag)
+			mtx_vector_multiply(gobj->nVtx, (MTX_VECTOR*)gobj->nml, gobj->n_out, &fs->ms->nmtx); // transform the normals once
+																								// update which matrix is associated with the transformed vertices
 		gobj->matrixID = fs->ms->id;
 	}
 
@@ -746,10 +735,23 @@ int ds_blend_draw_face(DS_CTX *ctx, DS_FACE_SORT *fs)
 	}
 
 	if (!reverseOrder) // copy vertex data to new variables
-		for (j = 0; j<face->nVtx; ++j) p[j] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
+	{
+		for (j = 0; j < face->nVtx; ++j)
+		{
+			p[j] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
+			if (gobj->nmlFlag)
+				n[j] = *(GUT_POINT*)&nml[face->nml[j]].data.xyzw[0];
+		}
+	}
 	else
-		for (k = 0, j = face->nVtx - 1; j >= 0; --j, ++k) p[k] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
-
+	{
+		for (k = 0, j = face->nVtx - 1; j >= 0; --j, ++k)
+		{
+			p[k] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
+			if (gobj->nmlFlag)
+				n[k] = *(GUT_POINT*)&nml[face->nml[j]].data.xyzw[0];
+		}
+	}
 	// check for special flag to re-normalize
 	if (ctx->drawAdj.normalizeFlag)//if (ctx->global_normalize)
 		for (j = 0; j < face->nVtx; ++j) ds_normalize_point(&ctx->origin, &p[j]);
@@ -768,24 +770,39 @@ int ds_blend_draw_face(DS_CTX *ctx, DS_FACE_SORT *fs)
 	}
 	else
 	{
-		glBegin(GL_TRIANGLES);
-		for (j = 0; j < face->nVtx; ++j)
+		if (!gobj->nmlFlag)
 		{
-			if (j >= 2)
+			glBegin(GL_TRIANGLES);
+			for (j = 2; j < face->nVtx; ++j)
 			{
 				// determine face normal from cross product
 				gut_vector(&p[0], &p[j - 1], &vab);
 				gut_vector(&p[j - 1], &p[j], &vbc);
 				gut_cross_product(&vab, &vbc, &normal);
 				gut_normalize_point((GUT_POINT*)&normal);
-				glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+				glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 				glColor4f((float)clr->r, (float)clr->g, (float)clr->b, (float)fs->alpha);
 				glVertex3f((float)p[0].x, (float)p[0].y, (float)p[0].z);
 				glVertex3f((float)p[j - 1].x, (float)p[j - 1].y, (float)p[j - 1].z);
 				glVertex3f((float)p[j].x, (float)p[j].y, (float)p[j].z);
 			}
+			glEnd();
 		}
-		glEnd();
+		else
+		{	// use owner supplied normals
+			glBegin(GL_TRIANGLES);
+			for (j = 2; j < face->nVtx; ++j)
+			{
+				glColor4f((float)clr->r, (float)clr->g, (float)clr->b, (float)fs->alpha);
+				glNormal3f((float)n[0].x, (float)n[0].y, (float)n[0].z);
+				glVertex3f((float)p[0].x, (float)p[0].y, (float)p[0].z);
+				glNormal3f((float)n[j - 1].x, (float)n[j - 1].y, (float)n[j - 1].z);
+				glVertex3f((float)p[j - 1].x, (float)p[j - 1].y, (float)p[j - 1].z);
+				glNormal3f((float)n[j].x, (float)n[j].y, (float)n[j].z);
+				glVertex3f((float)p[j].x, (float)p[j].y, (float)p[j].z);
+			}
+			glEnd();
+		}
 	}
 	return 0;
 }
@@ -814,7 +831,7 @@ ds_blend_sort_init(DS_CTX *ctx)
 }
 
 //-----------------------------------------------------------------------------
-int ds_blend_sort_one_face(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, MTX_MATRIX *mtx, int reverseOrder, int matrixID, float alpha)
+int ds_blend_sort_one_face(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, MTX_MATRIX *mtx, MTX_MATRIX *nmtx, int reverseOrder, int matrixID, float alpha)
 //-----------------------------------------------------------------------------
 {
 	GUT_POINT		*v;
@@ -857,10 +874,11 @@ int ds_blend_sort_one_face(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, MTX_
 	ms.id = matrixID;
 	if (!avl_find(ctx->transparency.avlMtxSort, &ms, &msp))
 	{
-		msp      = (DS_MATRIX_SORT*)mem_malloc(ctx->transparency.mtx_set);
-		msp->id  = matrixID;
-		msp->mtx = *mtx;
-		fs->ms   = msp;
+		msp       = (DS_MATRIX_SORT*)mem_malloc(ctx->transparency.mtx_set);
+		msp->id   = matrixID;
+		msp->mtx  = *mtx;
+		msp->nmtx = *nmtx;
+		fs->ms    = msp;
 		avl_insert(ctx->transparency.avlMtxSort, msp);
 	}
 	else
@@ -878,9 +896,11 @@ void ds_draw_geometry(DS_CTX *ctx)
 //-----------------------------------------------------------------------------
 {
 	static int				i, j, k, reverseOrder;
-	static MTX_MATRIX		*mp, mtx, rmtx, tmtx;
+	static MTX_MATRIX		*mp, mtx, rmtx, tmtx, nmtx;
 	static MTX_VECTOR		*v;
+	static MTX_VECTOR		*nml;
 	static GUT_POINT		p[32];
+	static GUT_POINT		n[32];
 	static GUT_POINT		cntr;
 	double					maxZ;
 	static GUT_VECTOR		vab, vbc, normal;
@@ -919,20 +939,26 @@ void ds_draw_geometry(DS_CTX *ctx)
 		if (!gobj->active) continue;
 
 		if (!gobj->v_out) gobj->v_out = malloc(sizeof(MTX_VECTOR) * gobj->nVtx); // alocate memory once 
+		if (!gobj->n_out) gobj->n_out = malloc(sizeof(MTX_VECTOR) * gobj->nVtx); // alocate memory once 
 
 		transformID = 0;
 		ds_geometry_draw_init(ctx, gobj); // initialize transformations unque to each object
-		while (ds_geometry_next_draw_transform(ctx, gobj, &mp, &reverseOrder, ctx->geomAdj.orientation))
+
+		while (ds_geometry_next_draw_transform(ctx, gobj, &mp, &reverseOrder, gobj->geo_orientation))
 		{
 			gobj->matrixID = matrixID = (objectID << 8) | (transformID++ & 0xff); // associate the current matrix with the object
 
 			mtx_multiply_matrix(mp, &ctx->matrix, &mtx);
 			mtx_multiply_matrix(&mtx, &rmtx, &tmtx);
 			mtx_vector_multiply(gobj->nVtx, (MTX_VECTOR*)gobj->vtx, gobj->v_out, &tmtx); // transform the vertices once
+			if (gobj->nmlFlag)
+			{
+				mtx_vector_multiply(gobj->nVtx, (MTX_VECTOR*)gobj->nml, gobj->n_out, &mtx); // transform the normals once
+			}
 
 			if (gobj->nTri && (gobj->drawWhat & GEOMETRY_DRAW_FACES)) // faces
 			{
-				for (i = 0, v = gobj->v_out, face = gobj->tri; i < gobj->nTri; ++i, ++face)
+				for (i = 0, v = gobj->v_out, nml = gobj->n_out, face = gobj->tri; i < gobj->nTri; ++i, ++face)
 				{
 					switch (gobj->cAttr.face.state) {
 					case DS_COLOR_STATE_EXPLICIT: clr = &face->color; break;
@@ -963,7 +989,7 @@ void ds_draw_geometry(DS_CTX *ctx)
 							normal.j = cntr.y - origin[1].y;
 							normal.k = cntr.z - origin[1].z;
 							gut_normalize_vector(&normal);
-							glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+							glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 							ds_label_draw_id(&ctx->label.face, (float)cntr.x, (float)cntr.y, (float)cntr.z + scale * 1.25, (float)normal.k, face->id);
 						}
 						break;
@@ -972,19 +998,18 @@ void ds_draw_geometry(DS_CTX *ctx)
 						if (gobj->lFlags.face)
 						{
 							gut_mid_point((GUT_POINT*)&v[face->vtx[0]].data.xyzw[0], (GUT_POINT*)&v[face->vtx[1]].data.xyzw[0], &cntr);
-//							gut_mid_point((GUT_POINT*)&v[edge->vtx[0]].data.xyzw, (GUT_POINT*)&v[edge->vtx[1]].data.xyzw, &cntr);
 							normal.i = cntr.x - origin[1].x;
 							normal.j = cntr.y - origin[1].y;
 							normal.k = cntr.z - origin[1].z;
 							gut_normalize_vector(&normal);
-							glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+							glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 							ds_label_draw_id(&ctx->label.face, (float)cntr.x, (float)cntr.y, (float)cntr.z + ctx->eAttr.maxLength * gobj->eAttr.width * 1.5, (float)normal.k, face->id);
 						}
 						break;
 					default: // normal polygon faces
 						if (transparentFlag) //gobj->cAttr.face.transparencyFlag)
 						{
-							ds_blend_sort_one_face(ctx, gobj, face, &tmtx, reverseOrder, matrixID, alpha);  // add face to transparency context
+							ds_blend_sort_one_face(ctx, gobj, face, &tmtx, &mtx, reverseOrder, matrixID, alpha);  // add face to transparency context
 						}
 						else if ( !skipFaceFlag ) // draw
 						{
@@ -992,6 +1017,8 @@ void ds_draw_geometry(DS_CTX *ctx)
 								for (j = 0, cntr.x=0, cntr.y = 0, cntr.z=0, maxZ=(-1000); j < face->nVtx; ++j)
 								{
 									p[j] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
+									if (gobj->nmlFlag)
+										n[j] = *(GUT_POINT*)&nml[face->nml[j]].data.xyzw[0];
 									cntr.x += p[j].x; cntr.y += p[j].y; cntr.z += p[j].z;
 //									maxZ = p[j].z > maxZ ? p[j].z : maxZ;
 								}
@@ -999,6 +1026,8 @@ void ds_draw_geometry(DS_CTX *ctx)
 								for (k = 0, j = face->nVtx - 1, cntr.x = 0, cntr.y = 0, cntr.z = 0,maxZ = (-1000); j >= 0; --j, ++k)
 								{
 									p[k] = *(GUT_POINT*)&v[face->vtx[j]].data.xyzw[0];
+									if (gobj->nmlFlag)
+										n[j] = *(GUT_POINT*)&nml[face->nml[j]].data.xyzw[0];
 									cntr.x += p[k].x; cntr.y += p[k].y; cntr.z += p[k].z;
 //									maxZ = p[k].z > maxZ ? p[k].z : maxZ;
 								}
@@ -1024,24 +1053,39 @@ void ds_draw_geometry(DS_CTX *ctx)
 							}
 							else
 							{
-								glBegin(GL_TRIANGLES);
-								for (j = 0; j < face->nVtx; ++j)
+								if (!gobj->nmlFlag)
 								{
-									if (j >= 2)
+									glBegin(GL_TRIANGLES);
+									for (j = 2; j < face->nVtx; ++j)
 									{
 										// determine face normal from cross product
 										gut_vector(&p[0], &p[j - 1], &vab);
 										gut_vector(&p[j - 1], &p[j], &vbc);
 										gut_cross_product(&vab, &vbc, &normal);
 										gut_normalize_point((GUT_POINT*)&normal);
-										glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+										glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 										glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
 										glVertex3f((float)p[0].x, (float)p[0].y, (float)p[0].z);
 										glVertex3f((float)p[j - 1].x, (float)p[j - 1].y, (float)p[j - 1].z);
 										glVertex3f((float)p[j].x, (float)p[j].y, (float)p[j].z);
 									}
+									glEnd();
 								}
-								glEnd();
+								else
+								{	// use owner supplied normals
+									glBegin(GL_TRIANGLES);
+									for (j = 2; j < face->nVtx; ++j)
+									{
+										glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
+										glNormal3f((float)n[0].x, (float)n[0].y, (float)n[0].z);
+										glVertex3f((float)p[0].x, (float)p[0].y, (float)p[0].z);
+										glNormal3f((float)n[j - 1].x, (float)n[j - 1].y, (float)n[j - 1].z);
+										glVertex3f((float)p[j - 1].x, (float)p[j - 1].y, (float)p[j - 1].z);
+										glNormal3f((float)n[j].x, (float)n[j].y, (float)n[j].z);
+										glVertex3f((float)p[j].x, (float)p[j].y, (float)p[j].z);
+									}
+									glEnd();
+								}
 							}
 							if (gobj->lFlags.face) 
 								ds_label_draw_id(&ctx->label.face, (float)cntr.x, (float)cntr.y, (float)cntr.z + 0.03, (float)normal.k, face->id);
@@ -1050,14 +1094,14 @@ void ds_draw_geometry(DS_CTX *ctx)
 				}
 			}
 
-			if (gobj->nEdge && (gobj->drawWhat & GEOMETRY_DRAW_EDGES))//0x2)) //ctx->tri_edge_mode == 1 || ctx->tri_edge_mode == 2))
+			if (gobj->nEdge && (gobj->drawWhat & GEOMETRY_DRAW_EDGES))
 			{
 				for (i = 0, v = gobj->v_out, edge = gobj->edge; i < gobj->nEdge; ++i, ++edge)
 				{
 					switch (gobj->cAttr.edge.state) {
 					case DS_COLOR_STATE_EXPLICIT: clr = &face->color; break;
 					case DS_COLOR_STATE_AUTOMATIC:ds_ctbl_get_color(gobj->ctE, edge->id, &clr);  break;
-					case DS_COLOR_STATE_OVERRIDE: clr = &gobj->cAttr.edge.color; break;// &ctx->clrCtl.triangle.override; break;
+					case DS_COLOR_STATE_OVERRIDE: clr = &gobj->cAttr.edge.color; break;
 					}
 
 					ds_gl_render_edge(ctx, gobj, (GUT_POINT*)&v[edge->vtx[0]].data.xyzw, (GUT_POINT*)&v[edge->vtx[1]].data.xyzw, p, &origin[1], out, edgeNormal, clr,
@@ -1070,7 +1114,7 @@ void ds_draw_geometry(DS_CTX *ctx)
 						normal.j = cntr.y - origin[1].y;
 						normal.k = cntr.z - origin[1].z;
 						gut_normalize_vector(&normal);
-						glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+						glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 						ds_label_draw_id(&ctx->label.edge, (float)cntr.x, (float)cntr.y, (float)cntr.z + ctx->eAttr.maxLength * gobj->eAttr.width * 1.5, (float)normal.k, edge->id);
 					}
 				}
@@ -1080,10 +1124,10 @@ void ds_draw_geometry(DS_CTX *ctx)
 			{
 				double		scale;
 
-				clr = &gobj->cAttr.vertex.color;// ctx->renderVertex.clr;
+				clr = &gobj->cAttr.vertex.color;
 
-				if (ctx->eAttr.maxLength > 0.0)	scale = gobj->vAttr.scale * ctx->eAttr.maxLength; // 0.03;
-				else								scale = gobj->vAttr.scale; // 0.03;
+				if (ctx->eAttr.maxLength > 0.0)	scale = gobj->vAttr.scale * ctx->eAttr.maxLength; 
+				else								scale = gobj->vAttr.scale; 
 
 				for (i = 0, v = gobj->v_out; i < gobj->nVtx; ++i, ++face, ++v)
 				{
@@ -1096,7 +1140,7 @@ void ds_draw_geometry(DS_CTX *ctx)
 						normal.j = cntr.y - origin[1].y;
 						normal.k = cntr.z - origin[1].z;
 						gut_normalize_vector(&normal);
-						glNormal3f((float)normal.i * 3, (float)normal.j * 3, (float)normal.k * 3);
+						glNormal3f((float)normal.i, (float)normal.j, (float)normal.k);
 						ds_label_draw_id(&ctx->label.vertex, (float)cntr.x, (float)cntr.y, (float)cntr.z + scale * 1.25, (float)normal.k, i);
 					}
 				}
@@ -1112,14 +1156,19 @@ void ds_draw_geometry(DS_CTX *ctx)
 		if (nNodes)
 		{
 			ctx->origin = origin[1];
+			// set up transparent blending
 			glEnable(GL_ALPHA_TEST);
 			glEnable(GL_BLEND);
-			glDepthMask(GL_TRUE);
+			glDepthMask(GL_FALSE);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 			// traverse the avl tree of faces - back to front z ordered 
-			avl_traverse_ltr(ctx->transparency.avlZSort, (void*)ctx, ds_blend_draw_face);
+			avl_traverse_rtl(ctx->transparency.avlZSort, (void*)ctx, ds_blend_draw_face);
+
+			// restore regular rendering without blending
 			glDisable(GL_ALPHA_TEST);
 			glDisable(GL_BLEND);
+			glDepthMask(GL_TRUE);
 		}
 	}
 
@@ -1127,16 +1176,16 @@ void ds_draw_geometry(DS_CTX *ctx)
 
 	if (ctx->drawAdj.clipFlag && ctx->drawAdj.clipVisibleFlag)
 	{
-		glNormal3f((float)0, (float)0, (float)3);
+		glNormal3f((float)0, (float)0, (float)1.0);
 
 		glColor3f((float)1, (float)1, (float)0);
-		glVertex3f((float)1.05, (float)-1.05, (float)ctx->drawAdj.clipZValue);
-		glVertex3f((float)1.05, (float)1.05, (float)ctx->drawAdj.clipZValue);
-		glVertex3f((float)-1.05, (float)1.05, (float)ctx->drawAdj.clipZValue);
+		glVertex3f((float) 1.05, (float)-1.05, (float)ctx->drawAdj.clipZValue);
+		glVertex3f((float) 1.05, (float) 1.05, (float)ctx->drawAdj.clipZValue);
+		glVertex3f((float)-1.05, (float) 1.05, (float)ctx->drawAdj.clipZValue);
 
-		glVertex3f((float)-1.05, (float)1.05, (float)ctx->drawAdj.clipZValue);
+		glVertex3f((float)-1.05, (float) 1.05, (float)ctx->drawAdj.clipZValue);
 		glVertex3f((float)-1.05, (float)-1.05, (float)ctx->drawAdj.clipZValue);
-		glVertex3f((float)1.05, (float)-1.05, (float)ctx->drawAdj.clipZValue);
+		glVertex3f((float) 1.05, (float)-1.05, (float)ctx->drawAdj.clipZValue);
 	}
 
 	glEnd();

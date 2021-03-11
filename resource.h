@@ -70,6 +70,7 @@
 #define IDC_RADIO31                     1041
 #define IDC_RADIO14                     1042
 #define IDC_RADIO32                     1042
+#define IDC_STATIC68                    1042
 #define IDC_RADIO15                     1043
 #define IDC_RADIO16                     1044
 #define IDC_RADIO33                     1044
@@ -243,6 +244,7 @@
 #define IDC_STATIC98                    1117
 #define IDC_EDIT19                      1117
 #define IDC_BUTTON29                    1117
+#define IDC_STATIC70                    1117
 #define IDC_STATIC99                    1118
 #define IDC_CHECK14                     1118
 #define IDC_EDIT38                      1118
@@ -270,11 +272,14 @@
 #define IDC_CHECK57                     1126
 #define IDC_CHECK20                     1127
 #define IDC_CHECK58                     1127
+#define IDC_STATIC71                    1127
 #define IDC_CHECK21                     1128
 #define IDC_BUTTON30                    1128
 #define IDC_BUTTON12                    1129
 #define IDC_BUTTON31                    1129
+#define IDC_EDIT55                      1129
 #define IDC_BUTTON32                    1130
+#define IDC_EDIT56                      1130
 #define IDC_EDIT23                      1131
 #define IDC_EDIT42                      1131
 #define IDC_STATIC121                   1132
@@ -282,7 +287,9 @@
 #define IDC_CHECK25                     1133
 #define IDC_EDIT44                      1133
 #define IDC_EDIT45                      1134
+#define IDC_EDIT57                      1134
 #define IDC_CHECK59                     1135
+#define IDC_EDIT58                      1135
 #define IDC_EDIT24                      1136
 #define IDC_CHECK60                     1136
 #define IDC_BUTTON13                    1136
@@ -297,12 +304,19 @@
 #define IDC_CHECK24                     1140
 #define IDC_CHECK65                     1140
 #define IDC_BUTTON33                    1141
+#define IDC_EDIT59                      1141
 #define IDC_BUTTON34                    1142
+#define IDC_COMBO1                      1142
 #define IDC_BUTTON35                    1143
+#define IDC_COMBO2                      1143
 #define IDC_EDIT46                      1144
+#define IDC_COMBO3                      1144
 #define IDC_EDIT47                      1145
+#define IDC_STATIC69                    1145
 #define IDC_EDIT48                      1146
+#define IDC_CHECK77                     1146
 #define IDC_EDIT49                      1147
+#define IDC_CHECK78                     1147
 #define IDC_CHECK66                     1148
 #define IDC_CHECK67                     1149
 #define IDC_CHECK68                     1150
@@ -364,7 +378,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         40026
-#define _APS_NEXT_CONTROL_VALUE         1135
+#define _APS_NEXT_CONTROL_VALUE         1143
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

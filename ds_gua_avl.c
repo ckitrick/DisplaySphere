@@ -122,6 +122,11 @@ typedef struct {
 } GUA_VDATA;  // vertex data
 
 typedef struct {
+	GUT_POINT		p;
+	int				id;		// global unique ID - need to save since place in AVL tree will not be in order
+} GUA_NDATA;  // normal data
+
+typedef struct {
 	double				len;	//
 	int					id;		// global unique ID 
 } GUA_ELDATA; // EL Edge Length data
@@ -143,6 +148,7 @@ typedef struct {
 	int					*vid;		// array of uniqiue vertex IDs (sorted)
 	int					*rvid;		// array of reverse ordered uniqiue vertex IDs (sorted)
 	int					*ovid;		// array of unique vertex IDs in original order
+	int					*onid;		// array of unique vertex IDs in original order
 	int					teid;		// unique triangle ID 
 	float				rgba[4];	// explict color 
 	int					id;			// global ID 
@@ -686,7 +692,7 @@ static int gua_tedata_insert(GUA_DB *db, int *eid, int ne)
 }
 
 //--------------------------------------------------------------------------------
-static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgba)
+static int gua_tdata_insert(GUA_DB *db, int *vid, int *nid, int nv, int teid, float *rgba)
 //--------------------------------------------------------------------------------
 {
 	GUA_BLK				*blk;
@@ -701,14 +707,18 @@ static int gua_tdata_insert(GUA_DB *db, int *vid, int nv, int teid, float *rgba)
 
 	t = ((GUA_TDATA*)blk->data) + blk->nc; // db specific data
 
-	t->vid = gua_integer_array(db, nv); // get an array to hold info
-	t->rvid = gua_integer_array(db, nv); // get an array to hold info
-	t->ovid = gua_integer_array(db, nv); // get an array to hold info
+	t->vid = gua_integer_array(db, nv);  // get an array to hold vertex index info (sorted)
+	t->rvid = gua_integer_array(db, nv); // get an array to hold vertex index info (sorted - reverse)
+	t->ovid = gua_integer_array(db, nv); // get an array to hold vertex index info (original order)
+	t->onid = gua_integer_array(db, nv); // get an array to hold normal index info (original order)
 
 	t->nv = nv;
 	for (i = 0; i < nv; ++i) // save original vertex id's
+	{
 		t->ovid[i] = t->vid[i] = vid[i];
-
+		if (  nid )
+		t->onid[i] = nid[i]; 
+	}
 	gua_integer_array_order(t->vid, nv); // put lowest id# first
 	gua_integer_array_order_reverse(t->vid, t->rvid, nv); // put lowest id# first and revers
 										 
@@ -1004,6 +1014,7 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 	//
 	GUA_UNIQUE	*gua = (GUA_UNIQUE*)guap;
 	GUA_DB		*vdb;  // vertex DB      - unqiue coordinates 
+	GUA_DB		*ndb;  // normal DB      - unqiue coordinates 
 	GUA_DB		*edb;  // edge DB        - unique vertex pairs 
 	GUA_DB		*eldb; // edge length DB - unique edge lengths  
 	GUA_DB		*tedb; // triangle DB    - unique edge length IDs 
@@ -1012,20 +1023,30 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 	int			i, j, n, m;
 	int			nBlk;
 //	GUA_VDATA	*vdata;
-	int			*iptr;
+	int			*iptr; // used for vertices
+	int			*inptr; // used for normals
 
 	// local copies re-casted
 	vdb  = (GUA_DB*)gua->vdb;
+	ndb  = (GUA_DB*)gua->ndb;
 	eldb = (GUA_DB*)gua->eldb;
 	edb  = (GUA_DB*)gua->edb;
 	tedb = (GUA_DB*)gua->tedb;
 	tdb  = (GUA_DB*)gua->tdb;
 
+	geo->nmlFlag = ndb ? 1 : 0;
+
 	// convert unique geo data to geo object
+	if (strlen(gua->name)) // copy name
+		strcpy(geo->name, gua->name);
 
 	// vertex array 
 	// allocate array
 	geo->vtx  = (GUT_POINT*)malloc(sizeof(GUT_POINT)*vdb->nc);
+	if (ndb)
+		geo->nml = (GUT_POINT*)malloc(sizeof(GUT_POINT)*ndb->nc);
+	else
+		geo->nml = 0;
 	geo->nVtx = vdb->nc;
 
 	// transfer vertex coordinate data 
@@ -1043,11 +1064,30 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 		blk = (GUA_BLK*)blk->next;
 	}
 
+	if (ndb)
+	{
+		// transfer normal coordinate data 
+		blk = (GUA_BLK*)ndb->head;
+		n = 0;
+		while (blk)
+		{
+			GUA_VDATA *data = (GUA_VDATA*)blk->data;
+			for (i = 0; i < blk->nc; ++i) // go thru all components of this block
+			{
+				geo->nml[data[i].id] = *(GUT_POINT*)&data[i].p;
+				++n;
+			}
+
+			blk = (GUA_BLK*)blk->next;
+		}
+	}
+
 	// tri array 
 	// allocate array
 	geo->tri = (DS_FACE*)malloc(sizeof(DS_FACE)*tdb->nc);
 	geo->nTri = tdb->nc;
-	geo->vIndex = iptr = (int*)malloc(sizeof(int)*(tdb->nci/3)); // array to hold indices
+	geo->vIndex = iptr = (int*)malloc(sizeof(int)*(tdb->nci / 3)); // array to hold indices
+	geo->nIndex = inptr = (int*)malloc(sizeof(int)*(tdb->nci / 3)); // array to hold indices
 
 	// transfer data for all triangles
 	blk = (GUA_BLK*)tdb->head;
@@ -1063,14 +1103,18 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 			geo->tri[n].color = *(DS_COLOR*)&data[i].rgba;	// explict color - which can be the default color
 			geo->tri[n].id = data[i].teid;			// unique ID 
 			geo->tri[n].vtx = iptr;					// attach array memory
+			geo->tri[n].nml = inptr;				// attach array memory
 			geo->tri[n].nVtx = data[i].nv;
 			m += data[i].nv;
 			for (j = 0; j < data[i].nv; ++j)
 			{
 				geo->tri[n].vtx[j] = data[i].ovid[j];	// unique vertex IDs
-				//geo->tri[n].vtx[j] = data[i].vid[j];	// unique vertex IDs
+				geo->tri[n].nml[j] = data[i].onid[j];	// unique normal IDs
 			}
+			//
+			// NEED TO GENERATE NORMALS
 			iptr += data[i].nv; // move pointer forward
+			inptr += data[i].nv; // move pointer forward
 			++n;
 		}
 
@@ -1190,6 +1234,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	GUA_UNIQUE		*gua;			// = (GUA_UNIQUE*)guap;
 	char			*bp;
 	GUA_DB			*vdb;			// vertex DB      - unqiue coordinates 
+	GUA_DB			*ndb;			// vertex DB      - unqiue coordinates 
 	GUA_DB			*edb;			// edge DB        - unique vertex pairs 
 	GUA_DB			*eldb;			// edge length DB - unique edge lengths  
 	GUA_DB			*tedb;			// triangle DB    - unique edge length IDs 
@@ -1224,13 +1269,15 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 
 	// create all the attribute databases
 	gua->vdb  = gua_db_init ( gua_vdata_init,  gua_vdata_insert,  mnc, xyz_compare);	// vertex DB
+	gua->ndb  = 0;																		// normal DB
 	gua->eldb = gua_db_init ( gua_eldata_init, gua_eldata_insert, mnc,  el_compare);	// edge by length DB
-	gua->edb  = gua_db_init ( gua_edata_init,  gua_edata_insert,  mnc,   e_compare);		// edge by unique vertex pairs DB
+	gua->edb  = gua_db_init ( gua_edata_init,  gua_edata_insert,  mnc,   e_compare);	// edge by unique vertex pairs DB
 	gua->tedb = gua_db_init ( gua_tedata_init, gua_tedata_insert, mnc,  te_compare);	// triangle by unique edges DB
 	gua->tdb  = gua_db_init ( gua_tdata_init,  gua_tdata_insert,  mnc,   t_compare);		// triangle by unique vertices DB
 
 	// local copies re-casted
 	vdb  = (GUA_DB*)gua->vdb;
+	ndb  = (GUA_DB*)gua->ndb;
 	eldb = (GUA_DB*)gua->eldb;
 	edb  = (GUA_DB*)gua->edb;
 	tedb = (GUA_DB*)gua->tedb;
@@ -1373,7 +1420,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				++tedb->nProcessed;
 				tid = teins((void*)tedb, elid,3); // use array of edge length IDs 
 				++tdb->nProcessed;
-				ttid = tins((void*)tdb, vid, 3, tid, rgb); // use array of unique vertex IDs 
+				ttid = tins((void*)tdb, vid, 0, 3, tid, rgb); // use array of unique vertex IDs 
 
 				if (ctx->inputTrans.replicateFlag && j < 2)
 				{	// perform rotation transformation on coordinate data
@@ -1761,12 +1808,14 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	GUA_UNIQUE		*gua;			// = (GUA_UNIQUE*)guap;
 	char			*bp;
 	GUA_DB			*vdb;			// vertex DB      - unqiue coordinates 
+	GUA_DB			*ndb;			// normal DB      - unqiue normals 
 	GUA_DB			*edb;			// edge DB        - unique vertex pairs 
 	GUA_DB			*eldb;			// edge length DB - unique edge lengths  
 	GUA_DB			*tedb;			// triangle DB    - unique edge length IDs 
 	GUA_DB			*tdb;			// triangle DB    - unqiue vertex ID sets 
 	int				i, j, k, l;		// counters
 	int				vid[32]; 		// unique vertex IDs for current triangle
+	int				nid[32]; 		// unique vertex IDs for current triangle
 	int				elid[32];		// unique edge length IDs for current triangle 
 	int				eid[32];		// unigue edge by unique vertex ID's for current triangle
 	int				tid;			// unique triangle by unique edge lengths
@@ -1775,47 +1824,72 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	GUA_WORD		word[32];
 	int				n, m; 			// number of words parsed
 	GUA_VDATA		v[32];			// vertex coordinate data for current triangle 
+	GUA_VDATA		nml[32];		// normal coordinate data for current triangle 
 	double			elen[32];		// length of three edges of current triangle
 	int				maxVID = 0;
 	int				nDigits = 0;
 	int				decimal = 0;
-	GUT_POINT		vpt[32];
-	GUT_POINT		vpt_dup[32];
-	GUT_POINT		vtmp[32];		// vertex coordinate data for current triangle 
+	GUT_POINT		vpt[32],     npt[32];
+	GUT_POINT		vpt_dup[32], npt_dup[32];
+	GUT_POINT		vtmp[32],    ntmp[32];		// vertex coordinate data for current triangle 
 	int				nv;
 	int				nf;
 	int				ne;
-	GUT_POINT		*ov;
+	GUT_POINT		*ov;	// original vertices
+	GUT_POINT		*on;	// original normals
 	DS_POLYGON		*of;
 	int				*ocf; // off color flag
 	int				modulo;
 	int				nVIndx = 0; // sum of all vertex indices for all faces
 	int				colorFormat = 0;
+	int				fileType = 0;
+	char			objectName[64];
 
 	if (!fp) return 1; // error 
 
 	bp = fgets(buffer, 256, fp); // read first line
 	gua_parse(buffer, &n, word);
-	if (!n || strcmp(word[0].buffer, "OFF"))
+	// First line options 
+	// OFF [name]
+	// NOFF [name]
+	if (!n) fileType = 0; 
+	else if (!strcmp(word[0].buffer, "OFF")) fileType = 1;
+	else if (!strcmp(word[0].buffer, "NOFF")) fileType = 2;
+	else fileType = 0;
+	if(!fileType)
 	{
 		rewind(fp); // can't process
-		return 1; // error
+		return 1;	// error
+	}
+	objectName[0] = 0;
+	if (n > 1) // non-standard option to assign a name to the object after the OFF signature
+	{
+		strcpy(objectName, word[1].buffer);
 	}
 	
 	// create a GUA structure
 	gua = (GUA_UNIQUE*)MALLOC(sizeof(GUA_UNIQUE)); // guap;
 	if (gua == NULL) return 1; // error
 	*guap = (void*)gua; // pass pointer back 
+	strcpy(gua->name, objectName); // save
 
 	// create all the attribute databases
-	gua->vdb = gua_db_init(gua_vdata_init, gua_vdata_insert, mnc, xyz_compare);		// vertex DB
+	gua->vdb  = gua_db_init(gua_vdata_init,  gua_vdata_insert,  mnc, xyz_compare);	// vertex DB
+	if (fileType == 2) // normals are required to present
+		gua->ndb = gua_db_init(gua_vdata_init, gua_vdata_insert, mnc, xyz_compare);	// normal DB
+	else
+		gua->ndb = 0;
 	gua->eldb = gua_db_init(gua_eldata_init, gua_eldata_insert, mnc, el_compare);	// edge by length DB
-	gua->edb = gua_db_init(gua_edata_init, gua_edata_insert, mnc, e_compare);		// edge by unique vertex pairs DB
+	gua->edb  = gua_db_init(gua_edata_init,  gua_edata_insert,  mnc, e_compare);	// edge by unique vertex pairs DB
 	gua->tedb = gua_db_init(gua_tedata_init, gua_tedata_insert, mnc, te_compare);	// triangle by unique edges DB
-	gua->tdb = gua_db_init(gua_tdata_init, gua_tdata_insert, mnc, t_compare);		// triangle by unique vertices DB
-	
+	gua->tdb  = gua_db_init(gua_tdata_init,  gua_tdata_insert,  mnc, t_compare);	// triangle by unique vertices DB
+
 	// local copies re-casted
 	vdb  = (GUA_DB*)gua->vdb;
+	if (gua->ndb)
+		ndb = (GUA_DB*)gua->ndb;
+	else
+		ndb = 0;
 	eldb = (GUA_DB*)gua->eldb;
 	edb  = (GUA_DB*)gua->edb;
 	tedb = (GUA_DB*)gua->tedb;
@@ -1823,6 +1897,9 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 
 	// data specific insert functions from each database with correct cast
 	GUA_VDATA_INS  vins = (GUA_VDATA_INS)vdb->insert;
+	GUA_VDATA_INS  nins = 0;// = (GUA_VDATA_INS)ndb->insert; // same data type
+	if (ndb)
+		nins = (GUA_VDATA_INS)ndb->insert; // same data type
 	GUA_EDATA_INS  eins = (GUA_EDATA_INS)edb->insert;
 	GUA_ELDATA_INS elins = (GUA_ELDATA_INS)eldb->insert;
 	GUA_TEDATA_INS teins = (GUA_TEDATA_INS)tedb->insert;
@@ -1848,38 +1925,54 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	nf = atoi(word[1].buffer); // number of faces
 	ne = atoi(word[2].buffer); // number of edges
 
-	ov = (GUT_POINT*)MALLOC(sizeof(GUT_POINT)*nv); // array storage for all vertices 
-	of = (DS_POLYGON*)MALLOC(sizeof(DS_POLYGON)*nf);		// array storage for polygon faces 
-	ocf = (int*)MALLOC(sizeof(int)*nf);				// array of color flags for all polygon faces
+	ov = (GUT_POINT*)MALLOC(sizeof(GUT_POINT)*nv);		// array storage for all vertices 
+	if (fileType == 2)
+		on = (GUT_POINT*)MALLOC(sizeof(GUT_POINT)*nv);		// array storage for all normals 
+	else
+		on = 0;
+	of = (DS_POLYGON*)MALLOC(sizeof(DS_POLYGON)*nf);	// array storage for polygon faces 
+	ocf = (int*)MALLOC(sizeof(int)*nf);					// array of color flags for all polygon faces
 
 	// vertex section 
-//	for (i = 0; i < nv; ++i)
 	for (i = 0; i < nv; ) 
 	{
 		bp = fgets(buffer, 256, fp);
 		gua_parse(buffer, &n, word);
-		if (n < 3) // error
+		if (n && word[0].buffer[0] == '#')
 		{
 			continue;
 		}
-//		else if (word[0].buffer[0] == '#')
-//		{
-//			continue;
-//		}
+		else if (n < 3) // error
+		{
+			continue;
+		}
+		else if (fileType == 2 && n < 6) // error
+		{
+			continue; 
+		}
 		else if (n >= 3)
 		{
-			if (!decimal)
+			if (!decimal) // need to determine the accuracy level based on the supplied text - JUST DO ONCE
 			{
 				int	nDigits;
 				vdb->zero = eldb->zero = set_tolerance(word[0].buffer, &decimal, &nDigits);
 				vdb->nDigits = eldb->nDigits = nDigits;
 			}
+			// save the vertex xyz data
 			ov[i].x = atof(word[0].buffer);
 			ov[i].y = atof(word[1].buffer);
 			ov[i].z = atof(word[2].buffer);
 			ov[i].w = 1;
+
+			if (n > 3 && on) // add normal to array 
+			{
+				on[i].x = atof(word[3].buffer);
+				on[i].y = atof(word[4].buffer);
+				on[i].z = atof(word[5].buffer);
+				on[i].w = 1;
+			}
 			++i; // increment count when valid data is processed
-		}	
+		}
 	}
 
 	// face section 
@@ -1901,14 +1994,21 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 		else if (of[i].nVtx > 32 || of[i].nVtx < 0)
 			return 1; // max 
 
-		of[i].vtx = gua_integer_array(tdb, of[i].nVtx);
+		of[i].vtx = gua_integer_array(tdb, of[i].nVtx); // array for vertex indices
+		if (on)
+			of[i].nml = gua_integer_array(tdb, of[i].nVtx); // array for normal indices
+		else
+			of[i].nml = 0;
 
 		for (j = 1, k=0; j < of[i].nVtx +1; ++j, ++k)
 		{
-			of[i].vtx[k] = atoi(word[j].buffer);
+			of[i].vtx[k] = atoi(word[j].buffer); // save original indices
+			if (on)
+				of[i].nml[k] = of[i].vtx[k];
 		}
 		of[i].id = i;
 		ocf[i] = 0;
+
 		if (n >= of[i].nVtx + 1 + 3) // color 
 		{
 			j = of[i].nVtx + 1;
@@ -1954,7 +2054,11 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 
 		// make a copy of all the original vertices based on index reference
 		for (j = 0; j < of[i].nVtx; ++j)
+		{
 			vpt[j] = ov[of[i].vtx[j]];
+			if(on)
+				npt[j] = on[of[i].nml[j]]; 
+		}
 
 		if (!ocf[i])
 			of[i].color = *(DS_COLOR*)defaultColor; // use the default color since it wasn't explicitly defined
@@ -1965,6 +2069,12 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 			mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&vpt[0], (MTX_VECTOR*)&vtmp[0], &ctx->inputTrans.matrix[0]);
 			for (j = 0; j < of[i].nVtx; ++j)
 				vpt[j] = vtmp[j];
+			if (on) // transform normals
+			{
+				mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&npt[0], (MTX_VECTOR*)&ntmp[0], &ctx->inputTrans.matrix[0]);
+				for (j = 0; j < of[i].nVtx; ++j)
+					npt[j] = ntmp[j];
+			}
 		}
 
 		// replicate as required
@@ -1976,12 +2086,24 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 			{
 				for (j = 0; j < of[i].nVtx; ++j)
 					vpt_dup[j] = vpt[j];
+				if (on) // normals
+				{
+					for (j = 0; j < of[i].nVtx; ++j)
+						npt_dup[j] = npt[j];
+				}
 			}
 			else
 			{	// mirror the x coord
 				for (j = 0; j < of[i].nVtx; ++j)
 				{
 					vpt[j] = vpt_dup[j]; vpt[j].x *= -1;
+				}
+				if (on) // normals
+				{
+					for (j = 0; j < of[i].nVtx; ++j)
+					{
+						npt[j] = npt_dup[j]; npt[j].x *= -1;
+					}
 				}
 			}
 
@@ -1992,6 +2114,12 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					v[l].p = vpt[l]; // copy coordinate data into node structure
 					of[i].vtx[l] = vid[l] = vins((void*)vdb, &v[l]); // insert into tree
 					++vdb->nProcessed;
+					if (on)
+					{
+						nml[l].p = npt[l];
+						of[i].nml[l] = nid[l] = vins((void*)ndb, &nml[l]); // insert into tree
+						++ndb->nProcessed;
+					}
 				}
 				if (of[i].nVtx == 1)
 				{
@@ -2000,13 +2128,19 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					++tedb->nProcessed;
 					tid = teins((void*)tedb, elid, of[i].nVtx); // use array of edge length IDs 
 					++tdb->nProcessed;
-					ttid = tins((void*)tdb, vid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
+					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
 
 					if (ctx->inputTrans.replicateFlag && j < 2)
 					{	// perform rotation transformation on coordinate data
 						mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&vpt[0], (MTX_VECTOR*)&vtmp[0], &ctx->inputTrans.matrix[0]);
 						for (j = 0; j < of[i].nVtx; ++j)
 							vpt[j] = vtmp[j];
+						if (on)
+						{
+							mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&npt[0], (MTX_VECTOR*)&ntmp[0], &ctx->inputTrans.matrix[0]);
+							for (j = 0; j < of[i].nVtx; ++j)
+								npt[j] = ntmp[j];
+						}
 					}
 				}
 				else
@@ -2035,14 +2169,19 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					++tedb->nProcessed;
 					tid = teins((void*)tedb, elid, of[i].nVtx); // use array of edge length IDs 
 					++tdb->nProcessed;
-					ttid = tins((void*)tdb, vid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
+					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
 
 					if (ctx->inputTrans.replicateFlag && j < 2)
 					{	// perform rotation transformation on coordinate data
 						mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&vpt, (MTX_VECTOR*)&vtmp, &ctx->inputTrans.matrix[0]);
 						for (j = 0; j < of[i].nVtx; ++j)
 							vpt[j] = vtmp[j];
-
+						if (on)
+						{
+							mtx_vector_multiply(of[i].nVtx, (MTX_VECTOR*)&npt, (MTX_VECTOR*)&ntmp, &ctx->inputTrans.matrix[0]);
+							for (j = 0; j < of[i].nVtx; ++j)
+								npt[j] = ntmp[j];
+						}
 					}
 				}
 			}
@@ -2063,6 +2202,11 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 			{
 				mtx_vector_multiply(1, (MTX_VECTOR*)&vpt, (MTX_VECTOR*)&vtmp, &ctx->inputTrans.matrix[0]);
 				vpt[0] = vtmp[0];
+				if (on)
+				{
+					mtx_vector_multiply(1, (MTX_VECTOR*)&npt, (MTX_VECTOR*)&ntmp, &ctx->inputTrans.matrix[0]);
+					npt[0] = ntmp[0];
+				}
 			}
 
 			// replicate as required
@@ -2073,10 +2217,14 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				if (!k)
 				{
 					vpt_dup[0] = vpt[0];
+					if (on)
+						npt_dup[0] = npt[0];
 				}
 				else
 				{	// mirror the x coord
 					vpt[0] = vpt_dup[0]; vpt[0].x *= -1;
+					if (on)
+						npt[0] = npt_dup[0]; npt[0].x *= -1;
 				}
 
 				for (j = 0; j < n; ++j) // z rotations
@@ -2085,11 +2233,21 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					vid[0] = vins((void*)vdb, &v[0]); // insert into tree
 					++vdb->nProcessed;
 
+					if (on)
+					{
+						nml[0].p = npt[0]; // copy coordinate data into node structure
+						nid[0] = vins((void*)ndb, &nml[0]); // insert into tree
+						++ndb->nProcessed;
+					}
 					if (ctx->inputTrans.replicateFlag && j < 2)
 					{	// perform rotation transformation on coordinate data
 						mtx_vector_multiply(1, (MTX_VECTOR*)&vpt[0], (MTX_VECTOR*)&vtmp[0], &ctx->inputTrans.matrix[0]);
 						vpt[0] = vtmp[0];
-
+						if (on)
+						{
+							mtx_vector_multiply(1, (MTX_VECTOR*)&npt[0], (MTX_VECTOR*)&ntmp[0], &ctx->inputTrans.matrix[0]);
+							npt[0] = ntmp[0];
+						}
 					}
 				}
 			}
@@ -2100,6 +2258,8 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	FREE(ov); 
 	FREE(ocf);
 	FREE(of);
+	if(on)
+		FREE(on);
 
 	return 0; // success
 }

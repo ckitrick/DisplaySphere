@@ -90,6 +90,7 @@ enum {
 	DS_BASE_LABEL_FACE				= 2700,
 	DS_BASE_LABEL_EDGE				= 2800,
 	DS_BASE_LABEL_VERTEX			= 2900,
+	DS_BASE_GEO_ORIENTATION			= 3000,
 };
 
 typedef struct {
@@ -122,7 +123,8 @@ DS_OBJECT_CONTROL ds_obj_fixed[] = {
 	L"Button",	L"Labels",			DS_STATIC,		517, 2, 41,38,	WS_VISIBLE | WS_CHILD | BS_GROUPBOX | BS_CENTER,  // 517, 2, 41,38
 
 	L"Static",	L"NAME",			DS_STATIC,		  8,22,65,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
-	L"Static",	L"Vis",				DS_STATIC,		 80,22,10,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Vis",				DS_STATIC,		 55,22,10,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
+	L"Static",	L"Geo",				DS_STATIC,		 70,22,20,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
 
 	L"Static",	L"F",				DS_STATIC,		102,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
 	L"Static",	L"E",				DS_STATIC,		114,22, 8,8,	WS_VISIBLE | WS_CHILD | SS_LEFT,
@@ -159,8 +161,8 @@ DS_OBJECT_CONTROL ds_obj_fixed[] = {
 int nDS_Fixed_Controls = sizeof(ds_obj_fixed) / sizeof(DS_OBJECT_CONTROL);
 
 DS_OBJECT_CONTROL_EX ds_obj_variable[] = {
-	(LPCWSTR)WC_STATIC,  L"default",DS_BASE_NAME				,	  8,32,66, 8,	WS_VISIBLE | WS_CHILD | SS_LEFT,								0,
-	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_ACTIVE					,	 80,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
+	(LPCWSTR)WC_STATIC,  L"default",DS_BASE_NAME				,	  8,32,40, 8,	WS_VISIBLE | WS_CHILD | SS_LEFT,								0,
+	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_ACTIVE					,	 55,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 
 	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_FACE				,	100,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_DRAW_EDGE				,	112,32,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
@@ -197,7 +199,10 @@ DS_OBJECT_CONTROL_EX ds_obj_variable[] = {
 	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_FACE				,	521,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_EDGE				,	533,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
 	(LPCWSTR)WC_BUTTON,  L"",	DS_BASE_LABEL_VERTEX			,	545,31,10,10,	WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX | WS_TABSTOP,			0,
-};
+
+	(LPCWSTR)WC_COMBOBOX,L"",	DS_BASE_GEO_ORIENTATION 		,	 65,31,25,200,	SS_SIMPLE | CBS_DROPDOWN | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,			0,
+}; 
+//CBS_DROPDOWN | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
 
 int nDS_Variable_Controls = sizeof(ds_obj_variable) / sizeof(DS_OBJECT_CONTROL_EX);
 
@@ -207,7 +212,11 @@ int nDS_Variable_Controls = sizeof(ds_obj_variable) / sizeof(DS_OBJECT_CONTROL_E
 static void ds_fill_object_controls(HWND hWndDlg, int objID, DS_GEO_OBJECT *gobj, char *buffer)
 //-----------------------------------------------------------------------------
 {
-	if (gobj->filename)
+	if (gobj->name[0])
+	{
+		SetDlgItemText(hWndDlg, DS_BASE_NAME + objID, gobj->name);
+	}
+	else if (gobj->filename)
 	{
 		SetDlgItemText(hWndDlg, DS_BASE_NAME + objID, ds_name_start(gobj->filename));
 	}
@@ -248,6 +257,37 @@ static void ds_fill_object_controls(HWND hWndDlg, int objID, DS_GEO_OBJECT *gobj
 	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_FACE   + objID, BM_SETCHECK, (gobj->lFlags.face   ? BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_EDGE   + objID, BM_SETCHECK, (gobj->lFlags.edge   ? BST_CHECKED : BST_UNCHECKED), 0);
 	SendDlgItemMessage(hWndDlg, DS_BASE_LABEL_VERTEX + objID, BM_SETCHECK, (gobj->lFlags.vertex ? BST_CHECKED : BST_UNCHECKED), 0);
+
+	{
+		char *geo_orientation[12]=
+		{
+			"IF - Icosahedron Face",
+			"IE - Icosahedron Edge",
+			"IV - Icosahedron Vertex",
+			"OF - Octahedron Face",
+			"OE - Octahedron Edge",
+			"OV - Octahedron Vertex",
+			"TF - Tetrahedron Face",
+			"TE - Tetrahedron Edge",
+			"TV - Tetrahedron Vertex",
+			"CF - Cube Face",
+			"CE - Cube Edge",
+			"CV - Cube Vertex",
+		};
+
+		int i;
+		for (i = 0; i < 12; ++i)
+		{
+			SendDlgItemMessage(hWndDlg, DS_BASE_GEO_ORIENTATION + objID, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)geo_orientation[i]);
+		}
+
+		// Send the CB_SETCURSEL message to display an initial item 
+		//  in the selection field  
+		int		index;
+		index = (gobj->geo_type - 1) * 3 + (2 - gobj->geo_orientation);
+		SendDlgItemMessage(hWndDlg, DS_BASE_GEO_ORIENTATION + objID, CB_SETCURSEL, (WPARAM)index, (LPARAM)0);
+		SendDlgItemMessage(hWndDlg, DS_BASE_GEO_ORIENTATION + objID, CB_SETDROPPEDWIDTH, (WPARAM)132, (LPARAM)0);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -268,14 +308,15 @@ void static ds_draw_variable_controls(HWND hWndDlg, HFONT s_hFont, int yOffset, 
 		rect.left = dsox->x;
 		rect.right = dsox->x + dsox->w;
 		rect.bottom = dsox->y + dsox->h + yOffset * *objID;
-		if (rect.bottom > *bottom)
+		if (dsox->h < 40 && rect.bottom > *bottom)
 			*bottom = rect.bottom;
 		MapDialogRect(hWndDlg, &rect);
 
 		if (!defaultObject || ( defaultObject && i != 1)) // don't create window for default visible checkbox
 		{
 			hEdit = CreateWindowExA(dsox->exStyle | WS_EX_TOOLWINDOW, (LPCSTR)dsox->className, (LPCSTR)dsox->text, dsox->style,
-					rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndDlg,
+//			hEdit = CreateWindowExA(dsox->exStyle, (LPCSTR)dsox->className, (LPCSTR)dsox->text, dsox->style,
+				rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndDlg,
 					(HMENU)(dsox->id + *objID), GetModuleHandle(NULL), NULL);
 			if (hEdit)
 				SendMessage(hEdit, WM_SETFONT, (WPARAM)s_hFont, (LPARAM)MAKELONG(TRUE, 0));
@@ -427,7 +468,7 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		objID     = control % 100;	// object ID 
 		temp      = 0;
 
-		if (control < 100 || control > 3000)
+		if (control < 100 || control > 3100)
 			return FALSE;
 
 		if (objID < 0 || objID > LL_GetLength(ctx->gobjectq))
@@ -497,6 +538,17 @@ LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LP
 		case DS_BASE_LABEL_FACE:		gobj->lFlags.face   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_LABEL_EDGE:		gobj->lFlags.edge   = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 		case DS_BASE_LABEL_VERTEX:		gobj->lFlags.vertex = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+
+		case DS_BASE_GEO_ORIENTATION:	//gobj->lFlags.vertex = SendDlgItemMessage(hWndDlg, control, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+			if (HIWORD(wParam) == CBN_SELCHANGE)
+			{
+				int ItemIndex = SendDlgItemMessage(hWndDlg, control, (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+				// decode index in geometry and orientation
+				gobj->geo_type = ItemIndex / 3 + 1;
+				gobj->geo_orientation = 2 - ItemIndex % 3;
+				InvalidateRect(pWnd, 0, 0);
+			}
+			break;
 		}
 		if (clrUpdate)
 		{

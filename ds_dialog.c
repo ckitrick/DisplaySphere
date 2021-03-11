@@ -183,6 +183,41 @@ LRESULT CALLBACK ds_dlg_about(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 
 			sprintf(buffer, "%s", ctx->executable.fullName);
 			SetDlgItemText(hWndDlg, IDC_STATIC105, buffer);
+
+//			{
+//				int xpos = 100;            // Horizontal position of the window.
+//				int ypos = 100;            // Vertical position of the window.
+//				int nwidth = 200;          // Width of the window
+//				int nheight = 200;         // Height of the window
+//				HWND hwndParent = hWndDlg; // Handle to the parent window
+//
+//				HWND hWndComboBox = CreateWindow(WC_COMBOBOX, TEXT(""),
+//					CBS_DROPDOWN | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
+//					xpos, ypos, nwidth, nheight, hwndParent, NULL, hInst,
+//					NULL);
+//				TCHAR Planets[9][10] =
+//				{
+//					TEXT("Mercury"), TEXT("Venus"), TEXT("Terra"), TEXT("Mars"),
+//					TEXT("Jupiter"), TEXT("Saturn"), TEXT("Uranus"), TEXT("Neptune"),
+//					TEXT("Pluto??")
+//				};
+//
+//				TCHAR A[16];
+//				int  k = 0;
+//
+//				memset(&A, 0, sizeof(A));
+//				for (k = 0; k <= 8; k += 1)
+//				{
+//					wcscpy_s(A, sizeof(A) / sizeof(TCHAR), (TCHAR*)Planets[k]);
+//
+//					// Add string to combobox.
+//					SendMessage(hWndComboBox, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)A);
+//				}
+//
+//				// Send the CB_SETCURSEL message to display an initial item 
+//				//  in the selection field  
+//				SendMessage(hWndComboBox, CB_SETCURSEL, (WPARAM)2, (LPARAM)0);			
+//			}
 		}
 		CreateHyperLink(GetDlgItem(hWndDlg, IDC_STATIC104));
 		break;
@@ -432,36 +467,49 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 	int				clrUpdate = 0;
 	int				i;
 	RECT			window;
+	DS_LABEL		*label = 0;
 
 	pWnd = GetWindow(hWndDlg, GW_OWNER);
 	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
 
 	switch (Msg) {
 	case WM_INITDIALOG:
+		{
+			static char *font[5] =
+			{
+				"T10 - Times Roman 10",
+				"T24 - Times Roman 24",
+				"H10 - Helvetica 10",
+				"H12 - Helvetica 12",
+				"H18 - Helvetica 18",
+			};
+
+			for (i = 0; i < 5; ++i)
+			{
+				SendDlgItemMessage(hWndDlg, IDC_COMBO1, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
+				SendDlgItemMessage(hWndDlg, IDC_COMBO2, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
+				SendDlgItemMessage(hWndDlg, IDC_COMBO3, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
+			}
+
+			SendDlgItemMessage(hWndDlg, IDC_COMBO1, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
+			SendDlgItemMessage(hWndDlg, IDC_COMBO2, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
+			SendDlgItemMessage(hWndDlg, IDC_COMBO3, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
+		}
+		// fall thru
 	case WM_PAINT:
-	{
+		{
 			// Geometry Adjustments
 			CheckRadioButton(hWndDlg, IDC_RADIO1, IDC_RADIO3, (ctx->geomAdj.polymode[0] == 0 ? IDC_RADIO1 : (ctx->geomAdj.polymode[0] == 1 ? IDC_RADIO2 : IDC_RADIO3)));
 			CheckRadioButton(hWndDlg, IDC_RADIO4, IDC_RADIO6, (ctx->geomAdj.polymode[1] == 0 ? IDC_RADIO4 : (ctx->geomAdj.polymode[1] == 1 ? IDC_RADIO5 : IDC_RADIO6)));
-			i = ctx->base_geometry.type;
-			CheckRadioButton(hWndDlg, IDC_RADIO7, IDC_RADIO10, (i == GEOMETRY_ICOSAHEDRON ? IDC_RADIO7 : (i == GEOMETRY_OCTAHEDRON ? IDC_RADIO8 : (i == GEOMETRY_TETRAHEDRON ? IDC_RADIO9 : IDC_RADIO10))));
-			i = ctx->geomAdj.orientation;
-			CheckRadioButton(hWndDlg, IDC_RADIO11, IDC_RADIO13, (i == GEOMETRY_ORIENTATION_FACE ? IDC_RADIO11 : (i == GEOMETRY_ORIENTATION_EDGE ? IDC_RADIO12 : IDC_RADIO13)));
 			SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->base_geometry.oneFaceFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->base_geometry.zRotFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_SETCHECK, (ctx->base_geometry.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->clrCtl.reverseColorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
 
 			// Label settings
-			CheckRadioButton(hWndDlg, IDC_RADIO56, IDC_RADIO60, ((int)ctx->label.edge.font   - 4 + IDC_RADIO56));
-			CheckRadioButton(hWndDlg, IDC_RADIO61, IDC_RADIO65, ((int)ctx->label.vertex.font - 4 + IDC_RADIO61));
-			CheckRadioButton(hWndDlg, IDC_RADIO71, IDC_RADIO75, ((int)ctx->label.face.font   - 4 + IDC_RADIO71));
-
-//			i = ctx->geomAdj.drawWhat;
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK22, BM_SETCHECK, (i &  GEOMETRY_DRAW_TRIANGLES ? BST_CHECKED : BST_UNCHECKED), 0);
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK23, BM_SETCHECK, (i &  GEOMETRY_DRAW_EDGES     ? BST_CHECKED : BST_UNCHECKED), 0);
-//			SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_SETCHECK, (i &  GEOMETRY_DRAW_VERTICES  ? BST_CHECKED : BST_UNCHECKED), 0);
-//			sprintf(buffer, "%.3f", ctx->renderVertex.scale);  SetDlgItemText(hWndDlg, IDC_EDIT24, buffer);
+			SendDlgItemMessage(hWndDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)(int)ctx->label.face.font - 4, (LPARAM)0);
+			SendDlgItemMessage(hWndDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)(int)ctx->label.edge.font - 4, (LPARAM)0);
+			SendDlgItemMessage(hWndDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)(int)ctx->label.vertex.font - 4, (LPARAM)0);
 
 			// Drawing Adjustments - version 2 (Check Boxes)
 			SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_SETCHECK, (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERPSECTIVE ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
@@ -474,7 +522,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_SETCHECK, (ctx->drawAdj.spin.spinState ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->drawAdj.clipVisibleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_SETCHECK, (ctx->drawAdj.stereoCrossEyeFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-//			ctx->drawAdj.stereoCrossEyeFlag
 			SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_SETCHECK, (ctx->drawAdj.stereoFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
 			SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_SETCHECK, (ctx->drawAdj.hiResFlag ? BST_CHECKED : BST_UNCHECKED), 0); // quality 
 			sprintf(buffer, "%.4f", ctx->drawAdj.clipZIncrement); SetDlgItemText(hWndDlg, IDC_EDIT1, buffer);
@@ -496,14 +543,9 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			// Color Adjustments 
 			sprintf(buffer, "%.2f", ctx->clrCtl.face.defaultColor.a);  SetDlgItemText(hWndDlg, IDC_EDIT54, buffer);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			sprintf(buffer, "%.3f", ctx->clrCtl.light.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
-			sprintf(buffer, "%.3f", ctx->clrCtl.light.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
-			sprintf(buffer, "%.3f", ctx->clrCtl.light.z);  SetDlgItemText(hWndDlg, IDC_EDIT22, buffer);
-
-			// Edge Attributes - init
-//			sprintf(buffer, "%.4f", ctx->eAttr.width);  SetDlgItemText(hWndDlg, IDC_EDIT3, buffer);
-//			sprintf(buffer, "%.4f", ctx->eAttr.height); SetDlgItemText(hWndDlg, IDC_EDIT4, buffer);
-//			sprintf(buffer, "%.4f", ctx->eAttr.offset); SetDlgItemText(hWndDlg, IDC_EDIT5, buffer);
+			sprintf(buffer, "%.3f", ctx->lighting.position.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
+			sprintf(buffer, "%.3f", ctx->lighting.position.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
+			sprintf(buffer, "%.3f", ctx->lighting.position.z);  SetDlgItemText(hWndDlg, IDC_EDIT22, buffer);
 
 			// Input Modifications - init
 			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->inputTrans.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0);
@@ -527,6 +569,19 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);		
 			SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->png.stateSaveFlag ? BST_CHECKED : BST_UNCHECKED), 0);
 			SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_SETCHECK, (ctx->png.bwFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+			
+			// lighting information
+			SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->lighting.ambientEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+			SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->lighting.diffuseEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+			SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->lighting.specularEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+			sprintf(buffer, "%.2f", ctx->lighting.ambientPercent);	SetDlgItemText(hWndDlg, IDC_EDIT55, buffer);
+			sprintf(buffer, "%.2f", ctx->lighting.diffusePercent);	SetDlgItemText(hWndDlg, IDC_EDIT56, buffer);
+			sprintf(buffer, "%.2f", ctx->lighting.specularPercent);	SetDlgItemText(hWndDlg, IDC_EDIT57, buffer);
+			sprintf(buffer, "%.0f", ctx->lighting.matShininess);	SetDlgItemText(hWndDlg, IDC_EDIT58, buffer);
+			sprintf(buffer, "%.0f", ctx->lighting.matSpecular);		SetDlgItemText(hWndDlg, IDC_EDIT59, buffer);
+			SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_SETCHECK, (ctx->geomAdj.cull[0] ? BST_CHECKED : BST_UNCHECKED), 0);
+			SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_SETCHECK, (ctx->geomAdj.cull[1] ? BST_CHECKED : BST_UNCHECKED), 0);
+
 		}
 		break;
 
@@ -553,15 +608,43 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 				case IDC_EDIT15: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT15, buffer, (void*)&ctx->inputTrans.yAxis.y, 1, 4, 0, 0, 0); break;
 				case IDC_EDIT16: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT16, buffer, (void*)&ctx->inputTrans.yAxis.z, 1, 4, 0, 0, 0); break;
 				case IDC_EDIT17: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT17, buffer, (void*)&ctx->drawAdj.clipZValue, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->clrCtl.light.x, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->clrCtl.light.y, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->clrCtl.light.z, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->lighting.position.x, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->lighting.position.y, 1, 3, 0, 0, 0); break;
+				case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->lighting.position.z, 1, 3, 0, 0, 0); break;
 				case IDC_EDIT23:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT23, 2, buffer);
 				case IDC_EDIT24: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT24, buffer, (void*)&ctx->renderVertex.scale, 1, 4, 0, 0, 0); break;
 				case IDC_EDIT25: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT25, buffer, (void*)&ctx->drawAdj.eyeSeparation, 0, 3, 0, 0, 0); break;
 				case IDC_EDIT54: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT54, buffer, (void*)&ctx->clrCtl.face.defaultColor.a, 0, 2, 1, 0.0, 1.0); break;
+//				void ds_edit_text_update(HWND pWnd, HWND dlg, int control, char *buffer, void *vPtr, int doubleFlag, int nDigits, int clamp, double min, double max)
+				case IDC_EDIT55: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT55, buffer, (void*)&ctx->lighting.ambientPercent,  1, 2, 1, 0.0,   1.0); break;
+				case IDC_EDIT56: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT56, buffer, (void*)&ctx->lighting.diffusePercent,  1, 2, 1, 0.0,   1.0); break;
+				case IDC_EDIT57: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT57, buffer, (void*)&ctx->lighting.specularPercent, 1, 2, 1, 0.0,   1.0); break;
+//				case IDC_EDIT60: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT60, buffer, (void*)&ctx->lighting.cutoffAngle,     1, 1, 1, 0.0,  90.0); break;
+				case IDC_EDIT59: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT59, buffer, (void*)&ctx->lighting.matSpecular,     1, 2, 1, 0.0,   1.0); break;
+				case IDC_EDIT58: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT58, buffer, (void*)&ctx->lighting.matShininess,    1, 1, 1, 0.0, 128.0); break;
 				}
 				break;
+			}
+		}
+		if (HIWORD(wParam) == CBN_SELCHANGE)
+		{
+			i = SendDlgItemMessage(hWndDlg, LOWORD(wParam), (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+			switch (LOWORD(wParam)) {
+			case IDC_COMBO1: label = &ctx->label.face; break;
+			case IDC_COMBO2: label = &ctx->label.edge; break;
+			case IDC_COMBO3: label = &ctx->label.vertex; break;
+			}
+			if (label)
+			{
+				switch (i) {
+				case 0:	label->font = GLUT_BITMAP_TIMES_ROMAN_10; break;
+				case 1:	label->font = GLUT_BITMAP_TIMES_ROMAN_24; break;
+				case 2:	label->font = GLUT_BITMAP_HELVETICA_10;	  break;
+				case 3:	label->font = GLUT_BITMAP_HELVETICA_12;	  break;
+				case 4:	label->font = GLUT_BITMAP_HELVETICA_18;	  break;
+				}
+				ds_label_update(label);
+				InvalidateRect(pWnd, 0, 0);
 			}
 		}
 		switch (wParam) { // on command 
@@ -571,15 +654,6 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 		case IDC_RADIO4: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO4, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO5: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO5, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO6: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO6, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
-
-		case IDC_RADIO7:  ctx->base_geometry.type = SendDlgItemMessage(hWndDlg, IDC_RADIO7, BM_GETCHECK, 0, 0) ? GEOMETRY_ICOSAHEDRON : GEOMETRY_ICOSAHEDRON; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO8:  ctx->base_geometry.type = SendDlgItemMessage(hWndDlg, IDC_RADIO8, BM_GETCHECK, 0, 0) ? GEOMETRY_OCTAHEDRON  : GEOMETRY_ICOSAHEDRON; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO9:  ctx->base_geometry.type = SendDlgItemMessage(hWndDlg, IDC_RADIO9, BM_GETCHECK, 0, 0) ? GEOMETRY_TETRAHEDRON : GEOMETRY_ICOSAHEDRON; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO10: ctx->base_geometry.type = SendDlgItemMessage(hWndDlg, IDC_RADIO10, BM_GETCHECK, 0, 0) ? GEOMETRY_CUBEHEDRON  : GEOMETRY_ICOSAHEDRON; InvalidateRect(pWnd, 0, 0); break;
-
-		case IDC_RADIO11: ctx->geomAdj.orientation = SendDlgItemMessage(hWndDlg, IDC_RADIO11, BM_GETCHECK, 0, 0) ? GEOMETRY_ORIENTATION_FACE : GEOMETRY_ORIENTATION_FACE; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO12: ctx->geomAdj.orientation = SendDlgItemMessage(hWndDlg, IDC_RADIO12, BM_GETCHECK, 0, 0) ? GEOMETRY_ORIENTATION_EDGE : GEOMETRY_ORIENTATION_FACE; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO13: ctx->geomAdj.orientation = SendDlgItemMessage(hWndDlg, IDC_RADIO13, BM_GETCHECK, 0, 0) ? GEOMETRY_ORIENTATION_VERTEX : GEOMETRY_ORIENTATION_FACE; InvalidateRect(pWnd, 0, 0); break;
 
 		case IDC_RADIO21: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO21, BM_GETCHECK, 1, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
 		case IDC_RADIO22: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO22, BM_GETCHECK, 1, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
@@ -612,11 +686,10 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 
 		case IDC_CHECK14: ctx->drawAdj.stereoFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0);ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); break;
 		case IDC_CHECK15: ctx->clrCtl.useLightingFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK17: ctx->clrCtl.reverseColorFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK18: ctx->base_geometry.oneFaceFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK19: ctx->base_geometry.zRotFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK20: ctx->base_geometry.mirrorFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK43: 
+		case IDC_CHECK17: ctx->lighting.ambientEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK18: ctx->lighting.diffuseEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK19: ctx->lighting.specularEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK43:
 			ctx->drawAdj.hiResFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_GETCHECK, 0, 0) ? 1 : 0; 
 			if (ctx->drawAdj.hiResFlag)
 			{
@@ -629,24 +702,8 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 				ctx->renderVertex.vtxObj = &ctx->renderVertex.vtxObjLoRes;
 			}
 			InvalidateRect(pWnd, 0, 0); break;
-
-		case IDC_RADIO56: ctx->label.edge.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO57: ctx->label.edge.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO58: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_10;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO59: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_12;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO60: ctx->label.edge.font = GLUT_BITMAP_HELVETICA_18;		ds_label_update(&ctx->label.edge); InvalidateRect(pWnd, 0, 0); break;
-
-		case IDC_RADIO61: ctx->label.vertex.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO62: ctx->label.vertex.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO63: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_10;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO64: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_12;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO65: ctx->label.vertex.font = GLUT_BITMAP_HELVETICA_18;	ds_label_update(&ctx->label.vertex); InvalidateRect(pWnd, 0, 0); break;
-
-		case IDC_RADIO71: ctx->label.face.font = GLUT_BITMAP_TIMES_ROMAN_10;	ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO72: ctx->label.face.font = GLUT_BITMAP_TIMES_ROMAN_24;	ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO73: ctx->label.face.font = GLUT_BITMAP_HELVETICA_10;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO74: ctx->label.face.font = GLUT_BITMAP_HELVETICA_12;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO75: ctx->label.face.font = GLUT_BITMAP_HELVETICA_18;		ds_label_update(&ctx->label.face); InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK77: ctx->geomAdj.cull[0] = SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+		case IDC_CHECK78: ctx->geomAdj.cull[1] = SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
 
 		case IDCANCEL:
 			DestroyWindow(hWndDlg);

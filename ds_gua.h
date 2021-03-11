@@ -15,6 +15,8 @@ typedef struct {
 	void		*edb;		// unique edges (2 unique vertex indices) with unique edge
 	void		*tedb;		// unique triangles by unique edge lengths
 	void		*tdb;		// unique triangles by unique vertex indices along with unique tri by edge
+	void		*ndb;		// unique normals (coordinates)
+	char		name[32];	// user supplied name
 //	GUA_OFF		off;		// OFF data
 //	int			*vIndex;	// array of vertex indices
 } GUA_UNIQUE;

@@ -562,7 +562,8 @@ void ds_geometry_draw_init(DS_CTX *ctx, DS_GEO_OBJECT *gobj) //, BASE_GEOMETRY_N
 {
 	DS_BASE_GEOMETRY	*base = &ctx->base_geometry;
 
-	switch ( base->type ) {
+//	switch ( base->type ) {
+	switch (gobj->geo_type) {
 	case GEOMETRY_ICOSAHEDRON://			1
 		base->curPoly = &base->poly[0]; break;
 	case GEOMETRY_OCTAHEDRON://			1
