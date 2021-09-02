@@ -73,11 +73,11 @@ void ds_label_update(DS_LABEL *label)
 }
 
 //----------------------------------------------------------------------------------------------------------
-void ds_label_set(DS_LABEL *label, void *font, DS_COLOR *color)
+void ds_label_set(DS_LABEL *label, void *font, DS_COLOR *color, int enable)
 //----------------------------------------------------------------------------------------------------------
 {
 	// set the labels font parameters
-
+	label->enable = enable;
 
 	// update the offsets based on the specific font - approximate values
 	switch ((unsigned int)font) {
@@ -85,6 +85,7 @@ void ds_label_set(DS_LABEL *label, void *font, DS_COLOR *color)
 	case GLUT_BITMAP_9_BY_15:			label->font = font; label->xOffset = (float)-4.5; label->yOffset = (float)-6.0; break;
 	case GLUT_BITMAP_TIMES_ROMAN_10:
 		label->font = font;
+		label->color = *color;
 		label->xOffset = glutBitmapWidth(font, '9') / -2.5; // -2.0;
 		label->yOffset = (float)-2.0; 
 		break;
@@ -124,7 +125,7 @@ void ds_label_draw(DS_LABEL *label, float x, float y, float z, float nz, char *s
 }
 
 //----------------------------------------------------------------------------------------------------------
-void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, float nz, int id)
+void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, GUT_VECTOR *normal, int id, int lighting)
 //----------------------------------------------------------------------------------------------------------
 {
 	// Draw a label on the screen
@@ -132,10 +133,22 @@ void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, float nz, int 
 	int				i;
 	static char		buf[12];
 	static GLubyte	bitmap[10];
+	GUT_VECTOR		nml;
 
-	if (nz < 0.6) return; // don't draw if normal representing face is too oblique to view 
+	// get current model matrix and pre-apply to normal to determine visibility
+	GLdouble matrix[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, &matrix);
+	normal->l = 1.0;
+	matrix[15] = 1.0; 
+	matrix[14] = matrix[13] = matrix[12] = 0; // remove translation components
+	mtx_vector_multiply(1, (MTX_VECTOR*)normal, (MTX_VECTOR*)&nml, &matrix); // transform the vertices once
+	gut_normalize_vector(&nml);
+	if (nml.k < 0.6) return; // don't draw if normal representing face is too oblique to view 
 
-	glColor3f(label->color.r, label->color.g, label->color.b);	// set label specific color
+	if (lighting)
+		glDisable(GL_LIGHTING);
+
+	glColor3f((GLfloat)label->color.r, (GLfloat)label->color.g, (GLfloat)label->color.b);	// set label specific color
 	glRasterPos3f(x, y, z);										// initialize raster position
 	sprintf(buf, "%d", id);
 	len = (int)strlen(buf);										// determine length of string
@@ -143,4 +156,7 @@ void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, float nz, int 
 	glBitmap((GLsizei)0, (GLsizei)0, (GLfloat)0, (GLfloat)0, (GLfloat)(len*label->xOffset), (GLfloat)(len*label->yOffset), &bitmap[0]);
 	for (i = 0; i < len; i++) // draw each character of the string in the appropriate font
 		glutBitmapCharacter(label->font, buf[i]);
+
+	if (lighting)
+		glEnable(GL_LIGHTING);
 }

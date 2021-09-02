@@ -1105,6 +1105,7 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 			geo->tri[n].vtx = iptr;					// attach array memory
 			geo->tri[n].nml = inptr;				// attach array memory
 			geo->tri[n].nVtx = data[i].nv;
+			geo->tri[n].draw.nSegments = 0;
 			m += data[i].nv;
 			for (j = 0; j < data[i].nv; ++j)
 			{
@@ -1126,6 +1127,8 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 	// allocate array
 	geo->edge  = (DS_EDGE*)malloc(sizeof(DS_EDGE)*edb->nc);
 	geo->nEdge = edb->nc;
+	geo->edge[0].draw.n = 0;
+
 	// transfer data 
 	blk = (GUA_BLK*)edb->head;
 	n = 0;
@@ -1274,6 +1277,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	gua->edb  = gua_db_init ( gua_edata_init,  gua_edata_insert,  mnc,   e_compare);	// edge by unique vertex pairs DB
 	gua->tedb = gua_db_init ( gua_tedata_init, gua_tedata_insert, mnc,  te_compare);	// triangle by unique edges DB
 	gua->tdb  = gua_db_init ( gua_tdata_init,  gua_tdata_insert,  mnc,   t_compare);		// triangle by unique vertices DB
+	gua->name[0] = 0;
 
 	// local copies re-casted
 	vdb  = (GUA_DB*)gua->vdb;
@@ -1335,6 +1339,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				rgb[0] = (float)atof(word[9].buffer);
 				rgb[1] = (float)atof(word[10].buffer);
 				rgb[2] = (float)atof(word[11].buffer);
+				rgb[3] = (float)((DS_COLOR*)defaultColor)->a;
 				if (n>=13)
 					rgb[3] = (float)atof(word[12].buffer);
 				break;
@@ -1342,6 +1347,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				rgb[0] = (float)(atof(word[ 9].buffer) / 255.0);
 				rgb[1] = (float)(atof(word[10].buffer) / 255.0);
 				rgb[2] = (float)(atof(word[11].buffer) / 255.0);
+				rgb[3] = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= 13)
 					rgb[3] = (float)(atof(word[12].buffer) / 255.0);
 				break;
@@ -1604,7 +1610,7 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.r = (float)atof(word[9].buffer);
 				vct.color.g = (float)atof(word[10].buffer);
 				vct.color.b = (float)atof(word[11].buffer);
-				vct.color.a = (float)1.0;
+				vct.color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if ( n >= 13 )
 					vct.color.a = (float)atof(word[12].buffer);
 				break;
@@ -1612,7 +1618,7 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.r = (float)(atof(word[ 9].buffer) / 255.0);
 				vct.color.g = (float)(atof(word[10].buffer) / 255.0);
 				vct.color.b = (float)(atof(word[11].buffer) / 255.0);
-				vct.color.a = (float)1.0;
+				vct.color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= 13)
 					vct.color.a = (float)(atof(word[12].buffer) / 255.0);
 			}
@@ -1747,6 +1753,7 @@ int ngua_convert_to_object(DS_CTX *ctx, void *nguap, DS_GEO_OBJECT *geo)
 			geo->tri[n].vtx[0] = j++;	// v[0];			// unique vertex IDs
 			geo->tri[n].vtx[1] = j++;	// v[1];
 			geo->tri[n].vtx[2] = j++;	// v[2];
+			geo->tri[n].draw.nSegments = 0;
 			iptr += 3;
 			++n;
 		}
@@ -2025,7 +2032,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				of[i].color.r = (float)atof(word[j+0].buffer);
 				of[i].color.g = (float)atof(word[j+1].buffer);
 				of[i].color.b = (float)atof(word[j+2].buffer);
-				of[i].color.a = (float)1.0;
+				of[i].color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= of[i].nVtx + 1 + 4) // color 
 					of[i].color.a = (float)atof(word[j + 3].buffer);
 				break;
@@ -2033,7 +2040,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				of[i].color.r = (float)(atoi(word[j+0].buffer) / 255.0);
 				of[i].color.g = (float)(atoi(word[j+1].buffer) / 255.0);
 				of[i].color.b = (float)(atoi(word[j+2].buffer) / 255.0);
-				of[i].color.a = (float)1.0;
+				of[i].color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= of[i].nVtx + 1 + 4) // color 
 					of[i].color.a = (float)(atoi(word[j + 3].buffer) / 255.0);
 				break;

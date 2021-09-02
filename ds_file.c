@@ -505,7 +505,7 @@ int ds_file_initialization( HWND hWnd, char *filename )
 	if (dsf)
 	{
 		ds_file_set_window_text(hWnd, dsf->nameOnly);
-		if ( !ds_parse_file(ctx, dsf) )
+		if ( !ds_parse_file(ctx, dsf, (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj) )
 			ds_file_close(ctx, dsf); // free up the dsf
 		else
 		{
@@ -582,11 +582,11 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 				ShowWindow(ctx->attrControl, SW_SHOW);
 				ds_position_window(ctx, ctx->attrControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
-			if (!ctx->objControl)
+			if (!ctx->objDashboard)
 			{
-				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_control);
-				ShowWindow(ctx->objControl, SW_SHOW);
-				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
+				ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_dashboard);
+				ShowWindow(ctx->objDashboard, SW_SHOW);
+				ds_position_window(ctx, ctx->objDashboard, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
 		}
 		InvalidateRect(ctx->mainWindow, 0, 0);
@@ -668,7 +668,7 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 		{
 			ds_file_set_window_text(hOwnerWnd, dsf->nameOnly);
 			ds_file_type_initialization(ctx, dsf->nameOnly);
-			if (!ds_parse_file(ctx, dsf))
+			if (!ds_parse_file(ctx, dsf, (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj))
 				ds_file_close(ctx, dsf);
 			else
 			{
@@ -840,6 +840,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 	// inherit default settings
 	gobj->active			= ctx->defInputObj.active;
 	gobj->drawWhat			= ctx->defInputObj.drawWhat;
+	gobj->fAttr				= ctx->defInputObj.fAttr;
 	gobj->eAttr				= ctx->defInputObj.eAttr;
 	gobj->cAttr				= ctx->defInputObj.cAttr;
 	gobj->vAttr				= ctx->defInputObj.vAttr;
@@ -848,10 +849,16 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 	gobj->lFlags			= ctx->defInputObj.lFlags;
 	gobj->geo_type			= ctx->defInputObj.geo_type;
 	gobj->geo_orientation	= ctx->defInputObj.geo_orientation;
+	gobj->faceDefault		= ctx->defInputObj.faceDefault;
 
-	gobj->filename = malloc(strlen(dsf->nameOnly) + 1);
+	gobj->filename			= malloc(strlen(dsf->nameOnly) + 1);
 	strcpy(gobj->filename, dsf->nameOnly);
-	gobj->dsf		= dsf;
+	gobj->dsf				= dsf;
+	gobj->faceMem			= 0;
+	gobj->edgeMem			= 0;
+	gobj->faceInit			= 0;
+	gobj->edgeInit			= 0;
+	gobj->attrDialog		= 0;
 
 	if (!ctx->gobjAddFlag) // remove all the previous geometry
 	{
@@ -866,6 +873,14 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 			lgobj->tri		? free(lgobj->tri)		: 0;
 			lgobj->edge		? free(lgobj->edge)		: 0;
 			lgobj->vIndex   ? free(lgobj->vIndex)   : 0;
+			lgobj->faceMem  ? free(lgobj->faceMem)	: 0;
+			lgobj->edgeMem  ? free(lgobj->edgeMem)	: 0;
+			if (lgobj->attrDialog)
+			{
+				EndDialog(lgobj->attrDialog, 0);
+				DestroyWindow(lgobj->attrDialog);
+			}
+			lgobj->attrDialog = 0;
 			ds_file_close(ctx, lgobj->dsf);
 			lgobj			? free ( lgobj )		: 0; // free self
 		}
@@ -877,7 +892,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 }
 
 //-----------------------------------------------------------------------------
-DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf)
+DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf, DS_GEO_INPUT_OBJECT *gio)
 //-----------------------------------------------------------------------------
 {
 	void			*gua;
@@ -931,6 +946,39 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf)
 			gua_convert_to_object(ctx, gua, geo);
 		else
 			ngua_convert_to_object(ctx, gua, geo);
+	}
+	
+	// copy attributes
+	geo->active				= gio->active;
+	geo->drawWhat			= gio->drawWhat;
+	geo->fAttr				= gio->fAttr;
+	geo->eAttr				= gio->eAttr;
+	geo->cAttr				= gio->cAttr;
+	geo->vAttr				= gio->vAttr;
+	geo->rAttr				= gio->rAttr;
+	geo->tAttr				= gio->tAttr;
+	geo->lFlags				= gio->lFlags;
+	geo->geo_type			= gio->geo_type;
+	geo->geo_orientation	= gio->geo_orientation;
+	geo->faceDefault		= gio->faceDefault;
+	geo->dsf				= dsf;
+
+	// build geometry for drawing
+	ds_face_initialize(ctx, geo);
+	ds_face_update(ctx, geo);
+	ds_edge_initialize(ctx, geo);
+	ds_edge_update(ctx, geo);
+
+	// update object dashboard if open
+	if (ctx->objDashboard)
+	{
+		RECT	rect;
+		GetWindowRect(ctx->objDashboard, &rect);
+		EndDialog(ctx->objDashboard, 0);
+		DestroyWindow(ctx->objDashboard);
+		ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_dashboard);
+		ShowWindow(ctx->objDashboard, SW_SHOW);
+		//		MoveWindow(ctx->objDashboard, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,1);
 	}
 
 	return geo;

@@ -36,20 +36,22 @@
 #include "ds_gua.h"
 
 typedef struct { // FACE
-	int			vid[3];
-	int			svid[3]; // sorted
+	int			nv; // number of vertices in face
+	int			vid[5];
+	int			svid[5]; // sorted
 	int			id;
 	MTX_MATRIX	m_face;
 } FACE;
 
 typedef struct { // CONTEXT 
 	FACE				f[21]; //max
-	GUT_POINT			vdata[13]; // v[13]; // max
+	GUT_POINT			vdata[100]; // v[13]; // max
 	GUT_POINT			*v; // v[13]; // max
 	int					fq[21];
 	int					nfq;
 	int					nf;
 	int					nv;
+	int					nvPerFace;
 	int					nFcmp;
 	int					nVcmp;
 	int					nZRot;
@@ -116,6 +118,76 @@ static int face_compare(MATRIX_CONTEXT *ctx, FACE *a, FACE *b)
 	return 0;
 }
 
+//--------------------------------------------------------------------------------
+static int face_compare_new(MATRIX_CONTEXT *ctx, FACE *a, FACE *b)
+//--------------------------------------------------------------------------------
+{
+	// This is face compare function. It compares the three vertex indices 
+	// that define the face. The order of the vertex indices is always ordered.
+	// The compare is used when performing an insert into the face AVL tree.
+	// If all three vertex ID match we return 0 since the face is NOT unique.
+	// When face is NOT unique we store a pointer to the matching face is in 
+	// provided content structure.
+	int	diff;
+	int	i;
+
+	++ctx->nFcmp; // statistic info
+
+	for (i = 0; i < a->nv; ++i)
+	{
+		if (diff = a->svid[i] - b->svid[i])
+			return diff;
+	}
+
+	ctx->fp = a; // save the matching node
+	return 0;
+}
+
+//------------------------------------------------------------------------------------
+static int insert_face_new(MATRIX_CONTEXT *ctx, FACE *f, int *id)
+//------------------------------------------------------------------------------------
+{
+	// This function is called when attempting to add a new face to 
+	// face AVL tree. If the input face matches an already existing
+	// face the existing face's ID is returned. Otherwise the originally
+	// supplied id is unchanged.
+
+	int		tmp;
+	int		*vid;
+	int		i, j, start = 0, low;
+
+	// find lowest index in face vertex indices
+	low = f->vid[0]; // seed
+	for (i = 1; i < f->nv; ++i)
+	{
+		if (f->vid[i] < low)
+		{
+			low = f->vid[i];
+			start = i;
+		}
+	}
+	// put all in order in svid
+	for (i = 0, j = start; i < f->nv; ++i, ++j)
+	{
+		f->svid[i] = f->vid[j % f->nv];
+	}
+
+//	vid = &f->svid[0];
+
+	if (avl_insert(ctx->favl, f)) // attempt to insert face
+	{	// face was new
+		*id = f->id;
+		++ctx->nf;
+		return 1;
+	}
+	else
+	{
+		// duplicate 
+		*id = ctx->fp->id;
+		return 0;
+	}
+}
+
 //------------------------------------------------------------------------------------
 static int insert_face ( MATRIX_CONTEXT *ctx, FACE *f, int *id )
 //------------------------------------------------------------------------------------
@@ -168,7 +240,7 @@ static int insert_face ( MATRIX_CONTEXT *ctx, FACE *f, int *id )
 }
 
 //------------------------------------------------------------------------------------
-static void init ( MATRIX_CONTEXT *ctx, GUT_POINT *v )
+static void init ( MATRIX_CONTEXT *ctx, GUT_POINT *v, int nv, int nZRot )
 //------------------------------------------------------------------------------------
 {
 	// This is the common initialization routine for all
@@ -183,22 +255,27 @@ static void init ( MATRIX_CONTEXT *ctx, GUT_POINT *v )
 	int		i, id;
 
 	// create AVL tree for faces
-	ctx->favl = avl_create(face_compare, (void*)ctx);
+//	ctx->favl = avl_create(face_compare, (void*)ctx);
+	ctx->favl = avl_create(face_compare_new, (void*)ctx);
 	ctx->nf = ctx->nv = ctx->nFcmp = ctx->nVcmp = ctx->nfq = 0;
+	ctx->nvPerFace = nv;
 
-	ctx->nZRot = 3;
+	ctx->nZRot = nZRot;
 	f = &ctx->f[0];
-	f[0].vid[0] = 0;
-	f[0].vid[1] = 1;
-	f[0].vid[2] = 2;
-	f[0].id = ctx->nf; 
+	for (i = 0; i < nv; ++i)
+	{
+		f[0].vid[i] = i;
+	}
+	f[0].id = ctx->nf;
+	f[0].nv = ctx->nvPerFace;
 
-	if (insert_face(ctx, f, &id))
+//	if (insert_face(ctx, f, &id))
+	if (insert_face_new(ctx, f, &id))
 	{
 		ctx->fq[0] = id;
 		ctx->nfq = 1;
 	}
-	for (i = 0; i < 3; ++i)
+	for (i = 0; i < nv; ++i)
 	{
 		ctx->v[ctx->nv] = v[i];
 		insert_v(ctx, &v[i], &id);
@@ -227,40 +304,97 @@ static void fill(MATRIX_CONTEXT *ctx)
 	{
 		i = ctx->fq[--ctx->nfq]; // take top face from queue
 		f = &ctx->f[i]; // take top face from queue
+		f->nv = ctx->nvPerFace;
 
-		//echo process face $f.id 
-		for (i = 0; i < 3; ++i)
+		if (f->nv == 3)
 		{
-			// create 3 mirror points
-			v = &ctx->v[ctx->nv]; // use top of vertex array 
-
-			// add to vertex data base
-			gut_plane_from_points(&ctx->v[f->vid[i]], &ctx->v[f->vid[(i + 1) % 3]], &o, &plane);
-			gut_mirror_point_to_plane(&plane, &ctx->v[f->vid[(i + 2) % 3]], v);
-
-			// create mirror
-			if (insert_v(ctx, v, &vID))
+			//echo process face $f.id 
+			for (i = 0; i < f->nv; ++i)
 			{
-				// if mirror point is unique then create new face and add to queue
-				ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 3];
-				ctx->f[ctx->nf].vid[1] = f->vid[i];
-				ctx->f[ctx->nf].vid[2] = vID;
-				ctx->f[ctx->nf].id = ctx->nf;
+				// create n mirror points
+				v = &ctx->v[ctx->nv]; // use top of vertex array 
 
-				insert_face(ctx, &ctx->f[ctx->nf], &fID);
-				ctx->fq[ctx->nfq++] = fID;
-			}
-			else
-			{
-				// vertex is not unique so need to insert possible face by vid comparison
-				ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 3];
-				ctx->f[ctx->nf].vid[1] = f->vid[i];
-				ctx->f[ctx->nf].vid[2] = vID;
-				ctx->f[ctx->nf].id = ctx->nf;
+									  // add to vertex data base
+				gut_plane_from_points(&ctx->v[f->vid[i]], &ctx->v[f->vid[(i + 1) % 3]], &o, &plane);
+				gut_mirror_point_to_plane(&plane, &ctx->v[f->vid[(i + 2) % 3]], v);
 
-				if (insert_face(ctx, &ctx->f[ctx->nf], &fID))
+				// create mirror
+				if (insert_v(ctx, v, &vID))
 				{
-					ctx->fq[ctx->nfq++] = fID; // add to work queue
+					// if mirror point is unique then create new face and add to queue
+					ctx->f[ctx->nf].nv = ctx->nvPerFace;
+					ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 3];
+					ctx->f[ctx->nf].vid[1] = f->vid[i];
+					ctx->f[ctx->nf].vid[2] = vID;
+					ctx->f[ctx->nf].id = ctx->nf;
+
+					insert_face_new(ctx, &ctx->f[ctx->nf], &fID);
+					ctx->fq[ctx->nfq++] = fID;
+				}
+				else
+				{
+					// vertex is not unique so need to insert possible face by vid comparison
+					ctx->f[ctx->nf].nv = ctx->nvPerFace;
+					ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 3];
+					ctx->f[ctx->nf].vid[1] = f->vid[i];
+					ctx->f[ctx->nf].vid[2] = vID;
+					ctx->f[ctx->nf].id = ctx->nf;
+
+					if (insert_face_new(ctx, &ctx->f[ctx->nf], &fID))
+					{
+						ctx->fq[ctx->nfq++] = fID; // add to work queue
+					}
+				}
+			}
+		}
+		else if (f->nv == 5)
+		{
+			int vID[3];
+			int	j, newFlag = 0;
+
+			//echo process face $f.id 
+			for (i = 0; i < f->nv; ++i)
+			{
+
+									  // add to vertex data base
+				gut_plane_from_points(&ctx->v[f->vid[i]], &ctx->v[f->vid[(i + 1) % 5]], &o, &plane);
+
+				// need to mirror 3 points
+				for (j = 0; j < 3; ++j)
+				{
+					v = &ctx->v[ctx->nv]; // use top of vertex array 
+					gut_mirror_point_to_plane(&plane, &ctx->v[f->vid[(i + 2 + j) % 5]], v);
+					newFlag += insert_v(ctx, v, &vID[j]);
+				}
+
+				if (newFlag)// if any mirror point is unique then create new face and add to queue
+				{
+					ctx->f[ctx->nf].nv = ctx->nvPerFace;
+					ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 5];
+					ctx->f[ctx->nf].vid[1] = f->vid[i];
+					ctx->f[ctx->nf].vid[2] = vID[2];
+					ctx->f[ctx->nf].vid[3] = vID[1];
+					ctx->f[ctx->nf].vid[4] = vID[0];
+					ctx->f[ctx->nf].id = ctx->nf;
+
+					insert_face_new(ctx, &ctx->f[ctx->nf], &fID);
+					ctx->fq[ctx->nfq++] = fID;
+				}
+				else
+				{
+					// vertex is not unique so need to insert possible face by vid comparison
+					ctx->f[ctx->nf].nv = ctx->nvPerFace;
+					ctx->f[ctx->nf].vid[0] = f->vid[(i + 1) % 5];
+					ctx->f[ctx->nf].vid[1] = f->vid[i];
+					ctx->f[ctx->nf].vid[2] = vID[2];
+					ctx->f[ctx->nf].vid[3] = vID[1];
+					ctx->f[ctx->nf].vid[4] = vID[0];
+					ctx->f[ctx->nf].id = ctx->nf;
+
+					if (insert_face_new(ctx, &ctx->f[ctx->nf], &fID))
+					{
+						ctx->fq[ctx->nfq++] = fID; // add to work queue
+					}
 				}
 			}
 		}
@@ -305,12 +439,16 @@ static void matrix_vertex(MATRIX_CONTEXT *ctx)
 	double				*m;
 
 	f = &ctx->f[0]; // base face
-	z = *(GUT_VECTOR*)&ctx->v[f->vid[2]];
+	if (ctx->nvPerFace == 5)
+		z = *(GUT_VECTOR*)&ctx->v[f->vid[3]];
+	else if (ctx->nvPerFace == 3)
+		z = *(GUT_VECTOR*)&ctx->v[f->vid[2]];
 	gut_normalize_vector(&z);
 	gut_vector(&ctx->v[f->vid[0]], &ctx->v[f->vid[1]], &x);
 	gut_normalize_vector(&x);
 	gut_cross_product(&z, &x, &y);
 	m = (double*)&ctx->m_vertex;
+
 	// transformation matrix to global
 	m[0]  = x.i;	m[1]  = y.i;	m[2]  = z.i;	m[3]  = 0;
 	m[4]  = x.j;	m[5]  = y.j;	m[6]  = z.j;	m[7]  = 0;
@@ -326,10 +464,23 @@ static void matrix_face(MATRIX_CONTEXT *ctx, FACE *f)
 	GUT_VECTOR	x, y, z;
 	GUT_POINT	c;
 	double		*m;
+	int			i;
 
 	// FACE ORIENTATION - UNIQUE FOR EACH FACE
-	gut_center_point(&ctx->v[f->vid[0]], &ctx->v[f->vid[1]], &ctx->v[f->vid[2]], &c);
-	gut_vector(&c, &ctx->v[f->vid[2]], &y);
+	c = ctx->v[f->vid[0]];
+	for (i = 1; i < f->nv; ++i)
+	{
+		c.x += ctx->v[f->vid[i]].x;
+		c.y += ctx->v[f->vid[i]].y;
+		c.z += ctx->v[f->vid[i]].z;
+	}
+	c.x /= f->nv;
+	c.y /= f->nv;
+	c.z /= f->nv;
+	if (ctx->nvPerFace == 3)
+		gut_vector(&c, &ctx->v[f->vid[2]], &y);
+	else 
+		gut_vector(&c, &ctx->v[f->vid[3]], &y);
 	gut_normalize_vector(&y);
 	z = *(GUT_VECTOR*)&c;
 	gut_normalize_vector(&z);
@@ -408,10 +559,10 @@ static void create_cube(MATRIX_CONTEXT *ctx)
 }
 
 //------------------------------------------------------------------------------------
-static void create ( MATRIX_CONTEXT *ctx, GUT_POINT *v )
+static void create ( MATRIX_CONTEXT *ctx, GUT_POINT *v, int nv, int nZRot )
 //------------------------------------------------------------------------------------
 {
-	init(ctx, v); // initialize the process
+	init(ctx, v, nv, nZRot); // initialize the process
 	fill(ctx); // create all the poly faces
 	int		i;
 	for (i = 0; i < ctx->nf; ++i) // create trasnformation matrix per face 
@@ -420,7 +571,7 @@ static void create ( MATRIX_CONTEXT *ctx, GUT_POINT *v )
 	matrix_edge(ctx); // create mirror matrix from face[0]
 	matrix_vertex(ctx); // create mirror matrix from face[0]
 	matrix_mirror(ctx); // create mirror matrix from face[0]
-	mtx_create_rotation_matrix(&ctx->m_zrot, MTX_ROTATE_Z_AXIS, DTR(120.0));
+	mtx_create_rotation_matrix(&ctx->m_zrot, MTX_ROTATE_Z_AXIS, DTR(360.0)/nZRot);
 }
 
 //------------------------------------------------------------------------------------
@@ -513,8 +664,8 @@ static void convert_context_2_geo_object(MATRIX_CONTEXT *ctx, DS_GEO_OBJECT_VERT
 int ds_base_geometry_create ( DS_CTX *context )
 //------------------------------------------------------------------------------------
 {
-	GUT_POINT			v[3];
-	MATRIX_CONTEXT		ctx[4];
+	GUT_POINT			v[5];
+	MATRIX_CONTEXT		ctx[5];
 	DS_BASE_GEOMETRY	*base = &context->base_geometry;
 
 	// initialize memory pointers
@@ -522,32 +673,42 @@ int ds_base_geometry_create ( DS_CTX *context )
 	ctx[1].v = &ctx[1].vdata[0];
 	ctx[2].v = &ctx[2].vdata[0];
 	ctx[3].v = &ctx[3].vdata[0];
+	ctx[4].v = &ctx[4].vdata[0];
 
 	// ICOSAHEDRON
 	v[0].x = -0.525731112119133;  v[0].y = -0.303530999103343;  v[0].z = 0.794654472291766;	 v[0].w = 1;
 	v[1].x =  0.525731112119133;  v[1].y = -0.303530999103343;  v[1].z = 0.794654472291766;	 v[1].w = 1;
 	v[2].x =  0.000000000000000;  v[2].y =  0.607061998206686;  v[2].z = 0.794654472291766;	 v[2].w = 1;
-	create(&ctx[0], &v[0]);
+	create(&ctx[0], &v[0], 3, 3);
 	// OCTAHEDRON
 	v[0].x = -0.707106781186547;  v[0].y = -0.408248290463863;  v[0].z = 0.577350269189626;	 v[0].w = 1;
 	v[1].x =  0.707106781186547;  v[1].y = -0.408248290463863;  v[1].z = 0.577350269189626;	 v[1].w = 1;
 	v[2].x =  0.000000000000000;  v[2].y =  0.816496580927726;  v[2].z = 0.577350269189626;	 v[2].w = 1;
-	create(&ctx[1], &v[0]);
+	create(&ctx[1], &v[0], 3, 3);
 	// TETRAHEDRON
 	v[0].x = -0.816496580927726;  v[0].y = -0.471404520791032;  v[0].z = 0.333333333333333;	 v[0].w = 1;
 	v[1].x =  0.816496580927726;  v[1].y = -0.471404520791032;  v[1].z = 0.333333333333333;	 v[1].w = 1;
 	v[2].x =  0.000000000000000;  v[2].y =  0.942809041582063;  v[2].z = 0.333333333333333;	 v[2].w = 1;
-	create(&ctx[2], &v[0]);
+	create(&ctx[2], &v[0], 3, 3);
+	// DODECAHEDRON
+	v[0].x = -0.356822089773090;  v[0].y = -0.491123473188423;  v[0].z = 0.794654472291766;	 v[0].w = 1;
+	v[1].x =  0.356822089773090;  v[1].y = -0.491123473188423;  v[1].z = 0.794654472291766;	 v[1].w = 1;
+	v[2].x =  0.577350269189626;  v[2].y =  0.187592474085080;  v[2].z = 0.794654472291766;	 v[2].w = 1;
+	v[3].x =  0.000000000000000;  v[3].y =  0.607061998206686;  v[3].z = 0.794654472291766;	 v[3].w = 1;
+	v[4].x = -0.577350269189626;  v[4].y =  0.187592474085080;  v[4].z = 0.794654472291766;	 v[4].w = 1;
+	create(&ctx[4], &v[0], 5, 5);
+
 
 	ctx[3].favl = 0; // not needed
 	create_cube(&ctx[3]);
 
-	base->poly = (DS_POLYHEDRON*)malloc(sizeof(DS_POLYHEDRON) * 4);
+	base->poly = (DS_POLYHEDRON*)malloc(sizeof(DS_POLYHEDRON) * 5);
 
 	convert_context_2_polyhedron(&ctx[0], &base->poly[0]);
 	convert_context_2_polyhedron(&ctx[1], &base->poly[1]);
 	convert_context_2_polyhedron(&ctx[2], &base->poly[2]);
 	convert_context_2_polyhedron(&ctx[3], &base->poly[3]);
+	convert_context_2_polyhedron(&ctx[4], &base->poly[4]); 
 	base->stack = mtx_create_stack(10, MTX_PRE_MULTIPLY);
 	// create copy of icosahedron to be used for vertex rendering
 	convert_context_2_geo_object_hi_res(&ctx[0], &context->renderVertex.vtxObjLoRes, context->drawAdj.loRes.sphereFrequency);
@@ -572,8 +733,10 @@ void ds_geometry_draw_init(DS_CTX *ctx, DS_GEO_OBJECT *gobj) //, BASE_GEOMETRY_N
 		base->curPoly = &base->poly[2]; break;
 	case GEOMETRY_CUBEHEDRON://			1
 		base->curPoly = &base->poly[3]; break; // NOT CORRECT
+	case GEOMETRY_DODECAHEDRON://			1
+		base->curPoly = &base->poly[4]; break;
 	default:
-		base->curPoly = &base->poly[0];
+		base->curPoly = &base->poly[0]; // ICOSAHEDRON
 	}
 
 	base->nZRot = base->curPoly->nZRot; // = ctx->nZ3; // BYPASS TEST

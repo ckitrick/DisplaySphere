@@ -34,35 +34,28 @@ void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT 
 //-----------------------------------------------------------------------------------
 {
 	// create new points that represent triangles around edge
-	GUT_POINT			*o = origin;
-	GUT_PLANE	p; 
+	GUT_PLANE	pl; 
 	GUT_VECTOR	v; 
 	double		d;
 
 	d = ctx->eAttr.maxLength;
-	gut_plane_from_points(origin, b, a, &p);
+	gut_plane_from_points(origin, b, a, &pl);
 	d *= eattr->width / 2; // scale the edge length
-	v.i = p.A * d; // scale the normal vector
-	v.j = p.B * d;
-	v.k = p.C * d;
+	v.i = pl.A * d; // scale the normal vector
+	v.j = pl.B * d;
+	v.k = pl.C * d;
 	gut_point_plus_vector(a, &v, &out[0]);
-	gut_point_plus_vector(b, &v, &out[1]);
+	gut_point_plus_vector(b, &v, &out[4]);
 	v.i *= -1; // reverse the direction
 	v.j *= -1;
 	v.k *= -1;
-	gut_point_plus_vector(b, &v, &out[2]);
-	gut_point_plus_vector(a, &v, &out[3]);
+	gut_point_plus_vector(a, &v, &out[1]);
+	gut_point_plus_vector(b, &v, &out[5]);
 	d = (1 - eattr->height);
-	gut_scale_pt_from_origin(origin, &out[0], &out[4], d);
-	gut_scale_pt_from_origin(origin, &out[1], &out[5], d);
-	gut_scale_pt_from_origin(origin, &out[2], &out[6], d);
-	gut_scale_pt_from_origin(origin, &out[3], &out[7], d);
-	// triangle out(0,1,2) - top
-	// triangle out(2,3,0) - top
-	// triangle out(0,4,5) - side
-	// triangle out(5,1,0) - side 
-	// triangle out(2,6,7) - side 
-	// triangle out(7,3,2) - side 
+	gut_scale_pt_from_origin(origin, &out[0], &out[3], d);
+	gut_scale_pt_from_origin(origin, &out[1], &out[2], d);
+	gut_scale_pt_from_origin(origin, &out[4], &out[7], d);
+	gut_scale_pt_from_origin(origin, &out[5], &out[6], d);
 	if (eattr->offset != 1.0)
 	{	// move the points radially (in or out)
 		d = eattr->offset;
@@ -75,6 +68,63 @@ void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT 
 		gut_scale_pt_from_origin(origin, &out[6], &out[6], d);
 		gut_scale_pt_from_origin(origin, &out[7], &out[7], d);
 	}
+
+	// generate normals
+//	gut_cross_product_from_triangle_points(&out[0], &out[0], &out[0], &n[0]);// 0 4 5
+//	gut_cross_product_from_triangle_points(&out[1], &out[5], &out[6], &n[1]);// 1 5 6
+//	gut_cross_product_from_triangle_points(&out[2], &out[6], &out[7], &n[2]);// 2 6 7 
+//	gut_cross_product_from_triangle_points(&out[3], &out[7], &out[4], &n[3]);// 3 7 4
+}
+
+//-----------------------------------------------------------------------------------
+void ds_geo_edge_to_triangles_new(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT *a, GUT_POINT *b, GUT_POINT *out, GUT_VECTOR *nml, int normalize, GUT_POINT *origin)
+//-----------------------------------------------------------------------------------
+{
+	// create new points that represent triangles around edge
+	GUT_PLANE	pl;
+	GUT_VECTOR	v;
+	double		d;
+
+	d = ctx->eAttr.maxLength;
+	gut_plane_from_points(origin, b, a, &pl);
+	d *= eattr->width / 2; // scale the edge length
+	v.i = pl.A * d; // scale the normal vector
+	v.j = pl.B * d;
+	v.k = pl.C * d;
+	gut_point_plus_vector(a, &v, &out[0]);
+	gut_point_plus_vector(b, &v, &out[4]);
+	v.i *= -1; // reverse the direction
+	v.j *= -1;
+	v.k *= -1;
+	gut_point_plus_vector(a, &v, &out[1]);
+	gut_point_plus_vector(b, &v, &out[5]);
+	d = (1 - eattr->height);
+	gut_scale_pt_from_origin(origin, &out[0], &out[3], d);
+	gut_scale_pt_from_origin(origin, &out[1], &out[2], d);
+	gut_scale_pt_from_origin(origin, &out[4], &out[7], d);
+	gut_scale_pt_from_origin(origin, &out[5], &out[6], d);
+	if (eattr->offset != 1.0)
+	{	// move the points radially (in or out)
+		d = eattr->offset;
+		gut_scale_pt_from_origin(origin, &out[0], &out[0], d);
+		gut_scale_pt_from_origin(origin, &out[1], &out[1], d);
+		gut_scale_pt_from_origin(origin, &out[2], &out[2], d);
+		gut_scale_pt_from_origin(origin, &out[3], &out[3], d);
+		gut_scale_pt_from_origin(origin, &out[4], &out[4], d);
+		gut_scale_pt_from_origin(origin, &out[5], &out[5], d);
+		gut_scale_pt_from_origin(origin, &out[6], &out[6], d);
+		gut_scale_pt_from_origin(origin, &out[7], &out[7], d);
+	}
+
+	// generate normals
+	gut_cross_product_from_triangle_points(&out[0], &out[4], &out[5], &nml[0]);// 0 4 5
+	gut_cross_product_from_triangle_points(&out[1], &out[5], &out[6], &nml[1]);// 1 5 6
+	gut_cross_product_from_triangle_points(&out[2], &out[6], &out[7], &nml[2]);// 2 6 7 
+	gut_cross_product_from_triangle_points(&out[3], &out[7], &out[4], &nml[3]);// 3 7 4
+	gut_normalize_vector(&nml[0]);
+	gut_normalize_vector(&nml[1]);
+	gut_normalize_vector(&nml[2]);
+	gut_normalize_vector(&nml[3]);
 }
 
 //-----------------------------------------------------------------------------------

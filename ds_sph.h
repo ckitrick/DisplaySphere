@@ -13,7 +13,7 @@
 
 #define PROGRAM_NAME					"DisplaySphere" 
 #define PROGRAM_VERSION_MAJOR			0	 
-#define PROGRAM_VERSION_MINOR			987 
+#define PROGRAM_VERSION_MINOR			988 
 #define PROGRAM_EXE_LOCATION			"ProgramFiles(x86)" // environment variable
 //#define PROGRAM_DATA_LOCATION			"USERPROFILE"		// sample data location
 #define PROGRAM_DATA_LOCATION			"PUBLIC"			// sample data location
@@ -23,6 +23,7 @@
 #define GEOMETRY_OCTAHEDRON				2
 #define GEOMETRY_TETRAHEDRON			3
 #define GEOMETRY_CUBEHEDRON				4
+#define GEOMETRY_DODECAHEDRON			5
 
 #define GEOMETRY_ORIENTATION_FACE		2
 #define GEOMETRY_ORIENTATION_EDGE		1
@@ -55,7 +56,7 @@
 #define DS_COLOR_STATE_OVERRIDE			4	
 
 #define GEOMETRY_PROJECTION_ORTHOGRAPHIC	1
-#define GEOMETRY_PROJECTION_PERPSECTIVE		0
+#define GEOMETRY_PROJECTION_PERSPECTIVE		0
 
 #define MAX_NUM_INPUT_FILES				8
 
@@ -162,7 +163,7 @@ typedef struct {
 	int				zRotFlag;			// apply z rotation flag
 	int				zRoll;				// used to control the number of z rotations to apply
 	int				faceRoll;			// used to control how often to change the curFaceIndex
-	int				nZRot;				// max number of Z rotations per face (3 or 4)
+	int				nZRot;				// max number of Z rotations per face (3,4,5)
 	int				oneFaceFlag;		// only transform one polyhedron face
 	int				curFaceIndex;		// current face index
 	int				curPolyIndex;		// current polyhedron index (0,1,2,3)
@@ -190,27 +191,99 @@ typedef struct {
 } DS_CAPTURE;
 
 typedef struct {
+	int			spinState;
 	float		dx;
 	float		dy;
 	float		dz;
 	float		timerMSec;
-	int			spinState;
 } DS_SPIN;
 
-typedef struct {	// Triangle specific
-	int			*vtx;	// unique vertex IDs
-	int			*nml;	// unique normal IDs
-	int			id;		// unique ID auto generated 
-	int			nVtx;	// size of vertex array
-	DS_COLOR	color;	// explict color
+/*
+	Face options (new)
+	Extrusion 
+		double sided (close back side)
+		height
+		direction: radial or face normal
+	Offset
+		factor (outward > 1.0, inward < 1.0) 
+	Hole
+		Polygonal or round
+		radius % of max (less than 1.0)
+		Increment automatic
+
+*/
+
+typedef struct {
+	int				enable;
+	float			xOffset;	// applied as a subtraction from current raster position after multiplying by number of characters
+	float			yOffset;
+	void			*font;
+	DS_COLOR		color;
+} DS_LABEL; // _ATTRIBUTES;
+
+typedef struct {							// new face control
+	int			nSegments; 					// based on the angle of division
+	int			*nSeg;						// integer array of nSegs per edge 
+	float		*angle;						// array of subtended angles
+	GUT_POINT	centroid;					// average center of polygon
+	double		radius;						// max radius of hole
+	GUT_VECTOR	normal;						// outside face normal for 
+	GUT_VECTOR	rnormal; 					// inside face normal (reverse)
+	GUT_VECTOR	*nml; 						// [nFaceVtx] explicit vertex normals 
+	GUT_VECTOR	*no; 						// [nFaceVtx] outside normals for extrusion
+	GUT_VECTOR	*ni;  						// [nSegments] inside normals for extrusion 
+	GUT_POINT	*vto, *vti, *vbo, *vbi; 	// [nSegments * 4]
+	GUT_POINT	**vct, **vcb; 				// [nFaceVtx] each - corner top and bottom 
+} DS_FACE_DRAWABLE;
+
+typedef struct {							// new face control
+	GUT_VECTOR	*n; 						// all normals
+	GUT_POINT	*v;							// all vertices 
+	GUT_POINT	middle;
+	GUT_VECTOR	normal;
+} DS_EDGE_DRAWABLE;
+
+typedef struct {	// new face control
+	int			draw;
+	struct {
+		int		 enable; // 
+		int		 bothSides; // draw both sides of face
+		int		 direction; // radial (0) or normal (1)
+		int		 holeOnly;
+		double	 factor;
+	} extrusion;
+	struct {
+		int		 enable; // 
+		double	 factor; // positive numbers used only
+	} offset;
+	struct {
+		int		 enable; // 
+		double	 factor;	// positive numbers used only
+	} scale;
+	struct {
+		int		 enable; // 
+		int		 style; // round = 0, polygonal = 1
+		double	 radius; // max at 0.95 min at 0.1
+	} hole;
+	DS_LABEL label;
+} DS_FACE_ATTRIBUTES;
+
+typedef struct {		// Triangle specific
+	int					*vtx;	// unique vertex IDs
+	int					*nml;	// unique normal IDs
+	int					id;		// unique ID auto generated 
+	int					nVtx;	// size of vertex array
+	DS_COLOR			color;	// explict color
+	DS_FACE_DRAWABLE	draw;	// drawable components
 } DS_FACE; 
 
-typedef struct {	// General version 
-	int			*vtx;	// unique vertex IDs
-	int			*nml;	// unique normal IDs
-	int			id;		// unique ID auto generated 
-	int			nVtx;	// size of vertex array
-	DS_COLOR	color;	// explict color
+typedef struct {		// General version 
+	int					*vtx;	// unique vertex IDs
+	int					*nml;	// unique normal IDs
+	int					id;		// unique ID auto generated 
+	int					nVtx;	// size of vertex array
+	DS_COLOR			color;	// explict color
+	DS_FACE_DRAWABLE	draw;	// drawable components
 } DS_POLYGON;
 
 typedef struct {
@@ -218,21 +291,26 @@ typedef struct {
 } DS_VTRIANGLE;
 
 typedef struct {
-	int			vtx[2]; // unique vertex IDs
-	int			id;		// unique ID auto generated 
+	int					vtx[2]; // unique vertex IDs
+	int					id;		// unique ID auto generated 
+	DS_EDGE_DRAWABLE	draw;	// drawable components
 } DS_EDGE;
 
 typedef struct {
-	int			type;		// GEOMETRY_EDGE_SQUARE/ROUND
-	double		width,		// adjustment from radius position
-				height,		// fraction of 1.0
-				offset,		// fraction of 1.0
-				minLength,	// minimum length of all edges
-				maxLength;	// maximum length of all edges
+	int					draw,		// draw flag
+						type;		// GEOMETRY_EDGE_SQUARE/ROUND
+	double				width,		// adjustment from radius position
+						height,		// fraction of 1.0
+						offset,		// fraction of 1.0
+						minLength,	// minimum length of all edges
+						maxLength;	// maximum length of all edges
+	DS_LABEL			label;
 } DS_EDGE_ATTRIBUTES;
 
 typedef struct {
+	int					draw;
 	double				scale;
+	DS_LABEL			label;
 } DS_VERTEX_ATTRIBUTES;
 
 typedef struct {
@@ -282,9 +360,9 @@ typedef struct {
 	int					axiiFlag;
 	int					axiiLabelFlag;
 	int					clipFlag;
+	double				clipZValue;
 	double				clipZIncrement;
 	int					clipVisibleFlag;
-	double				clipZValue;
 	float				eyeSeparation;
 	DS_SPIN				spin;
 	int					spinFlag;
@@ -325,12 +403,12 @@ typedef struct {
 	char			user_color_table[128];
 } DS_COLOR_CONTROL;
 
-typedef struct {
-	float			xOffset;	// applied as a subtraction from current raster position after multiplying by number of characters
-	float			yOffset;
-	void			*font;
-	DS_COLOR		color;
-} DS_LABEL;
+//ypedef struct {
+//	float			xOffset;	// applied as a subtraction from current raster position after multiplying by number of characters
+//	float			yOffset;
+//	void			*font;
+//	DS_COLOR		color;
+// DS_LABEL;
 
 typedef struct {
 	int				face;	// controls drawing
@@ -371,6 +449,7 @@ typedef struct {
 	char						*filename;		// saved to compare with updates
 	int							name[32];		// user specified name
 	int							drawWhat;		// what part of the object to draw F 1 E 2 V 4
+	DS_FACE_ATTRIBUTES			fAttr;			// face state for rendering
 	DS_EDGE_ATTRIBUTES			eAttr;			// edge state for rendering
 	DS_VERTEX_ATTRIBUTES		vAttr;			// vertex scale
 	DS_COLOR_ATTRIBUTES			cAttr;			// face, edge, and vertex color control
@@ -380,6 +459,7 @@ typedef struct {
 	int							geo_type;		// which of the base geometry
 	int							geo_orientation; // base orientation
 	DS_COLOR					faceDefault;
+	HWND						attrDialog; // window for attribute manipulation 
 } DS_GEO_INPUT_OBJECT;
 
 typedef struct {
@@ -388,6 +468,7 @@ typedef struct {
 	char						*filename;	// saved to compare with updates
 	int							name[32];	// user specified name
 	int							drawWhat;	// what part of the object to draw F 1 E 2 V 4
+	DS_FACE_ATTRIBUTES			fAttr;		// face state for rendering
 	DS_EDGE_ATTRIBUTES			eAttr;		// edge state for rendering
 	DS_VERTEX_ATTRIBUTES		vAttr;		// vertex scale
 	DS_COLOR_ATTRIBUTES			cAttr;		// face, edge, and vertex color control
@@ -396,6 +477,8 @@ typedef struct {
 	DS_LABEL_FLAGS				lFlags;		// label flags
 	int							geo_type;	// which of the base geometry
 	int							geo_orientation; // base orientation
+	DS_COLOR					faceDefault;
+	HWND						attrDialog; // window for attribute manipulation 
 											//=====================================================
 	MTX_VECTOR					*v_out;		// temp space for coordinate data to be used for transformations
 	MTX_VECTOR					*n_out;		// temp space for coordinate data to be used for transformations
@@ -416,12 +499,22 @@ typedef struct {
 								*ctB;		// color table for edges & triangles 
 	int							matrixID;	// identifying ID  ( ( object# << 8 ) | ( sequence & 0xff )
 	DS_FILE						*dsf;		// file structure
+	char						*faceMem;	// allocated memory for face options
+	char						*edgeMem;	// allocated memory for edge options
+	int							faceInit;	// flag for memory allocation
+	int							edgeInit;	// flag for memory allocation
+	DS_GEO_INPUT_OBJECT			restore;	// used to hold info during dialog changes
 } DS_GEO_OBJECT;
+
+//typedef struct {
+//	int						id;			// used to sort matrix
+//	MTX_MATRIX				mtx;		// model matrix
+//	MTX_MATRIX				nmtx;		// normal matrix
+//} DS_MATRIX_SORT;
 
 typedef struct {
 	int						id;			// used to sort matrix
 	MTX_MATRIX				mtx;		// model matrix
-	MTX_MATRIX				nmtx;		// normal matrix
 } DS_MATRIX_SORT;
 
 typedef struct {
@@ -469,6 +562,7 @@ typedef struct {
 //	char					cwdAfter[512];
 	char					currentDir[512];	// -cd
 	char					captureDir[512];	// -capd
+	char					tempBuffer[512];	// used for command line
 	char					*execDir;
 	char					*internalDSS;
 	int						ac;					// number of arguments to program
@@ -490,15 +584,18 @@ typedef struct {
 	DS_GEOMETRY_ADJUSTMENTS	geomAdj;
 	DS_EDGE_ATTRIBUTES		eAttr;			// global edge attributes for display
 	DS_CAPTURE				png;		
-	DS_GEO_INPUT_OBJECT		defInputObj;	// objDefault;// defaultObject;
-	DS_GEO_INPUT_OBJECT		*curInputObj;	// defaultObject;
+	DS_GEO_OBJECT			defInputObj;	// objDefault;// defaultObject;
+//	DS_GEO_INPUT_OBJECT		defInputObj;	// objDefault;// defaultObject;
+	DS_GEO_OBJECT			curInputObj;	// defaultObject;
 	DS_INPUT_TRANSFORMATION	inputTrans;		// modify vertex data when read in
 	DS_COLOR_TABLE_SET		cts;
 	HWND					mainWindow;
 	HWND					kbdToggle;
 	HWND					attrControl;
 	HWND					objInfo;
-	HWND					objControl;
+	//HWND					objControl;
+	HWND					objAttributes;
+	HWND					objDashboard;
 	HDC						hDC;			// device context
 	HPALETTE				hPalette;		// custom palette (if needed) 
 	HINSTANCE				hInstance;			
@@ -515,6 +612,11 @@ typedef struct {
 	DS_FILE					clrTbl;
 	DS_LABELS				label;
 	DS_LIGHTING				lighting;
+	DS_GEO_OBJECT			*curObjAttr;
+	LL						*objAttrQueue; //  queue of dialog windows
+	int						curRotationAxis;
+	double					curRotationAngle;
+	void					*cmdLineCtx;
 } DS_CTX;
 
 
@@ -542,6 +644,7 @@ void ds_geo_edge_to_triangles_hex(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_PO
 void draw_triangle_hex(DS_CTX *ctx, GUT_POINT *p, GUT_VECTOR *n, DS_COLOR *clr, int i, int j, int k, int nSeg);
 void ds_geo_edge_to_triangles(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT *a, GUT_POINT *b, GUT_POINT *out, int normalize, GUT_POINT *origin);
 void ds_geo_edge_to_triangles_hex_axii(DS_EDGE_ATTRIBUTES *eattr, GUT_POINT *a, GUT_POINT *b, GUT_POINT *p, GUT_VECTOR *x, GUT_VECTOR *y, GUT_VECTOR *z, GUT_VECTOR *n, int normalize, GUT_POINT *origin);
+void ds_geo_edge_to_triangles_new(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eattr, GUT_POINT *a, GUT_POINT *b, GUT_POINT *out, GUT_VECTOR *nml, int normalize, GUT_POINT *origin);
 int ds_base_geometry_create(DS_CTX *context);
 int ds_file_set_window_text(HWND window, char *p);
 void ds_clr_default_color_tables(DS_CTX *ctx); // builds 4 tables (8,16,32,64)
@@ -560,16 +663,22 @@ LRESULT CALLBACK ds_dlg_about (HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lPa
 LRESULT CALLBACK ds_dlg_attributes (HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ds_dlg_object_information (HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ds_dlg_object_control(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ds_dlg_object_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ds_dlg_object_dashboard(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam);
 
 // GEOMETRY UTILITY FUNCTIONS SPECIFIC TO DS
 int  ds_geo_plane_from_points(GUT_POINT *a, GUT_POINT *b, GUT_POINT *c, GUT_PLANE *p);
 void ds_geo_build_transform_matrix(DS_CTX *ctx);
 
 // Label & Font Functions
-void ds_label_set(DS_LABEL *label, void *font, DS_COLOR *color);
+void ds_label_set(DS_LABEL *label, void *font, DS_COLOR *color, int enable);
 void ds_label_draw(DS_LABEL *label, float x, float y, float z, float nz, char *string);
-void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, float nz, int id);
+//void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, float nz, int id);
+void ds_label_draw_id(DS_LABEL *label, float x, float y, float z, GUT_VECTOR *normal, int id, int lighting);
 void ds_label_update(DS_LABEL *label); // reset offsets after font change
+
+void ds_face_update(DS_CTX *ctx, DS_GEO_OBJECT *gobj);
+void ds_edge_update(DS_CTX *ctx, DS_GEO_OBJECT *gobj);
 
 //#define ERR_DEBUG
 //#ifdef ERR_DEBUG
