@@ -1,16 +1,16 @@
 /*
-	Copyright (C) 2020 Christopher J Kitrick
+Copyright (C) 2020 Christopher J Kitrick
 
-	Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-	The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 /*
-	This group of functions is designed to provide specific argument handling 
-	for DisplaySphere command line options. 
-	Also handles save and retore functionality.
+This group of functions is designed to provide specific argument handling
+for DisplaySphere command line options.
+Also handles save and retore functionality.
 */
 #include <stdlib.h>
 #include <windows.h>		/* must include this before GL/gl.h */
@@ -41,7 +41,7 @@ enum OPTION { // need to be in the same order as the options
 	OP_AXIS_LABEL,
 	OP_CAPTURE_DIRECTORY,
 	OP_CD,
-//	OP_CD_AFTER,
+	//	OP_CD_AFTER,
 	OP_CIRCLE,
 	OP_CLIP,
 	OP_CLR_BACKGROUND,
@@ -141,6 +141,7 @@ ARGUMENT	arg_geometry[] = {
 	"icosa",	"", 1, 0, (int*)ATYPE_SET_EXPLICIT, (int*)GEOMETRY_ICOSAHEDRON, 0,	"",	///
 	"octa",		"", 1, 0, (int*)ATYPE_SET_EXPLICIT, (int*)GEOMETRY_OCTAHEDRON,  0,	"",	///
 	"tetra",	"", 1, 0, (int*)ATYPE_SET_EXPLICIT, (int*)GEOMETRY_TETRAHEDRON, 0,	"",	///
+	"dodeca",	"", 1, 0, (int*)ATYPE_SET_EXPLICIT, (int*)GEOMETRY_DODECAHEDRON, 0,	"",	///
 };
 ARGUMENT_SET	set_geometry[] = {
 	sizeof(arg_geometry) / sizeof(ARGUMENT), arg_geometry,		// top level
@@ -155,28 +156,48 @@ ARGUMENT_SET	set_orientation[] = {
 };
 
 ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
-	"-active",				"-act",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set current object to be active",
 	"-axis",				"-ax",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable axis",
 	"-axis_label",			"-axl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display axis labels",
+	"-background_color",	"-bc",		6,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"change the background color (r, g, b)",
 	"-capture_directory",	"-capd",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set capture directory",
 	"-cd",					"-cd",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set working directory",
 	"-circle",				"-cir",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable circle mode",
 	"-clip",				"-clip",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"enable clippling and set z and increment (z, increment)",
-	"-clr_background",		"-cbs",		6,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"change the background color (r, g, b)",
-	"-clr_e_set",			"-ces",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object edge override color (r, g, b)",
-	"-clr_e_use",			"-ceu",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which color to use for current object edges (A|O)",
-	"-clr_f_default",		"-cfds",	0,  (ATYPE_ARRAY | 4),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set default color to assign to faces (r, g, b)",
-	"-clr_f_set",			"-cfs",		0,  (ATYPE_ARRAY | 4),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object face override color (r, g, b)",
-	"-clr_f_use",			"-cfu",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which color to use for current object faces (E|A|O)",
-	"-clr_t_on",			"-cto",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable transparency for faces",
-	"-clr_t_set",			"-cts",		0,	1,					(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set override alpha value for transparent",
-	"-clr_t_use",			"-ctu",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which alpha to use for current object faces (E|O)",
-	"-clr_table",			"-ct",		0,  1,					(int*)ATYPE_STRING,			(int*)0, 0,						"color table filename to read (filename)",
-	"-clr_v_set",			"-cvs",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object vertex color (r, g, b)",
+	"-color_table",			"-ct",		0,  1,					(int*)ATYPE_STRING,			(int*)0, 0,						"color table filename to read (filename)",
 	"-command_line",		"-cl",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"process command line file",
-	"-draw",				"-dr",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which components to draw on current object (FEV)",
-	"-e_param",				"-ep",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_DOUBLE,			(int*)0, 0,						"set edge parameters for the current object (width, height, offset)",
+	"-e_color",				"-ec",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object edge override color (r, g, b)",
+	"-e_color_use",			"-ecu",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which color to use for current object edges (A|O)",
+	"-e_draw",				"-ed", 		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set edge drawing state 0=disable or 1=enable",
+	"-e_label",				"-el",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's edge label",
+	"-e_label_color",		"-elc",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of edge labels",
+	"-e_label_font",		"-elf",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the edge label font",
+	"-e_offset",			"-eo",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set edge offset drawing state 0=disable or 1=enable",
+	"-e_offset_value",		"-eov",		0,  (ATYPE_ARRAY | 1),	(int*)ATYPE_DOUBLE,			(int*)0, 0,						"set edge offset value for the current object",
 	"-e_type",				"-et",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set edge type for current object (box|round)",
+	"-e_width_height",		"-ewh",		0,  (ATYPE_ARRAY | 2),	(int*)ATYPE_DOUBLE,			(int*)0, 0,						"set edge size for the current object (width, height)",
+	"-f_color_default",		"-fcd", 	0,  (ATYPE_ARRAY | 4),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set default color to assign to faces (r, g, b)",
+	"-f_color_override",	"-fco", 	0,  (ATYPE_ARRAY | 4),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object face override color (r, g, b)",
+	"-f_color_use",			"-fcu",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set which color to use for current object faces (E|A|O)",
+	"-f_draw", 				"-fd",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face drawing state 0=disable or 1=enable",
+	"-f_extrude",			"-fe",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face extrusion state 0=disable or 1=enable",
+	"-f_extrude_2sides",	"-fe2s",	0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face extrusion both sides state 0=disable or 1=enable",
+	"-f_extrude_direction","-fed",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set face extrusion direction for current object (normal|radial)",
+	"-f_extrude_height", 	"-feh",		0,  (ATYPE_ARRAY | 1),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set face extrusion height factor (0.05-1.0) for the current object", //value 
+	"-f_extrude_hole_only", "-feho",	0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face extrusion of hole only state 0=disable or 1=enable",
+	"-f_hole_radius", 		"-fhr",		0,  (ATYPE_ARRAY | 1),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set face hole radius (0.1-0.95) for the current object",
+	"-f_hole",				"-fh",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face hole state 0=disable or 1=enable",
+	"-f_hole_type", 		"-fht",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set face hole style for current object faces (round/polygonal)",
+	"-f_label", 			"-fl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set face label state for current object 0=disable or 1=enable",
+	"-f_label_clr", 		"-flc",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of face labels",
+	"-f_label_font", 		"-flf",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the face label font",
+	"-f_offset",	 		"-fo",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face offset state 0=disable or 1=enable",
+	"-f_offset_value", 		"-fov",		(ATYPE_ARRAY | 1),		(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the face offset factor (range)",
+	"-f_scale",				"-fs",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face scale state 0=disable or 1=enable",
+	"-f_trans", 			"-ft",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable transparency for faces",
+	"-f_scale_value",		"-fsv", 	(ATYPE_ARRAY | 1),		(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the face offset factor (range)",
+	"-f_trans_alpha",		"-fta",		0,	1,					(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set override alpha value for transparent",
+	"-f_trans_override",	"-fto",		0,	0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set face transparency override 0=disable or 1=enable",
+	"-no_lighting",			"-nl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"disable lighting",
 	"-film",				"-film",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, (void*)addr_film,		"enable film mode ( #frames, base_filename )",
 	"-geometry",			"-geo",		0,	1,					(int*)ATYPE_SUB_ARGUMENT,	(int*)0, (void*)&set_geometry,	"set base geometry (icosa|octa|cube|tetra)",
 	"-gl_back",				"-glb",		0,	1,					(int*)ATYPE_SUB_ARGUMENT,	(int*)0, (void*)&set_back,		"set OpenGL mode for back facing polygons (fill|line|point)",
@@ -192,15 +213,6 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 	"-in_x_mirror",			"-inx",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable input x axis mirroring",
 	"-in_z_rotate",			"-inz",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable input z axis repetition",
 	"-inactive",			"-ina",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)0, 0,						"set current object to be inactive",
-	"-label_e_clr",			"-lec",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of edge labels",
-	"-label_e_font",		"-lef",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the edge label font",
-	"-label_e_on",			"-leo",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's edge label",
-	"-label_f_clr",			"-lfc",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of face labels",
-	"-label_f_font",		"-lff",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the face label font",
-	"-label_f_on",			"-lfo",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's face label",
-	"-label_v_clr",			"-lvc",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of vertex labels",
-	"-label_v_font",		"-lvf",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the vertex label font",
-	"-label_v_on",			"-lvo",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's vertex label",
 	"-light",				"-li",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_DOUBLE,			(int*)0, 0,						"change the position of the light (x, y, z)",
 	"-light_param",			"-lip",		0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set light ambient, diffuse, specular",
 	"-light_param_state",	"-lips",	0,  0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set light ambient, diffuse, specular",
@@ -227,87 +239,93 @@ ARGUMENT	arg_main[] = {  // pre-sorted alphabetically
 	"-toolvis",				"-tv",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"make tool windows visible at startup",
 	"-txyz",				"-txyz",	0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set initial translation (x, y, z)",
 	"-udump",				"-ud",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"enable automatic dump of unique processing results after object input",
+	"-visible",				"-vis",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set current object to be visible",
+	"-v_draw",				"-vd",		0,	0, 					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"set current object to be visible",
+	"-v_color",				"-vc",		0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT_CLAMP,	(int*)0, 0,						"set current object vertex color (r, g, b)",
+	"-v_label",				"-vl",		0,  0,					(int*)ATYPE_SET_EXPLICIT,	(int*)1, 0,						"display object's vertex label",
+	"-v_label_font",		"-vlf",		0,	0,					(int*)ATYPE_USER_FUNCTION,	(int*)0, 0,						"set the vertex label font",
+	"-v_label_color",		"-vlc", 	0,  (ATYPE_ARRAY | 3),	(int*)ATYPE_FLOAT,			(int*)0, 0,						"set the color of vertex labels",
 	"-v_scale",				"-vs",		0,  1,					(int*)ATYPE_DOUBLE,			(int*)0, 0,						"set current object vertex scale (scale)",
 	"-win_wh",				"-wwh",		0,  (ATYPE_ARRAY | 2),	(int*)ATYPE_INTEGER,		(int*)0, 0,						"set initial rendering window width and height (w, h)",
 	"-win_xy",				"-wxy",		0,  (ATYPE_ARRAY | 2),	(int*)ATYPE_INTEGER,		(int*)0, 0,						"set initial rendering window left top corner position (x, y)",
 };
 
-ARGUMENT_SUBSTITUTE arg_main_substitute[]={
-/*	OP_CLR_BACKGROUND,		*/  "-act",			"-act",
-/*	OP_CLR_BACKGROUND,		*/  "-ax",			"-axis",
-/*	OP_CLR_BACKGROUND,		*/  "-axl",			"-axis_label",
-/*	OP_CD,					*/  "-capd",		"-capture_directory",
-/*	OP_CLR_BACKGROUND,		*/  "-cbs",			"-clr_background",
-/*	OP_CD,					*/  "-cd",			"-cd",
-/*	OP_CLR_E_SET,			*/  "-ces",			"-clr_e_set",
-/*	OP_CLR_E_USE,			*/  "-ceu",			"-clr_e_use",
-/*	OP_CLR_F_DEFAULT,		*/  "-cfds",		"-clr_f_default",
-/*	OP_CLR_F_SET,			*/  "-cfs",			"-clr_f_set",
-/*	OP_CLR_F_USE,			*/  "-cfu",			"-clr_f_use",
-/*	OP_CIRCLE,				*/  "-cir",			"-circle",
-/*	OP_COMMAND_LINE,		*/  "-cl",			"-command_line",
-/*	OP_CLIP,				*/  "-clip",		"-clip",
-/*	OP_CLR_TABLE,			*/  "-ct",			"-clr_table",
-/*	OP_CLR_TABLE,			*/  "-cto",			"-clr_t_on",
-/*	OP_CLR_TABLE,			*/  "-cts",			"-clr_t_set",
-/*	OP_CLR_TABLE,			*/  "-ctu",			"-clr_t_use",
-/*	OP_CLR_V_SET,			*/  "-cvs",			"-clr_v_set",
-/*	OP_DRAW,				*/  "-dr",			"-draw",
-/*	OP_EDGE_PARAM,			*/  "-ep",			"-e_param",
-/*	OP_EDGE_TYPE,			*/  "-et",			"-e_type",
-/*	OP_FILM,				*/  "-film",		"-film",
-/*	OP_GEOMETRY,			*/  "-geo",			"-geometry",
-/*	OP_GL_BACK,				*/  "-glb",			"-gl_back",
-/*	OP_GL_BACK,				*/  "-glbc",		"-gl_back_cull",
-/*	OP_GL_FRONT,			*/  "-glf",			"-gl_front",
-/*	OP_GL_FRONT,			*/  "-glfc",		"-gl_front_cull",
-/*	OP_HELP,				*/  "-help",		"-help",
-/*	OP_HIRES,				*/  "-hi",			"-hires",
-/*	OP_IMAGE,				*/  "-ibn",			"-image_basename",
-/*	OP_IMAGE,				*/  "-im",			"-image",
-/*	OP_INACTIVE,			*/  "-ina",			"-inactive",
-/*	OP_IN_CS,				*/  "-incs",		"-in_cs",
-/*	OP_IN_X_MIRROR,			*/  "-int",			"-in_transform",
-/*	OP_IN_Z_ROTATE,			*/  "-inx",			"-in_x_mirror",
-/*	OP_IN_TRANSFORM,		*/  "-inz",			"-in_z_rotate",
-/*--------------------------*/	"-lec",			"-label_e_clr",
-/*--------------------------*/	"-lef",			"-label_e_font",
-/*--------------------------*/	"-leo",			"-label_e_on",
-/*--------------------------*/	"-lfc",			"-label_f_clr",
-/*--------------------------*/	"-lff",			"-label_f_font",
-/*--------------------------*/	"-lfo",			"-label_f_on",
-/*	OP_LIGHT,				*/  "-li",			"-light",
-/*	OP_LIGHT,				*/  "-lip",			"-light_param",
-/*	OP_LIGHT,				*/  "-lips",		"-light_param_state",
-/*--------------------------*/	"-lvc",			"-label_v_clr",
-/*--------------------------*/	"-lvf",			"-label_v_font",
-/*--------------------------*/	"-lvo",			"-label_v_on",
-/*--------------------------*/  "-mat",			"-material",
-/*	OP_NO_FOG,				*/  "-nf",			"-no_fog",
-/*	OP_NO_IMAGE_STATE_SAVE,	*/  "-nimss",		"-no_image_state_save",
-/*	OP_NO_LIGHTING,			*/  "-nl",			"-no_lighting",
-/*	OP_NORMALIZE,			*/  "-no",			"-normalize",
-/*	OP_NO_UNIQUE,			*/  "-nu",			"-no_unique",
-/*	OP_OBJECT,				*/  "-o",			"-o",
-/*	OP_ORIENTATION,			*/  "-ori",			"-orientation",
-/*	OP_ORTHOGRAPHIC,		*/  "-ort",			"-orthographic",
-/*	OP_REPLICATE,			*/  "-rep",			"-replicate",
-/*	OP_REPLICATE,			*/  "-rm",			"-rot_matrix",
-/*	OP_ROP,					*/  "-rop",			"-rop",
-/*	OP_RX,					*/  "-rx",			"-rx",
-/*	OP_RY,					*/  "-ry",			"-ry",
-/*	OP_RZ,					*/  "-rz",			"-rz",
-/*	OP_SPIN,				*/  "-spin",		"-spin",
-/*	OP_SPP,					*/  "-spp",			"-spp",
-/*	OP_STEREO,				*/  "-st",			"-stereo",
-/*	OP_STEREO_ANGLE,		*/  "-sta",			"-stereo_angle",
-/*	OP_STEREO_NO_CROSS,		*/  "-stnc",		"-stereo_no_cross",
-/*	OP_TOOLVIS,				*/  "-tv",			"-toolvis",
-/*	OP_TXYZ,				*/  "-txyz",		"-txyz",
-/*	OP_UDUMP,				*/  "-ud",			"-udump",
-/*	OP_VERTEX_SCALE,		*/  "-vs",			"-v_scale",
-/*	OP_WIN_WH,				*/  "-wwh",			"-win_wh",
-/*	OP_WIN_XY,				*/  "-wxy",			"-win_xy",
+ARGUMENT_SUBSTITUTE arg_main_substitute[] = {
+	/*	OP_CLR_BACKGROUND,		*/  "-act",			"-act",
+	/*	OP_CLR_BACKGROUND,		*/  "-ax",			"-axis",
+	/*	OP_CLR_BACKGROUND,		*/  "-axl",			"-axis_label",
+	/*	OP_CD,					*/  "-capd",		"-capture_directory",
+	/*	OP_CLR_BACKGROUND,		*/  "-cbs",			"-clr_background",
+	/*	OP_CD,					*/  "-cd",			"-cd",
+	/*	OP_CLR_E_SET,			*/  "-ces",			"-clr_e_set",
+	/*	OP_CLR_E_USE,			*/  "-ceu",			"-clr_e_use",
+	/*	OP_CLR_F_DEFAULT,		*/  "-cfds",		"-clr_f_default",
+	/*	OP_CLR_F_SET,			*/  "-cfs",			"-clr_f_set",
+	/*	OP_CLR_F_USE,			*/  "-cfu",			"-clr_f_use",
+	/*	OP_CIRCLE,				*/  "-cir",			"-circle",
+	/*	OP_COMMAND_LINE,		*/  "-cl",			"-command_line",
+	/*	OP_CLIP,				*/  "-clip",		"-clip",
+	/*	OP_CLR_TABLE,			*/  "-ct",			"-clr_table",
+	/*	OP_CLR_TABLE,			*/  "-cto",			"-clr_t_on",
+	/*	OP_CLR_TABLE,			*/  "-cts",			"-clr_t_set",
+	/*	OP_CLR_TABLE,			*/  "-ctu",			"-clr_t_use",
+	/*	OP_CLR_V_SET,			*/  "-cvs",			"-clr_v_set",
+	/*	OP_DRAW,				*/  "-dr",			"-draw",
+	/*	OP_EDGE_PARAM,			*/  "-ep",			"-e_param",
+	/*	OP_EDGE_TYPE,			*/  "-et",			"-e_type",
+	/*	OP_FILM,				*/  "-film",		"-film",
+	/*	OP_GEOMETRY,			*/  "-geo",			"-geometry",
+	/*	OP_GL_BACK,				*/  "-glb",			"-gl_back",
+	/*	OP_GL_BACK,				*/  "-glbc",		"-gl_back_cull",
+	/*	OP_GL_FRONT,			*/  "-glf",			"-gl_front",
+	/*	OP_GL_FRONT,			*/  "-glfc",		"-gl_front_cull",
+	/*	OP_HELP,				*/  "-help",		"-help",
+	/*	OP_HIRES,				*/  "-hi",			"-hires",
+	/*	OP_IMAGE,				*/  "-ibn",			"-image_basename",
+	/*	OP_IMAGE,				*/  "-im",			"-image",
+	/*	OP_INACTIVE,			*/  "-ina",			"-inactive",
+	/*	OP_IN_CS,				*/  "-incs",		"-in_cs",
+	/*	OP_IN_X_MIRROR,			*/  "-int",			"-in_transform",
+	/*	OP_IN_Z_ROTATE,			*/  "-inx",			"-in_x_mirror",
+	/*	OP_IN_TRANSFORM,		*/  "-inz",			"-in_z_rotate",
+	/*--------------------------*/	"-lec",			"-label_e_clr",
+	/*--------------------------*/	"-lef",			"-label_e_font",
+	/*--------------------------*/	"-leo",			"-label_e_on",
+	/*--------------------------*/	"-lfc",			"-label_f_clr",
+	/*--------------------------*/	"-lff",			"-label_f_font",
+	/*--------------------------*/	"-lfo",			"-label_f_on",
+	/*	OP_LIGHT,				*/  "-li",			"-light",
+	/*	OP_LIGHT,				*/  "-lip",			"-light_param",
+	/*	OP_LIGHT,				*/  "-lips",		"-light_param_state",
+	/*--------------------------*/	"-lvc",			"-label_v_clr",
+	/*--------------------------*/	"-lvf",			"-label_v_font",
+	/*--------------------------*/	"-lvo",			"-label_v_on",
+	/*--------------------------*/  "-mat",			"-material",
+	/*	OP_NO_FOG,				*/  "-nf",			"-no_fog",
+	/*	OP_NO_IMAGE_STATE_SAVE,	*/  "-nimss",		"-no_image_state_save",
+	/*	OP_NO_LIGHTING,			*/  "-nl",			"-no_lighting",
+	/*	OP_NORMALIZE,			*/  "-no",			"-normalize",
+	/*	OP_NO_UNIQUE,			*/  "-nu",			"-no_unique",
+	/*	OP_OBJECT,				*/  "-o",			"-o",
+	/*	OP_ORIENTATION,			*/  "-ori",			"-orientation",
+	/*	OP_ORTHOGRAPHIC,		*/  "-ort",			"-orthographic",
+	/*	OP_REPLICATE,			*/  "-rep",			"-replicate",
+	/*	OP_REPLICATE,			*/  "-rm",			"-rot_matrix",
+	/*	OP_ROP,					*/  "-rop",			"-rop",
+	/*	OP_RX,					*/  "-rx",			"-rx",
+	/*	OP_RY,					*/  "-ry",			"-ry",
+	/*	OP_RZ,					*/  "-rz",			"-rz",
+	/*	OP_SPIN,				*/  "-spin",		"-spin",
+	/*	OP_SPP,					*/  "-spp",			"-spp",
+	/*	OP_STEREO,				*/  "-st",			"-stereo",
+	/*	OP_STEREO_ANGLE,		*/  "-sta",			"-stereo_angle",
+	/*	OP_STEREO_NO_CROSS,		*/  "-stnc",		"-stereo_no_cross",
+	/*	OP_TOOLVIS,				*/  "-tv",			"-toolvis",
+	/*	OP_TXYZ,				*/  "-txyz",		"-txyz",
+	/*	OP_UDUMP,				*/  "-ud",			"-udump",
+	/*	OP_VERTEX_SCALE,		*/  "-vs",			"-v_scale",
+	/*	OP_WIN_WH,				*/  "-wwh",			"-win_wh",
+	/*	OP_WIN_XY,				*/  "-wxy",			"-win_xy",
 };
 
 ARGUMENT_SET	set_main[] = {
@@ -322,19 +340,19 @@ ARGUMENT_SUBSTITUTE_SET	set_main_substitute[] = {
 int ds_filename_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
 //-----------------------------------------------------------------------------
 {
-//	int		i;
+	//	int		i;
 	DS_CTX		*ctx;
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
 
-	// CREATE A NEW INPUT OBJECT
+															 // CREATE A NEW INPUT OBJECT
 	DS_GEO_INPUT_OBJECT	*gio = (DS_GEO_INPUT_OBJECT*)malloc(sizeof(DS_GEO_INPUT_OBJECT));
 	if (!gio) return 1;
 
 	LL_AddTail(ctx->inputObjq, gio); // add to queue
 	ctx->curInputObj = gio; // make it the current object
 
-	// inherit the default input object 
+							// inherit the default input object 
 	memcpy(gio, &ctx->defInputObj, sizeof(DS_GEO_INPUT_OBJECT));
 
 	// replace the name
@@ -343,24 +361,24 @@ int ds_filename_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 
 	++*currentArgIndex; // move forward by one
 
-	// update the addresses
-	arg_main[OP_CLR_E_SET].addr		= (void*)&ctx->curInputObj->cAttr.edge.color;
-	arg_main[OP_CLR_F_SET].addr		= (void*)&ctx->curInputObj->cAttr.face.color;
-	arg_main[OP_CLR_V_SET].addr		= (void*)&ctx->curInputObj->cAttr.vertex.color;
-	arg_main[OP_EDGE_PARAM].addr	= (void*)&ctx->curInputObj->eAttr.width;
-	arg_main[OP_ACTIVE].addr		= (void*)&ctx->curInputObj->active;
-	arg_main[OP_INACTIVE].addr		= (void*)&ctx->curInputObj->active;
-	arg_main[OP_VERTEX_SCALE].addr	= (void*)&ctx->curInputObj->vAttr.scale;
-	arg_main[OP_CLR_T_ON].addr		= (void*)&ctx->curInputObj->tAttr.onFlag;
-	arg_main[OP_CLR_T_SET].addr		= (void*)&ctx->curInputObj->tAttr.alpha;
+						// update the addresses
+	arg_main[OP_CLR_E_SET].addr = (void*)&ctx->curInputObj->cAttr.edge.color;
+	arg_main[OP_CLR_F_SET].addr = (void*)&ctx->curInputObj->cAttr.face.color;
+	arg_main[OP_CLR_V_SET].addr = (void*)&ctx->curInputObj->cAttr.vertex.color;
+	arg_main[OP_EDGE_PARAM].addr = (void*)&ctx->curInputObj->eAttr.width;
+	arg_main[OP_ACTIVE].addr = (void*)&ctx->curInputObj->active;
+	arg_main[OP_INACTIVE].addr = (void*)&ctx->curInputObj->active;
+	arg_main[OP_VERTEX_SCALE].addr = (void*)&ctx->curInputObj->vAttr.scale;
+	arg_main[OP_CLR_T_ON].addr = (void*)&ctx->curInputObj->tAttr.onFlag;
+	arg_main[OP_CLR_T_SET].addr = (void*)&ctx->curInputObj->tAttr.alpha;
 	arg_main[OP_CLR_F_DEFAULT].addr = (void*)&ctx->curInputObj->faceDefault;
 
-	arg_main[OP_LABEL_EDGE_ON].addr   = (void*)&ctx->curInputObj->lFlags.edge;				// need to set index & flag correctly afterwards
-	arg_main[OP_LABEL_FACE_ON].addr   = (void*)&ctx->curInputObj->lFlags.face;				// need to set index & flag correctly afterwards
+	arg_main[OP_LABEL_EDGE_ON].addr = (void*)&ctx->curInputObj->lFlags.edge;				// need to set index & flag correctly afterwards
+	arg_main[OP_LABEL_FACE_ON].addr = (void*)&ctx->curInputObj->lFlags.face;				// need to set index & flag correctly afterwards
 	arg_main[OP_LABEL_VERTEX_ON].addr = (void*)&ctx->curInputObj->lFlags.vertex;			// need to set index & flag correctly afterwards
 
-//	arg_main[OP_GEOMETRY].addr		  = (void*)&ctx->curInputObj->geo_type;
-//	arg_main[OP_ORIENTATION].addr     = (void*)&ctx->curInputObj->geo_orientation;
+																							//	arg_main[OP_GEOMETRY].addr		  = (void*)&ctx->curInputObj->geo_type;
+																							//	arg_main[OP_ORIENTATION].addr     = (void*)&ctx->curInputObj->geo_orientation;
 
 	ARGUMENT	*arg2;
 	arg2 = arg_geometry;											//"-geometry" set base geometry
@@ -381,10 +399,10 @@ static int ds_font_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 //-----------------------------------------------------------------------------
 {
 	//	int		i;
-//	DS_CTX		*ctx;
+	//	DS_CTX		*ctx;
 	DS_LABEL	*label;
 
-//	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
+	//	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (!(label = (DS_LABEL*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
 
@@ -433,8 +451,8 @@ static int ds_light_param_arg_handler(ARGUMENT *arg, int *currentArgIndex, int m
 
 	if (*currentArgIndex + 2 >= maxNArgs) { ++*error; return 1; }//not enough arguments
 
-	ctx->lighting.ambientPercent  = atof(av[(*currentArgIndex)++]);
-	ctx->lighting.diffusePercent  = atof(av[(*currentArgIndex)++]);
+	ctx->lighting.ambientPercent = atof(av[(*currentArgIndex)++]);
+	ctx->lighting.diffusePercent = atof(av[(*currentArgIndex)++]);
 	ctx->lighting.specularPercent = atof(av[(*currentArgIndex)++]);
 
 	if (ctx->lighting.ambientPercent < 0.0) ctx->lighting.ambientPercent = 0.0;
@@ -460,8 +478,8 @@ static int ds_light_param_state_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 
 	if (*currentArgIndex + 2 >= maxNArgs) { ++*error; return 1; }//not enough arguments
 
-	ctx->lighting.ambientEnabled  = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
-	ctx->lighting.diffuseEnabled  = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
+	ctx->lighting.ambientEnabled = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
+	ctx->lighting.diffuseEnabled = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
 	ctx->lighting.specularEnabled = atoi(av[(*currentArgIndex)++]) != 0 ? 1 : 0;
 
 	return 0;
@@ -471,13 +489,13 @@ static int ds_light_param_state_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 static int ds_rotation(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error, int axis)
 //-----------------------------------------------------------------------------
 {
-//	int		i;
+	//	int		i;
 	DS_CTX		*ctx;
 	double	rotation;
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
 
-	// get rotation value
+															 // get rotation value
 	rotation = atof(av[*currentArgIndex]);
 	++*currentArgIndex; // move forward by one
 
@@ -516,13 +534,13 @@ static int ds_rot_z_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArg
 static int ds_clip_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
 //-----------------------------------------------------------------------------
 {
-//	int		i;
+	//	int		i;
 	DS_CTX		*ctx;
 	double	zposition;
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
 
-	// get z position value
+															 // get z position value
 	zposition = atof(av[*currentArgIndex]);
 	++*currentArgIndex; // move forward by one
 
@@ -550,10 +568,10 @@ static int ds_help_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 
 	len = sprintf_s(buffer, sizeof(buffer), "%s\n", ctx->version.text);
 	WriteFile(ctx->handle_out, buffer, len, NULL, NULL);
-	len = sprintf_s(buffer, sizeof(buffer), "Version - %d.%d\n\n", ctx->version.major, ctx->version.minor );
+	len = sprintf_s(buffer, sizeof(buffer), "Version - %d.%d\n\n", ctx->version.major, ctx->version.minor);
 	WriteFile(ctx->handle_out, buffer, len, NULL, NULL);
 
-	len = sprintf_s(buffer, sizeof(buffer), "Command line options\n\n" );
+	len = sprintf_s(buffer, sizeof(buffer), "Command line options\n\n");
 	WriteFile(ctx->handle_out, buffer, len, NULL, NULL);
 
 	len = sprintf_s(buffer, sizeof(buffer), " %-20s %-9s %s\n", "Option", "Alternate", "Description");
@@ -561,7 +579,7 @@ static int ds_help_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 	len = sprintf_s(buffer, sizeof(buffer), " %-20s %-9s %s\n", "-----------------", "---------", "-------------------------");
 	WriteFile(ctx->handle_out, buffer, len, NULL, NULL);
 
-	for (i = 0, a=set_main->argument; i < set_main->nArguments; ++i, ++a)
+	for (i = 0, a = set_main->argument; i < set_main->nArguments; ++i, ++a)
 	{
 		len = sprintf_s(buffer, sizeof(buffer), " %-20s (%-7s) %s\n", a->text, a->alt, a->description);
 		WriteFile(ctx->handle_out, buffer, len, NULL, NULL);
@@ -573,7 +591,7 @@ static int ds_help_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs
 
 		char buffer[256];
 		ReadFile(ctx->handle_in, buffer, 1, &nBytes, 0);
-		if ( buffer[0] != 'c')
+		if (buffer[0] != 'c')
 			exit(0);
 		FreeConsole();
 	}
@@ -736,14 +754,14 @@ static int ds_current_directory_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 {
 	char				*p; // c, *p;
 	DS_CTX				*ctx;
-	int					status = 0; 
+	int					status = 0;
 
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
 															 //	// directory change - prior to reading any external files
 	p = av[*currentArgIndex];
 	++*currentArgIndex; // move forward by one after getting path
-	
+
 	if (strlen(p))
 	{
 		ds_build_dsf(&ctx->curDir, p, 0);
@@ -796,8 +814,8 @@ static int ds_capture_directory_arg_handler(ARGUMENT *arg, int *currentArgIndex,
 			sprintf(buf2, "Capture Directory <%s> not valid.", p);
 			MessageBox(ctx->mainWindow, buf2, "Capture Directory Error", MB_OK);
 		}
-//		ds_build_dsf(&ctx->capDir, p, 0);
-//		strcpy(ctx->captureDir, ctx->capDir.fullName);
+		//		ds_build_dsf(&ctx->capDir, p, 0);
+		//		strcpy(ctx->captureDir, ctx->capDir.fullName);
 		return 0;
 	}
 	else
@@ -878,7 +896,7 @@ static int ds_obj_replicate_arg_handler(ARGUMENT *arg, int *currentArgIndex, int
 static int ds_rot_matrix_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, char **av, int *error)
 //-----------------------------------------------------------------------------
 {
-//	char				c, *p;
+	//	char				c, *p;
 	DS_CTX					*ctx;
 
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
@@ -886,7 +904,7 @@ static int ds_rot_matrix_arg_handler(ARGUMENT *arg, int *currentArgIndex, int ma
 
 	if (*currentArgIndex + 8 >= maxNArgs) { ++*error; return 1; }//not enough arguments
 
-	// load rotation matrix 9 numbers - row order
+																 // load rotation matrix 9 numbers - row order
 	mtx_set_unity(&ctx->matrix);
 	ctx->matrix.data.row_column[0][0] = atof(av[(*currentArgIndex)++]);
 	ctx->matrix.data.row_column[0][1] = atof(av[(*currentArgIndex)++]);
@@ -910,7 +928,7 @@ ds_command_line_arg_handler(ARGUMENT *arg, int *currentArgIndex, int maxNArgs, c
 
 	if (!(ctx = (DS_CTX*)arg->data)) { ++*error; return 1; }
 	if (*currentArgIndex == maxNArgs) { ++*error; return 1; }//error
-															
+
 	p = av[*currentArgIndex]; // filename
 	++*currentArgIndex; // move forward by one
 
@@ -987,49 +1005,49 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[0].addr = (void*)&ctx->geomAdj.polymode[0];
 	arg[1].addr = (void*)&ctx->geomAdj.polymode[0];
 	arg[2].addr = (void*)&ctx->geomAdj.polymode[0];
-//	arg = arg_geometry;											//"-geometry" set base geometry
-//	arg[0].addr = (void*)&ctx->base_geometry.type; //cube
-//	arg[1].addr = (void*)&ctx->base_geometry.type; //icos
-//	arg[2].addr = (void*)&ctx->base_geometry.type; //octa
-//	arg[3].addr = (void*)&ctx->base_geometry.type; //tetra
-//	arg = arg_orientation;											//"-orientation
-//	arg[0].addr = (void*)&ctx->geomAdj.orientation;
-//	arg[1].addr = (void*)&ctx->geomAdj.orientation;
-//	arg[2].addr = (void*)&ctx->geomAdj.orientation;
-	
+	//	arg = arg_geometry;											//"-geometry" set base geometry
+	//	arg[0].addr = (void*)&ctx->base_geometry.type; //cube
+	//	arg[1].addr = (void*)&ctx->base_geometry.type; //icos
+	//	arg[2].addr = (void*)&ctx->base_geometry.type; //octa
+	//	arg[3].addr = (void*)&ctx->base_geometry.type; //tetra
+	//	arg = arg_orientation;											//"-orientation
+	//	arg[0].addr = (void*)&ctx->geomAdj.orientation;
+	//	arg[1].addr = (void*)&ctx->geomAdj.orientation;
+	//	arg[2].addr = (void*)&ctx->geomAdj.orientation;
+
 	addr_film[0] = (void*)ctx->png.basename;			// need to set index & flag correctly afterwards
 	addr_film[1] = (void*)&ctx->png.nFrames;			// need to set index & flag correctly afterwards
 
 	arg = arg_main;
 	// GLOBALS ====================================================
-	arg[OP_AXIS].addr				= (void*)&ctx->drawAdj.axiiFlag;			// -ax axis
-	arg[OP_AXIS_LABEL].addr			= (void*)&ctx->drawAdj.axiiLabelFlag;		// -axl axis
+	arg[OP_AXIS].addr = (void*)&ctx->drawAdj.axiiFlag;			// -ax axis
+	arg[OP_AXIS_LABEL].addr = (void*)&ctx->drawAdj.axiiLabelFlag;		// -axl axis
 
-	arg[OP_CAPTURE_DIRECTORY].addr	= (void*)&ds_capture_directory_arg_handler;			// "-cd set current working directory  
-	arg[OP_CAPTURE_DIRECTORY].data	= (void*)ctx;												// 
-	
-	arg[OP_CD].addr				= (void*)&ds_current_directory_arg_handler;			// "-cd set current working directory  
-	arg[OP_CD].data				= (void*)ctx;												// 
+	arg[OP_CAPTURE_DIRECTORY].addr = (void*)&ds_capture_directory_arg_handler;			// "-cd set current working directory  
+	arg[OP_CAPTURE_DIRECTORY].data = (void*)ctx;												// 
 
-	arg[OP_CIRCLE].addr			= (void*)&ctx->drawAdj.circleFlag;				// "-cd set current working directory  
-	arg[OP_CLIP].addr			= (void*)&ds_clip_arg_handler;				// "-cd set current working directory  
-	arg[OP_CLIP].data			= (void*)ctx;									// 
-	arg[OP_CLR_F_DEFAULT].addr	= (void*)&ctx->clrCtl.face.defaultColor;	// treat as float array
+	arg[OP_CD].addr = (void*)&ds_current_directory_arg_handler;			// "-cd set current working directory  
+	arg[OP_CD].data = (void*)ctx;												// 
+
+	arg[OP_CIRCLE].addr = (void*)&ctx->drawAdj.circleFlag;				// "-cd set current working directory  
+	arg[OP_CLIP].addr = (void*)&ds_clip_arg_handler;				// "-cd set current working directory  
+	arg[OP_CLIP].data = (void*)ctx;									// 
+	arg[OP_CLR_F_DEFAULT].addr = (void*)&ctx->clrCtl.face.defaultColor;	// treat as float array
 	arg[OP_CLR_BACKGROUND].addr = (void*)&ctx->clrCtl.bkgClear;					// treat as float array
-	arg[OP_CLR_TABLE].addr		= (void*)ctx->clrCtl.user_color_table;			// filename
-	arg[OP_COMMAND_LINE].addr	= (void*)&ds_command_line_arg_handler;		// NEED FUNCTION
-	arg[OP_COMMAND_LINE].data	= (void*)ctx;
-	arg[OP_GL_BACK_CULL].addr	= (void*)&ctx->geomAdj.cull[1];
-	arg[OP_GL_FRONT_CULL].addr	= (void*)&ctx->geomAdj.cull[0];
-	arg[OP_HELP].addr			= (void*)&ds_help_arg_handler;				// NEED FUNCTION
-	arg[OP_HELP].data			= (void*)ctx;
-	arg[OP_HIRES].addr			= (void*)&ctx->drawAdj.hiResFlag;				// -high resolution
-	arg[OP_FILM].addr			= (void*)ds_image_arg_handler;					// need to set index & flag correctly afterwards
-	arg[OP_FILM].data			= (void*)ctx;									// need to set index & flag correctly afterwards
-	arg[OP_IMAGE].addr			= (void*)ds_image_arg_handler;					// need to set index & flag correctly afterwards
-	arg[OP_IMAGE].data			= (void*)ctx;									// need to set index & flag correctly afterwards
-	arg[OP_IMAGE_BASENAME].addr	= (void*)ctx->png.basename;						// just set name
-//	arg[OP_NO_IMAGE_STATE_SAVE].addr = (void*)&ctx->png.stateSaveFlag;				// need to set index & flag correctly afterwards
+	arg[OP_CLR_TABLE].addr = (void*)ctx->clrCtl.user_color_table;			// filename
+	arg[OP_COMMAND_LINE].addr = (void*)&ds_command_line_arg_handler;		// NEED FUNCTION
+	arg[OP_COMMAND_LINE].data = (void*)ctx;
+	arg[OP_GL_BACK_CULL].addr = (void*)&ctx->geomAdj.cull[1];
+	arg[OP_GL_FRONT_CULL].addr = (void*)&ctx->geomAdj.cull[0];
+	arg[OP_HELP].addr = (void*)&ds_help_arg_handler;				// NEED FUNCTION
+	arg[OP_HELP].data = (void*)ctx;
+	arg[OP_HIRES].addr = (void*)&ctx->drawAdj.hiResFlag;				// -high resolution
+	arg[OP_FILM].addr = (void*)ds_image_arg_handler;					// need to set index & flag correctly afterwards
+	arg[OP_FILM].data = (void*)ctx;									// need to set index & flag correctly afterwards
+	arg[OP_IMAGE].addr = (void*)ds_image_arg_handler;					// need to set index & flag correctly afterwards
+	arg[OP_IMAGE].data = (void*)ctx;									// need to set index & flag correctly afterwards
+	arg[OP_IMAGE_BASENAME].addr = (void*)ctx->png.basename;						// just set name
+																				//	arg[OP_NO_IMAGE_STATE_SAVE].addr = (void*)&ctx->png.stateSaveFlag;				// need to set index & flag correctly afterwards
 
 	arg[OP_LABEL_EDGE_COLOR].addr = (void*)&ctx->label.edge.color;	// treat as float array
 	arg[OP_LABEL_EDGE_FONT].addr = (void*)&ds_font_arg_handler; //&gio->active;
@@ -1043,95 +1061,95 @@ int cmd_line_init(DS_CTX *ctx)
 	arg[OP_LABEL_VERTEX_FONT].addr = (void*)&ds_font_arg_handler; //&gio->active;
 	arg[OP_LABEL_VERTEX_FONT].data = (void*)&ctx->label.vertex;
 
-	arg[OP_LIGHT].addr				= (void*)&ctx->clrCtl.light;					// -light
-	arg[OP_LIGHT_PARAM].addr		= (void*)&ds_light_param_arg_handler;
-	arg[OP_LIGHT_PARAM].data		= (void*)ctx;									// 
-	arg[OP_LIGHT_PARAM_STATE].addr	= (void*)&ds_light_param_state_arg_handler;
-	arg[OP_LIGHT_PARAM_STATE].data	= (void*)ctx;									// 
-	arg[OP_MATERIAL].addr			= (void*)&ds_material_arg_handler;
-	arg[OP_MATERIAL].data			= (void*)ctx;									// 
+	arg[OP_LIGHT].addr = (void*)&ctx->clrCtl.light;					// -light
+	arg[OP_LIGHT_PARAM].addr = (void*)&ds_light_param_arg_handler;
+	arg[OP_LIGHT_PARAM].data = (void*)ctx;									// 
+	arg[OP_LIGHT_PARAM_STATE].addr = (void*)&ds_light_param_state_arg_handler;
+	arg[OP_LIGHT_PARAM_STATE].data = (void*)ctx;									// 
+	arg[OP_MATERIAL].addr = (void*)&ds_material_arg_handler;
+	arg[OP_MATERIAL].data = (void*)ctx;									// 
 
-	arg[OP_NO_FOG].addr			= (void*)&ctx->drawAdj.fogFlag;					// -nofog
+	arg[OP_NO_FOG].addr = (void*)&ctx->drawAdj.fogFlag;					// -nofog
 	arg[OP_NO_IMAGE_STATE_SAVE].addr = (void*)&ctx->png.stateSaveFlag;				// need to set index & flag correctly afterwards
-	arg[OP_NO_LIGHTING].addr	= (void*)&ctx->clrCtl.useLightingFlag;			// -nolighting
-	arg[OP_NORMALIZE].addr		= (void*)&ctx->drawAdj.normalizeFlag;			// -normal
-	arg[OP_ORTHOGRAPHIC].addr	= (void*)&ctx->drawAdj.projection;				// change default
-	arg[OP_ROP].addr			= (void*)&ctx->relativeObjPathFlag;				// change relative path
-	arg[OP_SPP].addr			= (void*)&ctx->opengl.samplesPerPixel;			// -spp
-	arg[OP_SPIN].addr			= (void*)&ctx->drawAdj.spin;					// -spin
-	arg[OP_STEREO].addr			= (void*)&ctx->drawAdj.stereoFlag;				// -stereo
-	arg[OP_STEREO_ANGLE].addr	= (void*)&ctx->drawAdj.eyeSeparation;
-	arg[OP_STEREO_NO_CROSS].addr= (void*)&ctx->drawAdj.stereoCrossEyeFlag;
-	arg[OP_TOOLVIS].addr		= (void*)&ctx->window.toolsVisible;				// -toolvis
-	arg[OP_WIN_WH].addr			= (void*)&ctx->window.width;					// -win_wh
-	arg[OP_WIN_XY].addr			= (void*)&ctx->window.start_x;					// -win_xy
+	arg[OP_NO_LIGHTING].addr = (void*)&ctx->clrCtl.useLightingFlag;			// -nolighting
+	arg[OP_NORMALIZE].addr = (void*)&ctx->drawAdj.normalizeFlag;			// -normal
+	arg[OP_ORTHOGRAPHIC].addr = (void*)&ctx->drawAdj.projection;				// change default
+	arg[OP_ROP].addr = (void*)&ctx->relativeObjPathFlag;				// change relative path
+	arg[OP_SPP].addr = (void*)&ctx->opengl.samplesPerPixel;			// -spp
+	arg[OP_SPIN].addr = (void*)&ctx->drawAdj.spin;					// -spin
+	arg[OP_STEREO].addr = (void*)&ctx->drawAdj.stereoFlag;				// -stereo
+	arg[OP_STEREO_ANGLE].addr = (void*)&ctx->drawAdj.eyeSeparation;
+	arg[OP_STEREO_NO_CROSS].addr = (void*)&ctx->drawAdj.stereoCrossEyeFlag;
+	arg[OP_TOOLVIS].addr = (void*)&ctx->window.toolsVisible;				// -toolvis
+	arg[OP_WIN_WH].addr = (void*)&ctx->window.width;					// -win_wh
+	arg[OP_WIN_XY].addr = (void*)&ctx->window.start_x;					// -win_xy
 
-//	INPUT MODIFICATIONS =================
-	arg[OP_IN_CS].addr			= (void*)&ctx->inputTrans.centerAndScaleFlag;	// -in_cs
-	arg[OP_IN_X_MIRROR].addr	= (void*)&ctx->inputTrans.mirrorFlag;			// -in_x_mirror
-	arg[OP_IN_Z_ROTATE].addr	= (void*)&ctx->inputTrans.replicateFlag;		// -in_z_replicate
-	arg[OP_IN_TRANSFORM].addr	= (void*)&ctx->inputTrans.zAxis;				// -ztran
-	arg[OP_NO_UNIQUE].addr		= (void*)&ctx->inputTrans.guaFlag;				// -nogua
-	arg[OP_ROT_MATRIX].addr		= (void*)&ds_rot_matrix_arg_handler;			// 
-	arg[OP_ROT_MATRIX].data		= (void*)ctx;									// 
-	arg[OP_RX].addr				= (void*)&ds_rot_x_arg_handler;				// 
-	arg[OP_RX].data				= (void*)ctx;									// 
-	arg[OP_RY].addr				= (void*)&ds_rot_y_arg_handler;				// 
-	arg[OP_RY].data				= (void*)ctx;									// 
-	arg[OP_RZ].addr				= (void*)&ds_rot_z_arg_handler;				// 
-	arg[OP_RZ].data				= (void*)ctx;									// 
-	arg[OP_TXYZ].addr			= (void*)&ctx->trans;							// -xyztran
-	arg[OP_UDUMP].addr			= (void*)&ctx->inputTrans.guaResultsFlag;		// -unique_dump
-	arg[OP_UDUMP].addr			= (void*)&ctx->inputTrans.guaResultsFlag;		// -unique_dump
+																		//	INPUT MODIFICATIONS =================
+	arg[OP_IN_CS].addr = (void*)&ctx->inputTrans.centerAndScaleFlag;	// -in_cs
+	arg[OP_IN_X_MIRROR].addr = (void*)&ctx->inputTrans.mirrorFlag;			// -in_x_mirror
+	arg[OP_IN_Z_ROTATE].addr = (void*)&ctx->inputTrans.replicateFlag;		// -in_z_replicate
+	arg[OP_IN_TRANSFORM].addr = (void*)&ctx->inputTrans.zAxis;				// -ztran
+	arg[OP_NO_UNIQUE].addr = (void*)&ctx->inputTrans.guaFlag;				// -nogua
+	arg[OP_ROT_MATRIX].addr = (void*)&ds_rot_matrix_arg_handler;			// 
+	arg[OP_ROT_MATRIX].data = (void*)ctx;									// 
+	arg[OP_RX].addr = (void*)&ds_rot_x_arg_handler;				// 
+	arg[OP_RX].data = (void*)ctx;									// 
+	arg[OP_RY].addr = (void*)&ds_rot_y_arg_handler;				// 
+	arg[OP_RY].data = (void*)ctx;									// 
+	arg[OP_RZ].addr = (void*)&ds_rot_z_arg_handler;				// 
+	arg[OP_RZ].data = (void*)ctx;									// 
+	arg[OP_TXYZ].addr = (void*)&ctx->trans;							// -xyztran
+	arg[OP_UDUMP].addr = (void*)&ctx->inputTrans.guaResultsFlag;		// -unique_dump
+	arg[OP_UDUMP].addr = (void*)&ctx->inputTrans.guaResultsFlag;		// -unique_dump
 
 
-// OBJECT PARAMETERS =================
-	arg[OP_CLR_E_SET].addr		= (void*)&ctx->defInputObj.cAttr.edge.color; //  &gio->cAttr.edge.color;
-	arg[OP_CLR_E_USE].addr		= (void*)&ds_obj_clr_edge_arg_handler; // NEED FUNCTION
-	arg[OP_CLR_E_USE].data		= (void*)ctx;
+																		// OBJECT PARAMETERS =================
+	arg[OP_CLR_E_SET].addr = (void*)&ctx->defInputObj.cAttr.edge.color; //  &gio->cAttr.edge.color;
+	arg[OP_CLR_E_USE].addr = (void*)&ds_obj_clr_edge_arg_handler; // NEED FUNCTION
+	arg[OP_CLR_E_USE].data = (void*)ctx;
 
-//	arg[OP_CLR_F_DEFAULT].addr	= (void*)&ctx->clrCtl.face.defaultColor; // keep it here
-	arg[OP_CLR_F_DEFAULT].addr	= (void*)&ctx->defInputObj.faceDefault;
+	//	arg[OP_CLR_F_DEFAULT].addr	= (void*)&ctx->clrCtl.face.defaultColor; // keep it here
+	arg[OP_CLR_F_DEFAULT].addr = (void*)&ctx->defInputObj.faceDefault;
 
-	arg[OP_CLR_F_SET].addr		= (void*)&ctx->defInputObj.cAttr.face.color; //&gio->cAttr.face.color;
-	arg[OP_CLR_F_USE].addr		= (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
-	arg[OP_CLR_F_USE].data		= (void*)ctx;
+	arg[OP_CLR_F_SET].addr = (void*)&ctx->defInputObj.cAttr.face.color; //&gio->cAttr.face.color;
+	arg[OP_CLR_F_USE].addr = (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
+	arg[OP_CLR_F_USE].data = (void*)ctx;
 
-	arg[OP_CLR_T_ON].addr		= (void*)&ctx->defInputObj.tAttr.onFlag; 
-	arg[OP_CLR_T_SET].addr		= (void*)&ctx->defInputObj.tAttr.alpha;
-	arg[OP_CLR_T_USE].addr		= (void*)&ds_obj_clr_transparency_arg_handler; // NEED FUNCTION
-	arg[OP_CLR_T_USE].data		= (void*)ctx;
+	arg[OP_CLR_T_ON].addr = (void*)&ctx->defInputObj.tAttr.onFlag;
+	arg[OP_CLR_T_SET].addr = (void*)&ctx->defInputObj.tAttr.alpha;
+	arg[OP_CLR_T_USE].addr = (void*)&ds_obj_clr_transparency_arg_handler; // NEED FUNCTION
+	arg[OP_CLR_T_USE].data = (void*)ctx;
 
-	arg[OP_CLR_V_SET].addr		= (void*)&ctx->defInputObj.cAttr.vertex.color; //&gio->cAttr.vertex.color;
+	arg[OP_CLR_V_SET].addr = (void*)&ctx->defInputObj.cAttr.vertex.color; //&gio->cAttr.vertex.color;
 
-	arg[OP_DRAW].addr			= (void*)&ds_draw_what_arg_handler; // NEED FUNCTION
-	arg[OP_DRAW].data			= (void*)ctx;	
- 
-	arg[OP_EDGE_PARAM].addr		= (void*)&ctx->defInputObj.eAttr.width; //&gio->eAttr.width;
+	arg[OP_DRAW].addr = (void*)&ds_draw_what_arg_handler; // NEED FUNCTION
+	arg[OP_DRAW].data = (void*)ctx;
 
-	arg[OP_EDGE_TYPE].addr		= (void*)&ds_object_e_type_arg_handler;
-	arg[OP_EDGE_TYPE].data		= (void*)ctx;
+	arg[OP_EDGE_PARAM].addr = (void*)&ctx->defInputObj.eAttr.width; //&gio->eAttr.width;
 
-	arg[OP_CLR_F_USE].addr		= (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
-	arg[OP_CLR_F_USE].data		= (void*)ctx;
+	arg[OP_EDGE_TYPE].addr = (void*)&ds_object_e_type_arg_handler;
+	arg[OP_EDGE_TYPE].data = (void*)ctx;
 
-	arg[OP_ACTIVE].addr			= (void*)&ctx->defInputObj.active; //&gio->active;
-	arg[OP_INACTIVE].addr		= (void*)&ctx->defInputObj.active; //&gio->active;
+	arg[OP_CLR_F_USE].addr = (void*)&ds_obj_clr_face_arg_handler; // NEED FUNCTION
+	arg[OP_CLR_F_USE].data = (void*)ctx;
 
-	arg[OP_LABEL_EDGE_ON].addr    = (void*)&ctx->defInputObj.lFlags.edge;				// need to set index & flag correctly afterwards
-	arg[OP_LABEL_FACE_ON].addr    = (void*)&ctx->defInputObj.lFlags.face;				// need to set index & flag correctly afterwards
-	arg[OP_LABEL_VERTEX_ON].addr  = (void*)&ctx->defInputObj.lFlags.vertex;				// need to set index & flag correctly afterwards
+	arg[OP_ACTIVE].addr = (void*)&ctx->defInputObj.active; //&gio->active;
+	arg[OP_INACTIVE].addr = (void*)&ctx->defInputObj.active; //&gio->active;
 
-	arg[OP_OBJECT].addr			= (void*)&ds_filename_arg_handler;
-	arg[OP_OBJECT].data			= (void*)ctx;
+	arg[OP_LABEL_EDGE_ON].addr = (void*)&ctx->defInputObj.lFlags.edge;				// need to set index & flag correctly afterwards
+	arg[OP_LABEL_FACE_ON].addr = (void*)&ctx->defInputObj.lFlags.face;				// need to set index & flag correctly afterwards
+	arg[OP_LABEL_VERTEX_ON].addr = (void*)&ctx->defInputObj.lFlags.vertex;				// need to set index & flag correctly afterwards
 
-	arg[OP_REPLICATE].addr		= (void*)&ds_obj_replicate_arg_handler; // NEED FUNCTION
-	arg[OP_REPLICATE].data		= (void*)ctx;
+	arg[OP_OBJECT].addr = (void*)&ds_filename_arg_handler;
+	arg[OP_OBJECT].data = (void*)ctx;
 
-	arg[OP_VERTEX_SCALE].addr	= (void*)&ctx->curInputObj->vAttr.scale; //&gio->vAttr.scale;
+	arg[OP_REPLICATE].addr = (void*)&ds_obj_replicate_arg_handler; // NEED FUNCTION
+	arg[OP_REPLICATE].data = (void*)ctx;
 
-//	arg[OP_GEOMETRY].addr		= 0; // need to be parsed
-//	arg[OP_ORIENTATION].addr	= 0;
+	arg[OP_VERTEX_SCALE].addr = (void*)&ctx->curInputObj->vAttr.scale; //&gio->vAttr.scale;
+
+																	   //	arg[OP_GEOMETRY].addr		= 0; // need to be parsed
+																	   //	arg[OP_ORIENTATION].addr	= 0;
 
 	arg = arg_geometry;											//"-geometry" set base geometry
 	arg[0].addr = (void*)&ctx->defInputObj.geo_type; //cube
@@ -1157,13 +1175,13 @@ int ds_command_line(DS_CTX *ctx, int ac, char **av, int *error, int *argIndex, D
 	cmd_line_init(ctx); // initialize any pointers
 
 	while (currentIndex < ac)
-	{	
+	{
 		// look for alternate short form - and replace if found
 		if (arg_sub = arg_find_substitute(set_main_substitute, av[currentIndex]))
 		{
 			av[currentIndex] = arg_sub->longForm;
 		}
-		if(arg_decode(set_main, &currentIndex, ac, av, error, argIndex, errInfo))
+		if (arg_decode(set_main, &currentIndex, ac, av, error, argIndex, errInfo))
 			break;
 	}
 	return 0;
@@ -1194,24 +1212,24 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 	if (gobj->filename)
 	{
 		char	relativeFilename[1024];
-/* DEBUG
+		/* DEBUG
 		{
-			int			i;
-			DS_FILE		*dsf = &ctx->executable;
-			fprintf ( fp, "# executable: " );
-			for (i = 0; i < dsf->count; ++i)
-				fprintf(fp, "%s/", &dsf->splitName[dsf->word[i]]);
-			fprintf(fp, "\n");
-			dsf = gobj->dsf;
-			fprintf ( fp, "# object    : ");
-			for (i = 0; i < dsf->count; ++i)
-				fprintf(fp, "%s/", &dsf->splitName[dsf->word[i]]);
-			fprintf(fp, "\n");
+		int			i;
+		DS_FILE		*dsf = &ctx->executable;
+		fprintf ( fp, "# executable: " );
+		for (i = 0; i < dsf->count; ++i)
+		fprintf(fp, "%s/", &dsf->splitName[dsf->word[i]]);
+		fprintf(fp, "\n");
+		dsf = gobj->dsf;
+		fprintf ( fp, "# object    : ");
+		for (i = 0; i < dsf->count; ++i)
+		fprintf(fp, "%s/", &dsf->splitName[dsf->word[i]]);
+		fprintf(fp, "\n");
 		}
-*/ 
-		ds_cd_relative_filename (ctx, base, gobj->dsf, relativeFilename);
+		*/
+		ds_cd_relative_filename(ctx, base, gobj->dsf, relativeFilename);
 
-		fprintf(fp, "# Object settings for <%s>\n", gobj->dsf->nameOnly );
+		fprintf(fp, "# Object settings for <%s>\n", gobj->dsf->nameOnly);
 		fprintf(fp, "-o \"%s\"\n", relativeFilename);
 	}
 	else
@@ -1236,7 +1254,7 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 	}
 
 	fprintf(fp, "-clr_f_use ");
-	switch(gobj->cAttr.face.state) {
+	switch (gobj->cAttr.face.state) {
 	case DS_COLOR_STATE_AUTOMATIC: fprintf(fp, "a\n"); break;
 	case DS_COLOR_STATE_EXPLICIT:  fprintf(fp, "e\n"); break;
 	case DS_COLOR_STATE_OVERRIDE:  fprintf(fp, "o\n"); break;
@@ -1254,13 +1272,13 @@ int ds_save_object_state(DS_CTX *ctx, DS_FILE *base, FILE *fp, DS_GEO_OBJECT *go
 
 
 	//gobj->eAttr;
-	fprintf(fp, "-e_type %s\n", gobj->eAttr.type == GEOMETRY_EDGE_ROUND ? "round" : "box" );
+	fprintf(fp, "-e_type %s\n", gobj->eAttr.type == GEOMETRY_EDGE_ROUND ? "round" : "box");
 	fprintf(fp, "-e_param %f %f %f\n", gobj->eAttr.width, gobj->eAttr.height, gobj->eAttr.offset);
 
 	//gobj->vAttr;
 	fprintf(fp, "-v_scale %f\n", gobj->vAttr.scale);//.width, gobj->eAttr.height, gobj->eAttr.offset);
 
-	//gobj->rAttr;
+													//gobj->rAttr;
 	fprintf(fp, "-replicate "); //  , gobj->rAttr.oneFaceFlag, .width, gobj->eAttr.height, gobj->eAttr.offset);
 	fprintf(fp, "%c", gobj->rAttr.oneFaceFlag ? '1' : '0');
 	if (gobj->rAttr.xMirrorFlag) fprintf(fp, "X");
@@ -1345,7 +1363,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 					strcpy(&filename[i - 4], ".dsc");
 			}
 		}
-//		static DS_FILE	clrTblFile = { 0,0,0,0,0,0,0 };
+		//		static DS_FILE	clrTblFile = { 0,0,0,0,0,0,0 };
 		char			newFilename[512];
 		ds_build_dsf(&clrTblFile, clrTblFilename, 0); // full name
 		ds_cd_relative_filename(ctx, &base, &clrTblFile, newFilename);
@@ -1361,7 +1379,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 				strcpy(&filename[i - 4], ".dss");
 		}
 	}
-	fopen_s(&fp,filename, "w");
+	fopen_s(&fp, filename, "w");
 	if (!fp)
 	{
 		char buffer[128];
@@ -1393,11 +1411,11 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 		//	-cd
 
 		//	-capd
-		ds_cd_relative_filename (ctx, &base, &ctx->capDir, relativePath); // capDir is already a path only
+		ds_cd_relative_filename(ctx, &base, &ctx->capDir, relativePath); // capDir is already a path only
 		fprintf(fp, "-capture_directory \"%s\"\n", relativePath);
 	}
 
-//- axis
+	//- axis
 	if (ctx->drawAdj.axiiFlag) fprintf(fp, "-axis\n");
 	if (ctx->drawAdj.axiiLabelFlag) fprintf(fp, "-axis_label\n");
 	//- circle
@@ -1407,17 +1425,17 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	//- clr_backgound
 	fprintf(fp, "-clr_background %5.3f %5.3f %5.3f\n", ctx->clrCtl.bkgClear.r, ctx->clrCtl.bkgClear.g, ctx->clrCtl.bkgClear.b);
 	//- clr_table
-	if ( !clrTblFlag )
-		fprintf(fp, "-clr_table \"%s\"\n", clrTblFilename );
+	if (!clrTblFlag)
+		fprintf(fp, "-clr_table \"%s\"\n", clrTblFilename);
 
-//	//- geometry
-//	switch (ctx->base_geometry.type) {
-//	case GEOMETRY_CUBEHEDRON:	p = arg_geometry[0].text; break;
-//	case GEOMETRY_ICOSAHEDRON:	p = arg_geometry[1].text; break;
-//	case GEOMETRY_OCTAHEDRON:	p = arg_geometry[2].text; break;
-//	case GEOMETRY_TETRAHEDRON:	p = arg_geometry[3].text; break;
-//	}
-//	fprintf(fp, "-geometry %s\n", p);
+	//	//- geometry
+	//	switch (ctx->base_geometry.type) {
+	//	case GEOMETRY_CUBEHEDRON:	p = arg_geometry[0].text; break;
+	//	case GEOMETRY_ICOSAHEDRON:	p = arg_geometry[1].text; break;
+	//	case GEOMETRY_OCTAHEDRON:	p = arg_geometry[2].text; break;
+	//	case GEOMETRY_TETRAHEDRON:	p = arg_geometry[3].text; break;
+	//	}
+	//	fprintf(fp, "-geometry %s\n", p);
 
 	//- gl_back
 	switch (ctx->geomAdj.polymode[1]) {
@@ -1425,7 +1443,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	case GEOMETRY_POLYMODE_LINE:	p = arg_back[1].text; break;
 	case GEOMETRY_POLYMODE_POINT:	p = arg_back[2].text; break;
 	}
-	fprintf(fp, "-gl_back %s\n", p); 
+	fprintf(fp, "-gl_back %s\n", p);
 	if (ctx->geomAdj.cull[1]) fprintf(fp, "-gl_back_cull\n");
 
 	//- gl_front
@@ -1457,7 +1475,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 
 	//- light
 	//- light
-	fprintf(fp, "-light %f %f %f\n", ctx->lighting.position.x, ctx->lighting.position.y, ctx->lighting.position.z );
+	fprintf(fp, "-light %f %f %f\n", ctx->lighting.position.x, ctx->lighting.position.y, ctx->lighting.position.z);
 	fprintf(fp, "-light_param %f %f %f\n", ctx->lighting.ambientPercent, ctx->lighting.diffusePercent, ctx->lighting.specularPercent);
 	fprintf(fp, "-light_param_state %d %d %d\n", ctx->lighting.ambientEnabled, ctx->lighting.diffuseEnabled, ctx->lighting.specularEnabled);
 
@@ -1473,21 +1491,21 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	//- normalize
 	if (ctx->drawAdj.normalizeFlag) fprintf(fp, "-normalize\n");
 
-//	//- orientation
-//	switch (ctx->geomAdj.orientation) {
-//	case GEOMETRY_ORIENTATION_EDGE:   p = arg_orientation[0].text; break;
-//	case GEOMETRY_ORIENTATION_FACE:   p = arg_orientation[1].text; break;
-//	case GEOMETRY_ORIENTATION_VERTEX: p = arg_orientation[2].text; break;
-//	}
-//	fprintf(fp, "-orientation %s\n", p);
+	//	//- orientation
+	//	switch (ctx->geomAdj.orientation) {
+	//	case GEOMETRY_ORIENTATION_EDGE:   p = arg_orientation[0].text; break;
+	//	case GEOMETRY_ORIENTATION_FACE:   p = arg_orientation[1].text; break;
+	//	case GEOMETRY_ORIENTATION_VERTEX: p = arg_orientation[2].text; break;
+	//	}
+	//	fprintf(fp, "-orientation %s\n", p);
 
 	//- orthographic
-	if (ctx->drawAdj.projection == GEOMETRY_PROJECTION_ORTHOGRAPHIC ) fprintf(fp, "-orthographic\n");
+	if (ctx->drawAdj.projection == GEOMETRY_PROJECTION_ORTHOGRAPHIC) fprintf(fp, "-orthographic\n");
 
 	//- spin
 	if (ctx->drawAdj.spin.spinState)
 	{
-		fprintf(fp, "-spin %f %f %f %d\n", ctx->drawAdj.spin.dx, ctx->drawAdj.spin.dy, ctx->drawAdj.spin.dz, (int)ctx->drawAdj.spin.timerMSec );
+		fprintf(fp, "-spin %f %f %f %d\n", ctx->drawAdj.spin.dx, ctx->drawAdj.spin.dy, ctx->drawAdj.spin.dz, (int)ctx->drawAdj.spin.timerMSec);
 	}
 
 	//- spp
@@ -1499,11 +1517,11 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 		fprintf(fp, "-stereo\n");
 		fprintf(fp, "-stereo_angle %f\n", ctx->drawAdj.eyeSeparation);
 	}
-	if (!ctx->drawAdj.stereoCrossEyeFlag) fprintf(fp, "-stereo_no_cross\n" );
+	if (!ctx->drawAdj.stereoCrossEyeFlag) fprintf(fp, "-stereo_no_cross\n");
 
 	// -toolvis
-	if(ctx->attrControl && ctx->objDashboard) fprintf(fp, "-toolvis\n");
-//	if(ctx->window.toolsVisible) fprintf(fp, "-toolvis\n");
+	if (ctx->attrControl && ctx->objDashboard) fprintf(fp, "-toolvis\n");
+	//	if(ctx->window.toolsVisible) fprintf(fp, "-toolvis\n");
 
 	{ // get current window information from OS
 		RECT	rect;
@@ -1512,7 +1530,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 		width = rect.right - rect.left;
 		height = rect.bottom - rect.top;
 		//- win_wh
-		fprintf(fp, "-win_wh %d %d\n", width-WINDOW_SIZE_OFFSET_WIDTH, height- WINDOW_SIZE_OFFSET_HEIGHT);
+		fprintf(fp, "-win_wh %d %d\n", width - WINDOW_SIZE_OFFSET_WIDTH, height - WINDOW_SIZE_OFFSET_HEIGHT);
 		//- win_xy
 		fprintf(fp, "-win_xy %d %d\n", rect.left, rect.top);
 	}
@@ -1522,16 +1540,16 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 	// image
 	fprintf(fp, "# Capture settings\n");
 	fprintf(fp, "-image_basename %s\n", ctx->png.basename);
-	if(!ctx->png.stateSaveFlag)	fprintf(fp, "-no_image_state_save\n");
+	if (!ctx->png.stateSaveFlag)	fprintf(fp, "-no_image_state_save\n");
 
 	fprintf(fp, "# Input settings\n");
 	// input
 	//-in_cs
-	if ( ctx->inputTrans.centerAndScaleFlag) fprintf(fp, "-in_cs\n");
+	if (ctx->inputTrans.centerAndScaleFlag) fprintf(fp, "-in_cs\n");
 
 	//- in_transform
 	if (ctx->inputTrans.transformFlag) fprintf(fp, "-in_transform %f %f %f %f %f %f\n",
-		ctx->inputTrans.zAxis.x, ctx->inputTrans.zAxis.y, ctx->inputTrans.zAxis.z, ctx->inputTrans.yAxis.x, ctx->inputTrans.yAxis.y, ctx->inputTrans.yAxis.z );
+		ctx->inputTrans.zAxis.x, ctx->inputTrans.zAxis.y, ctx->inputTrans.zAxis.z, ctx->inputTrans.yAxis.x, ctx->inputTrans.yAxis.y, ctx->inputTrans.yAxis.z);
 
 	//- in_x_mirror
 	if (ctx->inputTrans.mirrorFlag) fprintf(fp, "-in_x_mirror\n");
@@ -1553,7 +1571,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 
 	//- udump
 	if (ctx->inputTrans.guaResultsFlag) fprintf(fp, "-udump\n");
-	
+
 	fprintf(fp, "# Object values\n");
 	fprintf(fp, "-clr_f_default %5.3f %5.3f %5.3f %5.3f\n", ctx->clrCtl.face.defaultColor.r, ctx->clrCtl.face.defaultColor.g, ctx->clrCtl.face.defaultColor.b, ctx->clrCtl.face.defaultColor.a);
 	{
@@ -1564,7 +1582,7 @@ int ds_save_state(DS_CTX *ctx, char *filename)
 		LL_SetHead(ctx->gobjectq);
 		while (obj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 		{
-//			gobj = (DS_GEO_INPUT_OBJECT*)obj;
+			//			gobj = (DS_GEO_INPUT_OBJECT*)obj;
 			ds_save_object_state(ctx, &base, fp, obj);
 		}
 	}

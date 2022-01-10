@@ -54,13 +54,19 @@
     <ClCompile Include="ds_dialog_custom.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ds_cmdline_lib.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ds_cmdline.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ds_labels.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ds_dialog2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ds_cmd_line_lib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ds_cmd_line.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ds_state.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,7 +95,7 @@
     <ClInclude Include="ds_sph.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ds_cmdline_lib.h">
+    <ClInclude Include="ds_cmd_line.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

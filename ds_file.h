@@ -39,5 +39,7 @@ void	ds_cd_relative_filename(DS_CTX *ctx, DS_FILE *base, DS_FILE *file, char *ne
 void	ds_pushd(DS_CTX *ctx, char *directory);
 void	ds_popd(DS_CTX *ctx);
 int		ds_build_url(DS_CTX *ctx, char *url);
+int		ds_dsf_file_open(DS_CTX *ctx, DS_FILE *dsf, char *mode); // does not create DSF
+int		ds_dsf_file_close(DS_CTX *ctx, DS_FILE *dsf); // Only destroys DSF internal contents
 
 #endif

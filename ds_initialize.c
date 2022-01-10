@@ -192,7 +192,7 @@ void ds_pre_init(DS_CTX *ctx)
 	{ // intialize GLUT
 		int		i = 0;
 		char	*av[2];
-		GLubyte	bitmap[10];
+	//	GLubyte	bitmap[10];
 		glutInit(&i, av);
 	}
 
@@ -215,32 +215,38 @@ void ds_pre_init(DS_CTX *ctx)
 	ds_build_dsf(&ctx->capDir, ctx->captureDir, 0);
 //	ds_build_dsf(&ctx->clrTbl, "", 0);
 
-	ctx->drawAdj.axiiFlag = 0;
-	ctx->drawAdj.fogFlag = 1;
-	ctx->drawAdj.normalizeFlag = 0;
-	ctx->drawAdj.projection = GEOMETRY_PROJECTION_PERPSECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
-	ctx->drawAdj.stereoFlag = 0;
-	ctx->drawAdj.stereoCrossEyeFlag = 1;
-	ctx->drawAdj.eyeSeparation = 2.5;
+	ctx->stateWrite.mode				= DS_STATE_NULL;
+	ctx->stateWrite.description[0]		= 0; 
+	ctx->stateWrite.filename[0]			= 0; 
+	ctx->stateWrite.offset				= 0;
+	ctx->stateWrite.objectCount			= 0;
 
-	ctx->drawAdj.circleFlag = 0;
-	ctx->drawAdj.clipFlag = 0;
-	ctx->drawAdj.clipZValue = 0;
-	ctx->drawAdj.clipZIncrement = (float)0.01;
+	ctx->drawAdj.axiiFlag				= 0;
+	ctx->drawAdj.fogFlag				= 1;
+	ctx->drawAdj.normalizeFlag			= 0;
+	ctx->drawAdj.projection				= GEOMETRY_PROJECTION_PERSPECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
+	ctx->drawAdj.stereoFlag				= 0;
+	ctx->drawAdj.stereoCrossEyeFlag		= 1;
+	ctx->drawAdj.eyeSeparation			= 2.5;
 
-	ctx->drawAdj.hiResFlag = 0;
-	ctx->drawAdj.loRes.edgeNSeg = 6;
-	ctx->drawAdj.loRes.sphereFrequency = 3;
-	ctx->drawAdj.hiRes.edgeNSeg = 12;
-	ctx->drawAdj.hiRes.sphereFrequency = 8;
-	ctx->drawAdj.quality = &ctx->drawAdj.loRes;
+	ctx->drawAdj.circleFlag				= 0;
+	ctx->drawAdj.clipFlag				= 0;
+	ctx->drawAdj.clipZValue				= 0;
+	ctx->drawAdj.clipZIncrement			= (float)0.01;
+
+	ctx->drawAdj.hiResFlag				= 0;
+	ctx->drawAdj.loRes.edgeNSeg			= 6;
+	ctx->drawAdj.loRes.sphereFrequency	= 3;
+	ctx->drawAdj.hiRes.edgeNSeg			= 12;
+	ctx->drawAdj.hiRes.sphereFrequency	= 8;
+	ctx->drawAdj.quality				= &ctx->drawAdj.loRes;
 
 	ds_base_geometry_create(ctx);
 
-	ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
-	ctx->base_geometry.oneFaceFlag = 0;
-	ctx->base_geometry.mirrorFlag = 0;
-	ctx->base_geometry.zRotFlag = 0;
+	ctx->base_geometry.type				= GEOMETRY_ICOSAHEDRON;
+	ctx->base_geometry.oneFaceFlag		= 0;
+	ctx->base_geometry.mirrorFlag		= 0;
+	ctx->base_geometry.zRotFlag			= 0;
 
 	// default window size & position 
 	ctx->window.start_x			= 0;
@@ -250,7 +256,12 @@ void ds_pre_init(DS_CTX *ctx)
 	// windows 
 	ctx->window.toolsVisible	= 0;
 	ctx->attrControl			= 0;
-	ctx->objInfo				= 0;
+	ctx->objDashboard			= 0;
+	ctx->objAttributes			= 0;
+	ctx->stateRecorderWin		= 0;
+	ctx->statePlaybackWin		= 0;
+	// Object associated with Object Attribute Window
+	ctx->curObjAttr				= 0;
 
 	// default capture name (single mode)
 	ctx->png.enabled			= 0;
@@ -271,9 +282,12 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->eAttr.type				= GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
 	ctx->eAttr.height			= 0.02;
 	ctx->eAttr.width			= 0.065;
-	ctx->eAttr.offset			= 1.00;
+	ctx->eAttr.offset.enable	= 0;
+	ctx->eAttr.offset.factor	= 0.10;
 	ctx->eAttr.maxLength		= 0;
 	ctx->eAttr.minLength		= 100000000;
+	ctx->eAttr.scale.enable		= 0;
+	ctx->eAttr.scale.factor		= 1.0;
 
 	// draw attributes
 //	ctx->geomAdj.drawWhat		= GEOMETRY_DRAW_TRIANGLES;
@@ -284,7 +298,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->clrCtl.light.y						= 0.5;
 	ctx->clrCtl.light.z						= 2.0;
 	ctx->clrCtl.light.w						= 1.0;
-	ctx->clrCtl.bkgClear.r					= 1.0;
+	ctx->clrCtl.bkgClear.r					= 1.0; // white
 	ctx->clrCtl.bkgClear.g					= 1.0;
 	ctx->clrCtl.bkgClear.b					= 1.0;
 	ctx->clrCtl.line.flag					= 0; // override flag
@@ -299,29 +313,29 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->clrCtl.face.override.g				= 1.0; // green
 	ctx->clrCtl.face.override.b				= 0.0;
 	ctx->clrCtl.face.defaultColor.r			= 1.0; // red
-	ctx->clrCtl.face.defaultColor.g			= 0;
-	ctx->clrCtl.face.defaultColor.b			= 0;
-	ctx->clrCtl.face.defaultColor.a			= 1.0;
+	ctx->clrCtl.face.defaultColor.g			=(float)0;
+	ctx->clrCtl.face.defaultColor.b			=(float)0;
+	ctx->clrCtl.face.defaultColor.a			=(float)0.7;
 	ctx->clrCtl.autoColor					= 0; // don't use auto generated unique colors by default
 	ctx->clrCtl.user_color_table[0]			= 0; // empty string 
 	ctx->clrCtl.reverseColorFlag			= 0;
 
 	// input transformation 
-	ctx->inputTrans.guaFlag = 1; // default
-	ctx->inputTrans.guaResultsFlag = 0; // default
-	ctx->inputTrans.zAxis.x = ctx->inputTrans.zAxis.y = ctx->inputTrans.zAxis.z = ctx->inputTrans.zAxis.w = 0;
-	ctx->inputTrans.yAxis.x = ctx->inputTrans.yAxis.y = ctx->inputTrans.yAxis.z = ctx->inputTrans.yAxis.w = 0;
-	ctx->inputTrans.replicateFlag = 0;
-	ctx->inputTrans.mirrorFlag = 0;
-	ctx->inputTrans.centerAndScaleFlag = 0; // default
+	ctx->inputTrans.guaFlag					= 1; // default
+	ctx->inputTrans.guaResultsFlag			= 0; // default
+	ctx->inputTrans.zAxis.x					= ctx->inputTrans.zAxis.y = ctx->inputTrans.zAxis.z = ctx->inputTrans.zAxis.w = 0;
+	ctx->inputTrans.yAxis.x					= ctx->inputTrans.yAxis.y = ctx->inputTrans.yAxis.z = ctx->inputTrans.yAxis.w = 0;
+	ctx->inputTrans.replicateFlag			= 0;
+	ctx->inputTrans.mirrorFlag				= 0;
+	ctx->inputTrans.centerAndScaleFlag		= 0; // default
 	mtx_set_unity(&ctx->inputTrans.matrix[0]);
 	mtx_create_rotation_matrix(&ctx->inputTrans.matrix[1], MTX_ROTATE_Z_AXIS, DTR(120.0));
 	// matrices will be initialized during post init 
 
 	// initialize the matrix
 	mtx_set_unity(&ctx->matrix);
-	ctx->rot[0] = ctx->rot[0] = ctx->rot[0] = 0;
-	ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0;
+	ctx->rot[0] = ctx->rot[0] = ctx->rot[0] = 0; // no rotation
+	ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0; // no translation
 
 	// initialize color table set
 	ctx->cts.avl = 0;
@@ -336,6 +350,7 @@ void ds_pre_init(DS_CTX *ctx)
 	ctx->opengl.samplesPerPixel = 16; // this will let program determine highest possible ( 8 )
 
 	// spin initial
+	ctx->drawAdj.spin.spinState = 0;
 	ctx->drawAdj.spin.dx = ctx->drawAdj.spin.dy = ctx->drawAdj.spin.dz = ctx->drawAdj.spin.timerMSec = 0;
 
 	// transparency method initialization
@@ -346,15 +361,6 @@ void ds_pre_init(DS_CTX *ctx)
 
 	// error 
 	ctx->errorInfo.count = 0;
-
-	// label initialization
-	{
-		DS_COLOR	clr = { 0,0,0 };
-		ds_label_set(&ctx->label.axii,	 GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.face,	 GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.edge,	 GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.vertex, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-	}
 
 	// lighting initialization
 	ctx->lighting.useLightingFlag	= 1;
@@ -376,59 +382,107 @@ void ds_pre_init(DS_CTX *ctx)
 
 	ctx->gobjectq = LL_Create();
 	ctx->inputObjq = LL_Create();
+
+	// initialize the default object
 	{
 		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
-		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
+		gio = (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj; // objDefault;
 
-													// object defaults: these are inheritied for each new object
-		gio->active = 1;
-		gio->filename = 0;
-		gio->drawWhat = GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
+		// object defaults: these are inheritied for each new object
+		gio->active		= 1;
+		gio->filename	= 0;
+//		gio->drawWhat	= GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
 
-		gio->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
-		gio->eAttr.height = 0.02;
-		gio->eAttr.width = 0.065;
-		gio->eAttr.offset = 1.00;
-		gio->eAttr.maxLength = 0;
-		gio->eAttr.minLength = 100000000;
+		gio->fAttr.draw					= 1;
+		gio->fAttr.scale.enable			= 0;
+		gio->fAttr.scale.factor			= 0.8;
+		gio->fAttr.extrusion.enable		= 0;
+		gio->fAttr.extrusion.factor		= 0.2;
+		gio->fAttr.extrusion.direction	= 1;// 1 = radial // 0 = normal;
+		gio->fAttr.extrusion.holeOnly	= 0;
+		gio->fAttr.extrusion.bothSides	= 1;
+		gio->fAttr.hole.enable			= 0;
+		gio->fAttr.hole.radius			= 0.75;
+		gio->fAttr.hole.shallowness		= 0.5;
+		gio->fAttr.hole.style			= FACE_HOLE_STYLE_POLYGONAL; // polygonal
+		gio->fAttr.offset.enable		= 0;
+		gio->fAttr.offset.factor		= 0.1;
+		gio->fAttr.orthodrome.style		= ORTHODROME_STYLE_RIM;
+		gio->fAttr.orthodrome.enable	= 1;
+		gio->fAttr.orthodrome.dashEnable = 0;
+		gio->fAttr.orthodrome.cutColorEnable = 0;
+		gio->fAttr.orthodrome.cutColor.r	= COLOR_CUT_OVERRIDE_RED;
+		gio->fAttr.orthodrome.cutColor.g	= COLOR_CUT_OVERRIDE_GRN;
+		gio->fAttr.orthodrome.cutColor.b	= COLOR_CUT_OVERRIDE_BLU;
+//		gio->fAttr.orthodrome.autoRadiusEnable  = 1;
+		gio->fAttr.orthodrome.radius			= 1;
+		gio->fAttr.orthodrome.depth1			= 0.01;
+		gio->fAttr.orthodrome.depth2			= 0.03;
+		gio->fAttr.orthodrome.height			= 0.01;
+		gio->fAttr.label.enable			= 0;
+		gio->fAttr.label.font			= GLUT_BITMAP_HELVETICA_12;
 
-		gio->vAttr.scale = 0.07; // default: vertex scale
+		gio->eAttr.draw					= 0;
+		gio->eAttr.type					= GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
+		gio->eAttr.height				= 0.02;
+		gio->eAttr.width				= 0.065;
+		gio->eAttr.offset.enable		= 0;
+		gio->eAttr.offset.factor		= 0.10;
+		gio->eAttr.maxLength			= 0;
+		gio->eAttr.minLength			= 100000000;
+		gio->eAttr.arcEnable			= 0;
+		gio->eAttr.label.enable			= 0;
+		gio->eAttr.scale.enable			= 0;
+		gio->eAttr.scale.factor			= 0.8;
+		gio->eAttr.label.font			= GLUT_BITMAP_HELVETICA_12;
 
-								 // default: face, edge, and vertex color control
-		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
-		gio->cAttr.face.color.r = COLOR_FACE_OVERRIDE_RED; //(float)0;
-		gio->cAttr.face.color.g = COLOR_FACE_OVERRIDE_GRN; //(float)0.8;
-		gio->cAttr.face.color.b = COLOR_FACE_OVERRIDE_BLU; //(float)0;
-		gio->cAttr.face.color.a = COLOR_FACE_OVERRIDE_ALP; //(float)1.0;
-		gio->cAttr.edge.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.edge.color.r = COLOR_EDGE_OVERRIDE_RED; //(float)0;
-		gio->cAttr.edge.color.g = COLOR_EDGE_OVERRIDE_GRN; //(float)0;
-		gio->cAttr.edge.color.b = COLOR_EDGE_OVERRIDE_BLU; //(float)0.8;
-		gio->cAttr.vertex.state = DS_COLOR_STATE_AUTOMATIC;
-		gio->cAttr.vertex.color.r = COLOR_VERTEX_OVERRIDE_RED; //(float)(214 / 255.0);
-		gio->cAttr.vertex.color.g = COLOR_VERTEX_OVERRIDE_GRN; //(float)(205 / 255.0);
-		gio->cAttr.vertex.color.b = COLOR_VERTEX_OVERRIDE_BLU; //(float)(41 / 255.0);
+		gio->vAttr.draw					= 0;
+		gio->vAttr.scale				= 0.07; // default: vertex scale
+		gio->vAttr.offset.enable		= 0; // default: vertex offset
+		gio->vAttr.offset.factor		= 0.1; // default: vertex offset
+		gio->vAttr.label.enable			= 0;
+		gio->vAttr.label.font			= GLUT_BITMAP_HELVETICA_12;
+
+		// default: face, edge, and vertex color control
+		gio->cAttr.face.state			= DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
+		gio->cAttr.face.color.r			= COLOR_FACE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.face.color.g			= COLOR_FACE_OVERRIDE_GRN; //(float)0.8;
+		gio->cAttr.face.color.b			= COLOR_FACE_OVERRIDE_BLU; //(float)0;
+		gio->cAttr.face.color.a			= COLOR_FACE_OVERRIDE_ALP; //(float)1.0;
+		gio->cAttr.edge.state			= DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.edge.color.r			= COLOR_EDGE_OVERRIDE_RED; //(float)0;
+		gio->cAttr.edge.color.g			= COLOR_EDGE_OVERRIDE_GRN; //(float)0;
+		gio->cAttr.edge.color.b			= COLOR_EDGE_OVERRIDE_BLU; //(float)0.8;
+		gio->cAttr.vertex.state			= DS_COLOR_STATE_AUTOMATIC;
+		gio->cAttr.vertex.color.r		= COLOR_VERTEX_OVERRIDE_RED; //(float)(214 / 255.0);
+		gio->cAttr.vertex.color.g		= COLOR_VERTEX_OVERRIDE_GRN; //(float)(205 / 255.0);
+		gio->cAttr.vertex.color.b		= COLOR_VERTEX_OVERRIDE_BLU; //(float)(41 / 255.0);
 		// inherit the global default
 		gio->faceDefault = ctx->clrCtl.face.defaultColor;
 
 		// default: replication flags
-		gio->rAttr.oneFaceFlag = 1;
-		gio->rAttr.zRotationFlag = 0;
-		gio->rAttr.xMirrorFlag = 0;
+		gio->rAttr.oneFaceFlag			= 1;
+		gio->rAttr.zRotationFlag		= 0;
+		gio->rAttr.xMirrorFlag			= 0;
 
 		// default: transparency flags
-		gio->tAttr.onFlag = 0;
-		gio->tAttr.state = DS_COLOR_STATE_EXPLICIT;
-		gio->tAttr.alpha = (float)1.0;
+		gio->tAttr.onFlag				= 0;
+		gio->tAttr.state				= DS_COLOR_STATE_EXPLICIT;
+		gio->tAttr.alpha				= (float)0.5;
 
 		// label flags
-		gio->lFlags.face   = 0;
-		gio->lFlags.edge   = 0;
-		gio->lFlags.vertex = 0;
+		gio->lFlags.face				= 0;
+		gio->lFlags.edge				= 0;
+		gio->lFlags.vertex				= 0;
 
 		// geometry	
-		gio->geo_type			= GEOMETRY_ICOSAHEDRON;
-		gio->geo_orientation	= GEOMETRY_ORIENTATION_FACE;
+		gio->geo_type					= GEOMETRY_ICOSAHEDRON;
+		gio->geo_orientation			= GEOMETRY_ORIENTATION_FACE;
+
+		// dialog window
+		gio->attrDialog = 0;
+
+		*(DS_GEO_INPUT_OBJECT*)&ctx->curInputObj = *gio; // copy into temp space
 	}
 	ctx->dssStateFlag = 0;
 
@@ -447,7 +501,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->drawAdj.axiiLabelFlag = 0;
 	ctx->drawAdj.fogFlag = 1;
 	ctx->drawAdj.normalizeFlag = 0;
-	ctx->drawAdj.projection = GEOMETRY_PROJECTION_PERPSECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
+	ctx->drawAdj.projection = GEOMETRY_PROJECTION_PERSPECTIVE; // = GEOMETRY_PROJECTION_ORTHOGRAPHIC)
 	ctx->drawAdj.stereoFlag = 0;
 	ctx->drawAdj.stereoCrossEyeFlag = 1;
 	ctx->drawAdj.eyeSeparation = 2.5;
@@ -489,6 +543,7 @@ void ds_pre_init2(DS_CTX *ctx)
 			lgobj->tri ? free(lgobj->tri) : 0;
 			lgobj->edge ? free(lgobj->edge) : 0;
 			lgobj->vIndex ? free(lgobj->vIndex) : 0;
+			if (lgobj->attrDialog) DestroyWindow(lgobj->attrDialog);
 			lgobj ? free(lgobj) : 0; // free self
 		}
 	}
@@ -504,11 +559,18 @@ void ds_pre_init2(DS_CTX *ctx)
 		DestroyWindow(ctx->attrControl); //destroy existing
 	if (ctx->objInfo)
 		DestroyWindow(ctx->objInfo); //destroy existing
-	if (ctx->objControl)
-		DestroyWindow(ctx->objControl); //destroy existing
+//	if (ctx->objControl)
+//		DestroyWindow(ctx->objControl); //destroy existing
+	if (ctx->objDashboard)
+		DestroyWindow(ctx->objDashboard); //destroy existing
+	if (ctx->objAttributes)
+		DestroyWindow(ctx->objAttributes); //destroy existing
 	ctx->attrControl = 0;
-	ctx->objControl = 0;
+//	ctx->objControl = 0;
 	ctx->objInfo = 0;
+	ctx->objDashboard = 0;
+	// current object
+	ctx->curObjAttr;
 
 	// default capture name (single mode)
 	ctx->png.enabled		= 0;
@@ -529,7 +591,8 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
 	ctx->eAttr.height = 0.02;
 	ctx->eAttr.width = 0.065;
-	ctx->eAttr.offset = 1.00;
+	ctx->eAttr.offset.enable = 0;
+	ctx->eAttr.offset.factor = 0.10;
 	ctx->eAttr.maxLength = 0;
 	ctx->eAttr.minLength = 100000000;
 
@@ -557,9 +620,9 @@ void ds_pre_init2(DS_CTX *ctx)
 	ctx->clrCtl.face.override.g = 1.0; // green
 	ctx->clrCtl.face.override.b = 0.0;
 	ctx->clrCtl.face.defaultColor.r = 1.0; // red
-	ctx->clrCtl.face.defaultColor.g = 0;
-	ctx->clrCtl.face.defaultColor.b = 0;
-	ctx->clrCtl.face.defaultColor.a = 1.0;
+	ctx->clrCtl.face.defaultColor.g = (float)0;
+	ctx->clrCtl.face.defaultColor.b = (float)0;
+	ctx->clrCtl.face.defaultColor.a = (float)0.7;
 	ctx->clrCtl.autoColor = 0; // don't use auto generated unique colors by default
 	ctx->clrCtl.user_color_table[0] = 0; // empty string 
 	ctx->clrCtl.reverseColorFlag = 0;
@@ -592,7 +655,7 @@ void ds_pre_init2(DS_CTX *ctx)
 	// ctx->opengl.samplesPerPixel = 0; // this will let program determine highest possible ( 8 )
 
 	// spin initial
-	ctx->drawAdj.spinFlag = 0;
+	ctx->drawAdj.spin.spinState = 0;
 	ctx->drawAdj.spin.dx = ctx->drawAdj.spin.dy = ctx->drawAdj.spin.dz = ctx->drawAdj.spin.timerMSec = 0;
 
 	// error 
@@ -601,10 +664,10 @@ void ds_pre_init2(DS_CTX *ctx)
 	// label initialization
 	{
 		DS_COLOR	clr = { 0,0,0 };
-		ds_label_set(&ctx->label.axii, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.face, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.edge, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
-		ds_label_set(&ctx->label.vertex, GLUT_BITMAP_TIMES_ROMAN_24, &clr);
+		ds_label_set(&ctx->label.axii, GLUT_BITMAP_TIMES_ROMAN_24, &clr, 0);
+		ds_label_set(&ctx->label.face, GLUT_BITMAP_TIMES_ROMAN_24, &clr, 0);
+		ds_label_set(&ctx->label.edge, GLUT_BITMAP_TIMES_ROMAN_24, &clr, 0);
+		ds_label_set(&ctx->label.vertex, GLUT_BITMAP_TIMES_ROMAN_24, &clr, 0);
 	}
 
 	// lighting initialization
@@ -628,21 +691,63 @@ void ds_pre_init2(DS_CTX *ctx)
 
 	{
 		DS_GEO_INPUT_OBJECT	*gio; // this is the default object configuration
-		ctx->curInputObj = gio = &ctx->defInputObj; // objDefault;
+		gio = (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj; // objDefault;
 
 													// object defaults: these are inheritied for each new object
 		gio->active = 1;
 		gio->filename = 0;
 		gio->drawWhat = GEOMETRY_DRAW_FACES;	 // what part of the object to draw F 1 E 2 V 4
 
+		gio->fAttr.draw = 1;
+		gio->fAttr.scale.enable = 0;
+		gio->fAttr.scale.factor = 0.8;
+		gio->fAttr.extrusion.enable = 0;
+		gio->fAttr.extrusion.factor = 0.2;
+		gio->fAttr.extrusion.direction = 1;// 1 = radial // 0 = normal;
+		gio->fAttr.extrusion.holeOnly = 0;
+		gio->fAttr.extrusion.bothSides = 1;
+		gio->fAttr.hole.enable = 0;
+		gio->fAttr.hole.radius = 0.75;
+		gio->fAttr.hole.shallowness = 0.5;
+		gio->fAttr.hole.style = FACE_HOLE_STYLE_POLYGONAL; // polygonal
+		gio->fAttr.offset.enable = 0;
+		gio->fAttr.offset.factor = 0.1;
+		gio->fAttr.orthodrome.style = ORTHODROME_STYLE_RIM;
+		gio->fAttr.orthodrome.enable = 1;
+		gio->fAttr.orthodrome.dashEnable = 0;
+		gio->fAttr.orthodrome.cutColorEnable = 0;
+		gio->fAttr.orthodrome.cutColor.r = COLOR_CUT_OVERRIDE_RED;
+		gio->fAttr.orthodrome.cutColor.g = COLOR_CUT_OVERRIDE_GRN;
+		gio->fAttr.orthodrome.cutColor.b = COLOR_CUT_OVERRIDE_BLU;
+		//		gio->fAttr.orthodrome.autoRadiusEnable = 1;
+		gio->fAttr.orthodrome.radius = 1;
+		gio->fAttr.orthodrome.depth1 = 0.01;
+		gio->fAttr.orthodrome.depth2 = 0.03;
+		gio->fAttr.orthodrome.height = 0.01;
+		gio->fAttr.label.enable = 0;
+		gio->fAttr.label.font = GLUT_BITMAP_HELVETICA_12;
+
+		gio->eAttr.draw = 0;
 		gio->eAttr.type = GEOMETRY_EDGE_ROUND; // GEOMETRY_EDGE_SQUARE;
 		gio->eAttr.height = 0.02;
 		gio->eAttr.width = 0.065;
-		gio->eAttr.offset = 1.00;
+		gio->eAttr.offset.enable = 0;
+		gio->eAttr.offset.factor = 0.10;
 		gio->eAttr.maxLength = 0;
 		gio->eAttr.minLength = 100000000;
+		gio->eAttr.scale.enable = 0;
+		gio->eAttr.scale.factor = 1.0;
+		gio->eAttr.arcEnable = 0;
+		gio->eAttr.label.enable = 0;
+		gio->eAttr.label.font = GLUT_BITMAP_HELVETICA_12;
 
+		gio->vAttr.draw = 0;
+//		gio->vAttr.scale = 0.07; // default: vertex scale
+		gio->vAttr.offset.enable = 0; // default: vertex offset
+		gio->vAttr.offset.factor = 0.1; // default: vertex offset
 		gio->vAttr.scale = 0.07; // default: vertex scale
+		gio->vAttr.label.enable = 0;
+		gio->vAttr.label.font = GLUT_BITMAP_HELVETICA_12;
 
 		// default: face, edge, and vertex color control
 		gio->cAttr.face.state = DS_COLOR_STATE_EXPLICIT;  //DEFAULT=0 EXPLICIT=0, AUTOMATIC=1, OVERRIDE=2
@@ -670,16 +775,14 @@ void ds_pre_init2(DS_CTX *ctx)
 		// default: transparency flags
 		gio->tAttr.onFlag = 0;
 		gio->tAttr.state = DS_COLOR_STATE_EXPLICIT;
-		gio->tAttr.alpha = (float)1.0;
-
-		// label flags
-		gio->lFlags.face = 0;
-		gio->lFlags.edge = 0;
-		gio->lFlags.vertex = 0;
+		gio->tAttr.alpha = (float)0.5;
 
 		// geometry	
 		gio->geo_type			= GEOMETRY_ICOSAHEDRON;
 		gio->geo_orientation	= GEOMETRY_ORIENTATION_FACE;
+
+		// copy
+		*(DS_GEO_INPUT_OBJECT*)&ctx->curInputObj = *gio;
 	}
 	ctx->dssStateFlag = 0;
 }
@@ -696,12 +799,6 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 		CAPTURE_IMAGE,
 		CAPTURE_FILM,
 	};
-
-//	if (!ctx->base_geometry.type)
-//		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
-
-//	if (!ctx->geomAdj.drawWhat)
-//		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
 
 	if (!ctx->drawAdj.clipFlag) // not set by command line
 	{
@@ -727,25 +824,6 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 	{
 			strcpy(ctx->png.basename, "image"); // default capture filename
 	}
-/*
-	if (strlen(ctx->png.basename)) // -capture option specified
-	{
-		if (!ctx->png.nFrames)
-		{
-			ctx->png.singleFlag = 1; // single capture
-			ctx->png.nFrames = 1;
-			captureMode = CAPTURE_IMAGE;
-		}
-		else
-		{
-			// movie
-			ctx->png.nFrames = ctx->png.nFrames < 0 ? ctx->png.nFrames * -1 : ctx->png.nFrames;
-			captureMode = CAPTURE_FILM;
-		}
-	}
-	else
-		strcpy(ctx->png.basename, "image"); // default capture filename
-*/
 
 	switch (captureMode) {
 	case CAPTURE_NONE: // no capture dependency - explicitly set bby user
@@ -827,24 +905,12 @@ void ds_post_init(DS_CTX *ctx) //, POLYHEDRON **poly)
 			// copy default color
 			ctx->clrCtl.face.defaultColor = gio->faceDefault;
 
-			if (gobj = ds_parse_file(ctx, dsf))
+			if (gobj = ds_parse_file(ctx, dsf, gio))
 			{
 				// transfer the settings
 				fclose(dsf->fp);
 				dsf->fp = 0;
 				ds_file_set_window_text(ctx->mainWindow, dsf->nameOnly);
-
-//				copy settings
-				gobj->drawWhat			= gio->drawWhat;
-				gobj->eAttr				= gio->eAttr;
-				gobj->cAttr				= gio->cAttr;
-				gobj->vAttr				= gio->vAttr;
-				gobj->rAttr				= gio->rAttr;
-				gobj->tAttr				= gio->tAttr;
-				gobj->lFlags			= gio->lFlags;
-				gobj->geo_type			= gio->geo_type;
-				gobj->geo_orientation	= gio->geo_orientation;
-				gobj->dsf				= dsf;
 			}
 			else
 			{
@@ -870,13 +936,6 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 		CAPTURE_IMAGE,
 		CAPTURE_FILM,
 	};
-
-//	if (!ctx->base_geometry.type)
-//		ctx->base_geometry.type = GEOMETRY_ICOSAHEDRON;
-
-
-//	if (!ctx->geomAdj.drawWhat)
-//		ctx->geomAdj.drawWhat = GEOMETRY_DRAW_TRIANGLES;
 
 	if (!ctx->drawAdj.clipFlag) // not set by command line
 	{
@@ -980,25 +1039,12 @@ void ds_post_init2(DS_CTX *ctx) //, POLYHEDRON **poly)
 				continue; // can't open file so skip
 			}
 
-			if (gobj = ds_parse_file(ctx, dsf))
+			if (gobj = ds_parse_file(ctx, dsf, gio))
 			{
 				// transfer the settings
 				fclose(dsf->fp);
 				dsf->fp = 0;
 				ds_file_set_window_text(ctx->mainWindow, dsf->nameOnly);
-
-				//	copy settings
-				gobj->active			= gio->active;
-				gobj->drawWhat			= gio->drawWhat;
-				gobj->eAttr				= gio->eAttr;
-				gobj->cAttr				= gio->cAttr;
-				gobj->vAttr				= gio->vAttr;
-				gobj->rAttr				= gio->rAttr;
-				gobj->tAttr				= gio->tAttr;
-				gobj->lFlags			= gio->lFlags;
-				gobj->geo_type			= gio->geo_type;
-				gobj->geo_orientation	= gio->geo_orientation;
-				gobj->dsf				= dsf;
 			}
 			else
 				ds_file_close(ctx, dsf);

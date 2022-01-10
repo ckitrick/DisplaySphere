@@ -112,7 +112,7 @@ void ds_filename_split(char *name, int *array, int *count)
 //-----------------------------------------------------------------------------
 {
 	// split a path-filename into parts - this function changes the name string
-	int		i, j, flag, len;
+	int		i, flag, len;
 	*count = 0;
 	flag = 0;
 	len = strlen(name);
@@ -374,8 +374,10 @@ DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 	// process any embedded environment variables 
 	ds_filename_env_var(buffer, string);
 
+	dsf->userName  = (char*)malloc(strlen(buffer) + 1);
 	dsf->fullName  = (char*)malloc(strlen(string) + 1);
 	dsf->splitName = (char*)malloc(strlen(string) + 1);
+	strcpy(dsf->userName, buffer); // the original input name
 	strcpy(dsf->fullName, string);
 	strcpy(dsf->splitName, string);
 	ds_filename_split(dsf->splitName, word, &dsf->count);
@@ -393,18 +395,7 @@ DS_FILE *ds_build_dsf(DS_FILE *dsf, char *buffer, int pathFlag)
 		for (i = 0; i < dsf->count; ++i)
 			dsf->word[i] = word[i];
 	}
-//	// make a copy of the fullName's path only
-//	for (i = 0, j = 0; i < dsf->count; ++i)
-//	{
-//		sprintf(&buffer[j], "%s", &dsf->splitName[dsf->word[i]]);
-//		j += strlen(&buffer[j]);
-//
-//		if (i < dsf->count - 1)
-//		{
-//			buffer[j++] = '/';
-//			buffer[j] = 0;
-//		}
-//	}
+
 	return dsf;
 }
 
@@ -452,6 +443,39 @@ DS_FILE *ds_file_open(DS_CTX *ctx, char *userName, char *mode)
 	}
 	else
 		return 0;
+}
+
+//-----------------------------------------------------------------------------
+int ds_dsf_file_open(DS_CTX *ctx, DS_FILE *dsf, char *mode)
+//-----------------------------------------------------------------------------
+{
+	// This does not build the DSF
+	// standard interface to open file
+
+	if (!dsf)
+		return 1;
+
+	if (!fopen_s(&dsf->fp, dsf->fullName, mode))
+		return 0; // success
+	else
+		return 1; // error
+}
+
+//-----------------------------------------------------------------------------
+int ds_dsf_file_close(DS_CTX *ctx, DS_FILE *dsf)
+//-----------------------------------------------------------------------------
+{
+	// This does not free up the dsf - just the contents
+	if (!dsf)
+		return 1;
+
+	if (dsf->fp) { fclose(dsf->fp); dsf->fp = 0; }
+	if (dsf->userName) { free(dsf->userName); dsf->userName = 0; }
+	if (dsf->fullName) { free(dsf->fullName); dsf->fullName = 0; }
+	if (dsf->splitName) { free(dsf->splitName); dsf->splitName; }
+	if (dsf->word) { free(dsf->word); dsf->word = 0; }
+
+	return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -505,7 +529,7 @@ int ds_file_initialization( HWND hWnd, char *filename )
 	if (dsf)
 	{
 		ds_file_set_window_text(hWnd, dsf->nameOnly);
-		if ( !ds_parse_file(ctx, dsf) )
+		if ( !ds_parse_file(ctx, dsf, (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj) )
 			ds_file_close(ctx, dsf); // free up the dsf
 		else
 		{
@@ -582,14 +606,27 @@ int ds_process_restore_file (DS_CTX *ctx, char *filename)
 				ShowWindow(ctx->attrControl, SW_SHOW);
 				ds_position_window(ctx, ctx->attrControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
-			if (!ctx->objControl)
+			if (!ctx->objDashboard)
 			{
-				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_control);
-				ShowWindow(ctx->objControl, SW_SHOW);
-				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
+				ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_dashboard);
+				ShowWindow(ctx->objDashboard, SW_SHOW);
+				ds_position_window(ctx, ctx->objDashboard, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
 		}
 		InvalidateRect(ctx->mainWindow, 0, 0);
+
+		// check stateRecorder
+		if (ctx->stateRead.mode == DS_STATE_OPEN)
+		{
+			// save filename
+			strcpy(ctx->stateRead.filename, filename);
+			// put up playback window enabled for further playback
+			if (!ctx->statePlaybackWin)
+			{
+				ctx->statePlaybackWin = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG10), ctx->mainWindow, ds_dlg_state_playback);
+				ShowWindow(ctx->statePlaybackWin, SW_SHOW);
+			}
+		}
 	}
 	SetCurrentDirectory(curDir);
 	return 0;
@@ -668,7 +705,7 @@ int ds_open_file_dialog (HWND hOwnerWnd, DS_CTX *ctx, int type)
 		{
 			ds_file_set_window_text(hOwnerWnd, dsf->nameOnly);
 			ds_file_type_initialization(ctx, dsf->nameOnly);
-			if (!ds_parse_file(ctx, dsf))
+			if (!ds_parse_file(ctx, dsf, (DS_GEO_INPUT_OBJECT*)&ctx->defInputObj))
 				ds_file_close(ctx, dsf);
 			else
 			{
@@ -744,7 +781,7 @@ int ds_read_file_from_buffer (DS_CTX *ctx)
 
 	if (dsf = ds_file_open(ctx, ctx->filename, "r"))
 	{
-		if (ds_parse_file(ctx, dsf))
+		if (ds_parse_file(ctx, dsf, 0)) // CHECK LATER
 		{
 			fclose(dsf->fp);
 			dsf->fp = 0;
@@ -840,6 +877,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 	// inherit default settings
 	gobj->active			= ctx->defInputObj.active;
 	gobj->drawWhat			= ctx->defInputObj.drawWhat;
+	gobj->fAttr				= ctx->defInputObj.fAttr;
 	gobj->eAttr				= ctx->defInputObj.eAttr;
 	gobj->cAttr				= ctx->defInputObj.cAttr;
 	gobj->vAttr				= ctx->defInputObj.vAttr;
@@ -848,10 +886,16 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 	gobj->lFlags			= ctx->defInputObj.lFlags;
 	gobj->geo_type			= ctx->defInputObj.geo_type;
 	gobj->geo_orientation	= ctx->defInputObj.geo_orientation;
+	gobj->faceDefault		= ctx->defInputObj.faceDefault;
 
-	gobj->filename = malloc(strlen(dsf->nameOnly) + 1);
+	gobj->filename			= malloc(strlen(dsf->nameOnly) + 1);
 	strcpy(gobj->filename, dsf->nameOnly);
-	gobj->dsf		= dsf;
+	gobj->dsf				= dsf;
+	gobj->faceMem			= 0;
+	gobj->edgeMem			= 0;
+	gobj->faceInit			= 0;
+	gobj->edgeInit			= 0;
+	gobj->attrDialog		= 0;
 
 	if (!ctx->gobjAddFlag) // remove all the previous geometry
 	{
@@ -866,6 +910,14 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 			lgobj->tri		? free(lgobj->tri)		: 0;
 			lgobj->edge		? free(lgobj->edge)		: 0;
 			lgobj->vIndex   ? free(lgobj->vIndex)   : 0;
+			lgobj->faceMem  ? free(lgobj->faceMem)	: 0;
+			lgobj->edgeMem  ? free(lgobj->edgeMem)	: 0;
+			if (lgobj->attrDialog)
+			{
+				EndDialog(lgobj->attrDialog, 0);
+				DestroyWindow(lgobj->attrDialog);
+			}
+			lgobj->attrDialog = 0;
 			ds_file_close(ctx, lgobj->dsf);
 			lgobj			? free ( lgobj )		: 0; // free self
 		}
@@ -877,7 +929,7 @@ DS_GEO_OBJECT *ds_geo_object_create(DS_CTX *ctx, DS_FILE *dsf ) //char *filename
 }
 
 //-----------------------------------------------------------------------------
-DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf)
+DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf, DS_GEO_INPUT_OBJECT *gio)
 //-----------------------------------------------------------------------------
 {
 	void			*gua;
@@ -931,6 +983,39 @@ DS_GEO_OBJECT *ds_parse_file(DS_CTX *ctx, DS_FILE *dsf)
 			gua_convert_to_object(ctx, gua, geo);
 		else
 			ngua_convert_to_object(ctx, gua, geo);
+	}
+	
+	// copy attributes
+	geo->active				= gio->active;
+	geo->drawWhat			= gio->drawWhat;
+	geo->fAttr				= gio->fAttr;
+	geo->eAttr				= gio->eAttr;
+	geo->cAttr				= gio->cAttr;
+	geo->vAttr				= gio->vAttr;
+	geo->rAttr				= gio->rAttr;
+	geo->tAttr				= gio->tAttr;
+	geo->lFlags				= gio->lFlags;
+	geo->geo_type			= gio->geo_type;
+	geo->geo_orientation	= gio->geo_orientation;
+	geo->faceDefault		= gio->faceDefault;
+	geo->dsf				= dsf;
+
+	// build geometry for drawing
+	ds_face_initialize(ctx, geo);
+	ds_face_update(ctx, geo);
+	ds_edge_initialize(ctx, geo);
+	ds_edge_update(ctx, geo);
+
+	// update object dashboard if open
+	if (ctx->objDashboard)
+	{
+		RECT	rect;
+		GetWindowRect(ctx->objDashboard, &rect);
+		EndDialog(ctx->objDashboard, 0);
+		DestroyWindow(ctx->objDashboard);
+		ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_dashboard);
+		ShowWindow(ctx->objDashboard, SW_SHOW);
+		//		MoveWindow(ctx->objDashboard, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,1);
 	}
 
 	return geo;

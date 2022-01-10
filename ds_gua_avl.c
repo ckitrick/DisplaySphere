@@ -153,6 +153,7 @@ typedef struct {
 	float				rgba[4];	// explict color 
 	int					id;			// global ID 
 	int					nv;			// number of vertices
+	int					normalFlag;	// normals
 } GUA_TDATA;	// T Triangle data
 
 // generic block of data 
@@ -389,7 +390,7 @@ static int t_compare(GUA_DB *db, void *av, void *bv)
 	GUA_TDATA *a = (GUA_TDATA*)av;
 	GUA_TDATA *b = (GUA_TDATA*)bv;
 	int			i;
-	int			diff, rdiff;
+	int			diff, rdiff, ndiff=0;
 
 	db->nCmp++;
 
@@ -412,12 +413,25 @@ static int t_compare(GUA_DB *db, void *av, void *bv)
 			break; 
 	}
 
-	if (!diff || !rdiff) // check if either is a match
+	if (a->normalFlag)
+	{
+		for (i = 0; i < a->nv; ++i)
+		{
+			ndiff = a->onid[i] - b->onid[i];
+			if (ndiff)
+				break;
+		}
+	}
+
+	if (( !diff || !rdiff ) && !ndiff) // check if either is a match
 	{
 		db->p = (void*)a; // save the matching node
 		return 0;
 	}
-	return diff > 0 ? 1 : -1; // done - point will inserted into tree based on diff
+	if ( ndiff )
+		return ndiff > 0 ? 1 : -1; // done - point will inserted into tree based on diff
+	else
+		return diff > 0 ? 1 : -1; // done - point will inserted into tree based on diff
 }
 
 //--------------------------------------------------------------------------------
@@ -692,7 +706,7 @@ static int gua_tedata_insert(GUA_DB *db, int *eid, int ne)
 }
 
 //--------------------------------------------------------------------------------
-static int gua_tdata_insert(GUA_DB *db, int *vid, int *nid, int nv, int teid, float *rgba)
+static int gua_tdata_insert(GUA_DB *db, int *vid, int *nid, int nv, int normalFlag, int teid, float *rgba)
 //--------------------------------------------------------------------------------
 {
 	GUA_BLK				*blk;
@@ -713,10 +727,11 @@ static int gua_tdata_insert(GUA_DB *db, int *vid, int *nid, int nv, int teid, fl
 	t->onid = gua_integer_array(db, nv); // get an array to hold normal index info (original order)
 
 	t->nv = nv;
+	t->normalFlag = normalFlag;
 	for (i = 0; i < nv; ++i) // save original vertex id's
 	{
 		t->ovid[i] = t->vid[i] = vid[i];
-		if (  nid )
+		if ( normalFlag )
 		t->onid[i] = nid[i]; 
 	}
 	gua_integer_array_order(t->vid, nv); // put lowest id# first
@@ -1105,6 +1120,7 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 			geo->tri[n].vtx = iptr;					// attach array memory
 			geo->tri[n].nml = inptr;				// attach array memory
 			geo->tri[n].nVtx = data[i].nv;
+			geo->tri[n].draw.nSegments = 0;
 			m += data[i].nv;
 			for (j = 0; j < data[i].nv; ++j)
 			{
@@ -1126,6 +1142,8 @@ int gua_convert_to_object(DS_CTX *ctx, void *guap, DS_GEO_OBJECT *geo)
 	// allocate array
 	geo->edge  = (DS_EDGE*)malloc(sizeof(DS_EDGE)*edb->nc);
 	geo->nEdge = edb->nc;
+	geo->edge[0].draw.n = 0;
+
 	// transfer data 
 	blk = (GUA_BLK*)edb->head;
 	n = 0;
@@ -1274,6 +1292,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 	gua->edb  = gua_db_init ( gua_edata_init,  gua_edata_insert,  mnc,   e_compare);	// edge by unique vertex pairs DB
 	gua->tedb = gua_db_init ( gua_tedata_init, gua_tedata_insert, mnc,  te_compare);	// triangle by unique edges DB
 	gua->tdb  = gua_db_init ( gua_tdata_init,  gua_tdata_insert,  mnc,   t_compare);		// triangle by unique vertices DB
+	gua->name[0] = 0;
 
 	// local copies re-casted
 	vdb  = (GUA_DB*)gua->vdb;
@@ -1335,6 +1354,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				rgb[0] = (float)atof(word[9].buffer);
 				rgb[1] = (float)atof(word[10].buffer);
 				rgb[2] = (float)atof(word[11].buffer);
+				rgb[3] = (float)((DS_COLOR*)defaultColor)->a;
 				if (n>=13)
 					rgb[3] = (float)atof(word[12].buffer);
 				break;
@@ -1342,6 +1362,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				rgb[0] = (float)(atof(word[ 9].buffer) / 255.0);
 				rgb[1] = (float)(atof(word[10].buffer) / 255.0);
 				rgb[2] = (float)(atof(word[11].buffer) / 255.0);
+				rgb[3] = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= 13)
 					rgb[3] = (float)(atof(word[12].buffer) / 255.0);
 				break;
@@ -1420,7 +1441,7 @@ int gua_spc_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				++tedb->nProcessed;
 				tid = teins((void*)tedb, elid,3); // use array of edge length IDs 
 				++tdb->nProcessed;
-				ttid = tins((void*)tdb, vid, 0, 3, tid, rgb); // use array of unique vertex IDs 
+				ttid = tins((void*)tdb, vid, 0, 3, 0, tid, rgb); // use array of unique vertex IDs 
 
 				if (ctx->inputTrans.replicateFlag && j < 2)
 				{	// perform rotation transformation on coordinate data
@@ -1604,7 +1625,7 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.r = (float)atof(word[9].buffer);
 				vct.color.g = (float)atof(word[10].buffer);
 				vct.color.b = (float)atof(word[11].buffer);
-				vct.color.a = (float)1.0;
+				vct.color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if ( n >= 13 )
 					vct.color.a = (float)atof(word[12].buffer);
 				break;
@@ -1612,7 +1633,7 @@ int ngua_spc_read(DS_CTX *ctx, void **nguap, FILE *fp, float *defaultColor)
 				vct.color.r = (float)(atof(word[ 9].buffer) / 255.0);
 				vct.color.g = (float)(atof(word[10].buffer) / 255.0);
 				vct.color.b = (float)(atof(word[11].buffer) / 255.0);
-				vct.color.a = (float)1.0;
+				vct.color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= 13)
 					vct.color.a = (float)(atof(word[12].buffer) / 255.0);
 			}
@@ -1747,6 +1768,7 @@ int ngua_convert_to_object(DS_CTX *ctx, void *nguap, DS_GEO_OBJECT *geo)
 			geo->tri[n].vtx[0] = j++;	// v[0];			// unique vertex IDs
 			geo->tri[n].vtx[1] = j++;	// v[1];
 			geo->tri[n].vtx[2] = j++;	// v[2];
+			geo->tri[n].draw.nSegments = 0;
 			iptr += 3;
 			++n;
 		}
@@ -2025,7 +2047,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				of[i].color.r = (float)atof(word[j+0].buffer);
 				of[i].color.g = (float)atof(word[j+1].buffer);
 				of[i].color.b = (float)atof(word[j+2].buffer);
-				of[i].color.a = (float)1.0;
+				of[i].color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= of[i].nVtx + 1 + 4) // color 
 					of[i].color.a = (float)atof(word[j + 3].buffer);
 				break;
@@ -2033,7 +2055,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 				of[i].color.r = (float)(atoi(word[j+0].buffer) / 255.0);
 				of[i].color.g = (float)(atoi(word[j+1].buffer) / 255.0);
 				of[i].color.b = (float)(atoi(word[j+2].buffer) / 255.0);
-				of[i].color.a = (float)1.0;
+				of[i].color.a = (float)((DS_COLOR*)defaultColor)->a;
 				if (n >= of[i].nVtx + 1 + 4) // color 
 					of[i].color.a = (float)(atoi(word[j + 3].buffer) / 255.0);
 				break;
@@ -2128,7 +2150,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					++tedb->nProcessed;
 					tid = teins((void*)tedb, elid, of[i].nVtx); // use array of edge length IDs 
 					++tdb->nProcessed;
-					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
+					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, on ? 1 : 0, tid, (float*)&of[i].color); // use array of unique vertex IDs 
 
 					if (ctx->inputTrans.replicateFlag && j < 2)
 					{	// perform rotation transformation on coordinate data
@@ -2169,7 +2191,7 @@ int gua_off_read(DS_CTX *ctx, void **guap, FILE *fp, float *defaultColor)
 					++tedb->nProcessed;
 					tid = teins((void*)tedb, elid, of[i].nVtx); // use array of edge length IDs 
 					++tdb->nProcessed;
-					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, tid, (float*)&of[i].color); // use array of unique vertex IDs 
+					ttid = tins((void*)tdb, vid, nid, of[i].nVtx, on ? 1 : 0, tid, (float*)&of[i].color); // use array of unique vertex IDs 
 
 					if (ctx->inputTrans.replicateFlag && j < 2)
 					{	// perform rotation transformation on coordinate data

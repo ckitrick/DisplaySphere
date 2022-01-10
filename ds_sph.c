@@ -34,6 +34,7 @@
 #include "ds_sph.h"
 #include "ds_file.h"
 #include "ds_gua.h"
+#include "ds_cmd_line.h" 
 
 #define _WIN32_DCOM
 //WINOLEAPI  CoInitializeEx(LPVOID pvReserved, DWORD dwCoInit);
@@ -185,7 +186,7 @@ void ds_reshape ( HWND hWnd, int width, int height )
 		zoom = -ctx->trans[2]*0.25 + 1;
 		glOrtho(-size*ar*zoom , size*ar*zoom, -size*zoom, size*zoom, -100.00f, 100.0f);
 	}
-	else if (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERPSECTIVE )
+	else if (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERSPECTIVE)
 	{
 		float	f, 
 				zn, 
@@ -262,7 +263,7 @@ void ds_position_window(DS_CTX *ctx, HWND hWnd, int flag, RECT *rect)
 		}
 		MoveWindow(hWnd, left, top, tool_w, tool_h, 1);
 	}
-	else if (hWnd == ctx->objControl)
+	else if (hWnd == ctx->objDashboard)
 	{
 		left = mrect.left + x_offset;
 		if (mrect.bottom + tool_h + y_offset < info.rcMonitor.bottom)
@@ -299,13 +300,13 @@ static void ds_update_obj_control_window (DS_CTX *ctx)
 {
 	RECT	rect;
 	// if window visible then save top,left position
-	if (ctx->objControl)
+	if (ctx->objDashboard)
 	{
-		GetWindowRect(ctx->objControl, &rect); // get existing rectangle
-		DestroyWindow(ctx->objControl); //destroy existing
-		ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_control);
-		ShowWindow(ctx->objControl, SW_SHOW);// make window visible
-		ds_position_window(ctx, ctx->objControl, 1, &rect); // move windows to appropriate spots - bottom or right of the current window 
+		GetWindowRect(ctx->objDashboard, &rect); // get existing rectangle
+		DestroyWindow(ctx->objDashboard); //destroy existing
+		ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), ctx->mainWindow, ds_dlg_object_dashboard);
+		ShowWindow(ctx->objDashboard, SW_SHOW);// make window visible
+		ds_position_window(ctx, ctx->objDashboard, 1, &rect); // move windows to appropriate spots - bottom or right of the current window 
 	}
 }
 
@@ -339,11 +340,11 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 				ShowWindow(ctx->attrControl, SW_SHOW);
 				ds_position_window(ctx, ctx->attrControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
-			if (!ctx->objControl)
+			if (!ctx->objDashboard)
 			{
-				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_control);
-				ShowWindow(ctx->objControl, SW_SHOW);
-				ds_position_window(ctx, ctx->objControl, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
+				ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_dashboard);
+				ShowWindow(ctx->objDashboard, SW_SHOW);
+				ds_position_window(ctx, ctx->objDashboard, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
 		}
 		InvalidateRect(hWnd, 0, 0);
@@ -393,7 +394,8 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		case ID_FILE_SAVESTATE: //ds_save_state(ctx, "C:/TEMP/ds_state.txt"); break;
 			if (ds_write_file_dialog(hWnd, ctx, 0))
 			{
-				ds_save_state(ctx, ctx->filename); // "C:/TEMP/ds_state.txt");
+				ds_state_write(ctx, ctx->filename);
+				//ds_save_state(ctx, ctx->filename); // "C:/TEMP/ds_state.txt");
 				//SetCurrentDirectory(ctx->curWorkingDir);
 			}
 			break;
@@ -433,13 +435,24 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			break;
 
 		case ID_FILE_OBJECTCONTROL:
-			if (!ctx->objControl)
+			if (!ctx->objDashboard)
 			{
-				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_control);
-				ShowWindow(ctx->objControl, SW_SHOW);
-				ds_position_window(ctx, ctx->objControl,0,0); // move windows to appropriate spots - bottom or right of the current window 
+				ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_dashboard);
+				ShowWindow(ctx->objDashboard, SW_SHOW);
+				ds_position_window(ctx, ctx->objDashboard, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
 			}
+//			else
+//			{
+//				MessageBox(ctx->mainWindow, "help", "ERROR", 0);
+//			}
 			break;
+//			if (!ctx->objControl)
+//			{
+//				ctx->objControl = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_control);
+//				ShowWindow(ctx->objControl, SW_SHOW);
+//				ds_position_window(ctx, ctx->objControl,0,0); // move windows to appropriate spots - bottom or right of the current window 
+//			}
+//			break;
 
 		case ID_FILE_OBJECTINFORMATION:
 			if (!ctx->objInfo)
@@ -447,6 +460,14 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 				ctx->objInfo = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG6), hWnd, ds_dlg_object_information);
 				ShowWindow(ctx->objInfo, SW_SHOW);
 //				ds_position_window(ctx, ctx->objInfo); // move windows to appropriate spots - bottom or right of the current window 
+			}
+			break;
+
+		case ID_FILE_INITIATESTATESEQUENCE:
+			if (!ctx->stateRecorderWin)
+			{
+				ctx->stateRecorderWin = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG9), hWnd, ds_dlg_state_recorder);
+				ShowWindow(ctx->stateRecorderWin, SW_SHOW);
 			}
 			break;
 
@@ -464,6 +485,20 @@ LONG WINAPI WindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 				ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 			}
 			break;
+//		case ID_FILE_TEMPORARY:
+//			{
+//			DialogBox(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG7), hWnd, ds_dlg_object_attributes);
+////			CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG7), hWnd, ds_dlg_object_attributes);
+//			}
+//			break;
+//		case ID_FILE_TEMP2:
+//			if(!ctx->objDashboard)
+//			{
+//				ctx->objDashboard = CreateDialog(ctx->hInstance, MAKEINTRESOURCE(IDD_DIALOG8), hWnd, ds_dlg_object_dashboard);
+//				ShowWindow(ctx->objDashboard, SW_SHOW);
+//				ds_position_window(ctx, ctx->objDashboard, 0, 0); // move windows to appropriate spots - bottom or right of the current window 
+//			}
+//			break;
 		}
 		break;
 
@@ -730,10 +765,12 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 
 	char	buffer[1024], curArg[128];
 	char	*av[64];
+	char	*error = 0;
+	int		consumed;
 	int		ac,
-			error=0,
 			nextAc,
-			badArgIndex;
+			badArgIndex,
+			status;
 
 	// make copy of the command line
 	strncpy(buffer, (char*)lpszCmdLine, 1024);
@@ -742,27 +779,45 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	ctx->ac = ac = ds_parse_lexeme(buffer, av, 64);
 	nextAc = 0;
 	curArg[0] = 0;
+	
+
+	if (!ac)
+		return 0;
 
 	ctx->errorInfo.count = 0;
-	ds_command_line(ctx, ac, av, &error, &badArgIndex, &ctx->errorInfo); // NEED TO HANDLE ERRORS
-	if (error)
+	status = _ds_cmd_line_process(ctx->cmdLineCtx, ac, av, &consumed, &error);
+	ds_object_final((void*)ctx);
+
+	if ( status && error )
 	{
 		char	buffer[128];
 		int		i;
 		buffer[0] = 0;
-		strcat(buffer, "An error in the command line was encountered at: ");
-		for (i = 0; i < ctx->errorInfo.count; ++i)
-		{
-			strcat(buffer, ctx->errorInfo.text[i]);
-			strcat(buffer, ",");
-		}
-		strcat(buffer, ">");
+		sprintf(buffer, "An error in the command line was encountered at \"%s\"", error);
+		if(status == 2)
+			strcat(buffer, " :: argument problem");
 
-		//badArgIndex = 0;
-//		sprintf(buffer, "An error in the command line was encountered at <%s><%s>", av[badArgIndex], curArg);
 		MessageBox(NULL, buffer, "Command Line Error", MB_OK);
 	}
 	return 0;
+}
+
+int checkObjWindows(DS_CTX *ctx, MSG *msg)
+{
+	DS_GEO_OBJECT	*gobj = &ctx->defInputObj;
+
+	if (gobj->attrDialog)
+		if (IsDialogMessage(gobj->attrDialog, &msg))
+			return TRUE;
+	
+	LL_SetHead(ctx->gobjectq);
+	while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+	{
+		if (gobj->attrDialog)
+			if (IsDialogMessage(gobj->attrDialog, &msg))
+				return TRUE;
+	}
+	return FALSE;
 }
 
 //-----------------------------------------------------------------------------
@@ -777,10 +832,12 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 	static DS_CTX		ctx;
 	int		method = 3; // 2;
 
+
 	ds_pre_init(&ctx); // initialize DS_CTX structure prior to command line options being processed
 
-	// process the command line
-	ds_command_line_options(&ctx, lpszCmdLine);
+	ds_build_command_line(&ctx); // build the command line options
+								 
+	ds_command_line_options(&ctx, lpszCmdLine); // process the command line to the main program
 
 	hWnd = ds_create_opengl_window(&ctx, "Display Sphere", ctx.window.start_x, ctx.window.start_y, ctx.window.width + WINDOW_SIZE_OFFSET_WIDTH, ctx.window.height + WINDOW_SIZE_OFFSET_HEIGHT);
 	if ( hWnd == NULL )
@@ -806,7 +863,10 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 	{
 		if (   !IsDialogMessage(ctx.kbdToggle, &msg)
 			&& !IsDialogMessage(ctx.attrControl, &msg)
-			&& !IsDialogMessage(ctx.objControl, &msg)
+			&& !IsDialogMessage(ctx.objDashboard, &msg)
+			&& !IsDialogMessage(ctx.stateRecorderWin, &msg)
+			&& !IsDialogMessage(ctx.statePlaybackWin, &msg)
+			&& !checkObjWindows(&ctx,&msg)
 			)
 		{
 			TranslateMessage(&msg);

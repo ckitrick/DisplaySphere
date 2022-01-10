@@ -1,0 +1,26 @@
+DisplaySphere - Unique Geometry Processing
+Version - 0.987
+Time:                            2021-08-29.09:20:44
+FILE PROCESSED:                  cube.off
+VERTICES                         #unique       4 #processed      12  #duplicates       8  #compares      21
+EDGE LENGTHS                     #unique       1 #processed      12  #duplicates      11  #compares      11
+EDGES BY UNIQUE VERTEX PAIRS     #unique       4 #processed      12  #duplicates       8  #compares      21
+TRIANGLES BY UNIQUE EDGE LENGTHS #unique       1 #processed       3  #duplicates       2  #compares       2
+TRIANGLES BY UNIQUE VERTEX ID    #unique       1 #processed       3  #duplicates       2  #compares       2
+PRECISION ZERO:                    0.00000007 (based on input data)
+Unique Vertices - ordered ( v ID X Y Z )
+v       2  -0.57735027  -0.57735027   0.57735027
+v       1  -0.57735027   0.57735027   0.57735027
+v       3   0.57735027  -0.57735027   0.57735027
+v       0   0.57735027   0.57735027   0.57735027
+Unique Edge Lengths - ordered ( el ID length )
+el      0   1.15470054
+Unique Edges by Vertex Pairs - ordered ( e ID v1 v2 elID )
+e       0      0      1      0
+e       3      0      3      0
+e       1      1      2      0
+e       2      2      3      0
+Unique Triangles by Unique Edge Lengths - ordered ( te ID el1 el2 el3 ... )
+te      0      0      0      0      0 
+Unique Triangles by Unique Vertices - ordered ( t ID teID v1 v2 v3 ... )
+t       0      0      0      1      2      3 

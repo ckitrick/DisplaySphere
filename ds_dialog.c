@@ -237,8 +237,7 @@ LRESULT CALLBACK ds_dlg_about(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lPar
 		case IDCANCEL:	EndDialog(hWndDlg, 0); break;
 		default:
 			if (HIWORD(wParam) == BN_CLICKED) { //Buttons, checkboxs, labels, static labels clicked
-				switch (LOWORD(wParam))
-				{
+				switch (LOWORD(wParam)) {
 				case IDC_STATIC104:
 					char		url[1024];
 					ds_build_url(ctx, url);
@@ -447,7 +446,6 @@ static void ds_dlg_spin_update(DS_CTX *ctx, HWND dlg, int control, int what, cha
 		SetDlgItemText(dlg, control, buffer);
 	}
 }
-
 //-----------------------------------------------------------------------------
 LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------
@@ -474,336 +472,304 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 
 	switch (Msg) {
 	case WM_INITDIALOG:
-		{
-			static char *font[5] =
-			{
-				"T10 - Times Roman 10",
-				"T24 - Times Roman 24",
-				"H10 - Helvetica 10",
-				"H12 - Helvetica 12",
-				"H18 - Helvetica 18",
-			};
-
-			for (i = 0; i < 5; ++i)
-			{
-				SendDlgItemMessage(hWndDlg, IDC_COMBO1, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
-				SendDlgItemMessage(hWndDlg, IDC_COMBO2, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
-				SendDlgItemMessage(hWndDlg, IDC_COMBO3, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)font[i]);
-			}
-
-			SendDlgItemMessage(hWndDlg, IDC_COMBO1, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
-			SendDlgItemMessage(hWndDlg, IDC_COMBO2, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
-			SendDlgItemMessage(hWndDlg, IDC_COMBO3, CB_SETDROPPEDWIDTH, (WPARAM)120, (LPARAM)0);
-		}
-		// fall thru
+	// fall thru
 	case WM_PAINT:
+	{
+		// Geometry Adjustments
+		CheckRadioButton(hWndDlg, IDC_RADIO1, IDC_RADIO3, (ctx->geomAdj.polymode[0] == 0 ? IDC_RADIO1 : (ctx->geomAdj.polymode[0] == 1 ? IDC_RADIO2 : IDC_RADIO3)));
+		CheckRadioButton(hWndDlg, IDC_RADIO4, IDC_RADIO6, (ctx->geomAdj.polymode[1] == 0 ? IDC_RADIO4 : (ctx->geomAdj.polymode[1] == 1 ? IDC_RADIO5 : IDC_RADIO6)));
+		SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->base_geometry.oneFaceFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->base_geometry.zRotFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_SETCHECK, (ctx->base_geometry.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->clrCtl.reverseColorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
+
+		// Drawing Adjustments - version 2 (Check Boxes)
+		SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_SETCHECK, (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERSPECTIVE ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK2, BM_SETCHECK, (ctx->drawAdj.normalizeFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_SETCHECK, (ctx->drawAdj.circleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_SETCHECK, (ctx->drawAdj.fogFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_SETCHECK, (ctx->drawAdj.axiiFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_SETCHECK, (ctx->drawAdj.axiiLabelFlag ? BST_CHECKED : BST_UNCHECKED), 0); // label 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_SETCHECK, (ctx->drawAdj.clipFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_SETCHECK, (ctx->drawAdj.spin.spinState ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->drawAdj.clipVisibleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_SETCHECK, (ctx->drawAdj.stereoCrossEyeFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_SETCHECK, (ctx->drawAdj.stereoFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
+		SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_SETCHECK, (ctx->drawAdj.hiResFlag ? BST_CHECKED : BST_UNCHECKED), 0); // quality 
+		sprintf(buffer, "%.4f", ctx->drawAdj.clipZIncrement); SetDlgItemText(hWndDlg, IDC_EDIT1, buffer);
+		sprintf(buffer, "%.4f", ctx->drawAdj.clipZValue); SetDlgItemText(hWndDlg, IDC_EDIT17, buffer);
+		sprintf(buffer, "%d", (int)ctx->drawAdj.spin.timerMSec);  SetDlgItemText(hWndDlg, IDC_EDIT2, buffer);
+		sprintf(buffer, "%.3f", ctx->drawAdj.spin.dx);  SetDlgItemText(hWndDlg, IDC_EDIT7, buffer);
+		sprintf(buffer, "%.3f", ctx->drawAdj.spin.dy);  SetDlgItemText(hWndDlg, IDC_EDIT8, buffer);
+		sprintf(buffer, "%.3f", ctx->drawAdj.spin.dz);  SetDlgItemText(hWndDlg, IDC_EDIT23, buffer);
+		sprintf(buffer, "%.3f", ctx->drawAdj.eyeSeparation);  SetDlgItemText(hWndDlg, IDC_EDIT25, buffer);
+		GetWindowRect(pWnd, &window);
 		{
-			// Geometry Adjustments
-			CheckRadioButton(hWndDlg, IDC_RADIO1, IDC_RADIO3, (ctx->geomAdj.polymode[0] == 0 ? IDC_RADIO1 : (ctx->geomAdj.polymode[0] == 1 ? IDC_RADIO2 : IDC_RADIO3)));
-			CheckRadioButton(hWndDlg, IDC_RADIO4, IDC_RADIO6, (ctx->geomAdj.polymode[1] == 0 ? IDC_RADIO4 : (ctx->geomAdj.polymode[1] == 1 ? IDC_RADIO5 : IDC_RADIO6)));
-			SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->base_geometry.oneFaceFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->base_geometry.zRotFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK20, BM_SETCHECK, (ctx->base_geometry.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->clrCtl.reverseColorFlag ? BST_CHECKED : BST_UNCHECKED), 0); // 
-
-			// Label settings
-			SendDlgItemMessage(hWndDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)(int)ctx->label.face.font - 4, (LPARAM)0);
-			SendDlgItemMessage(hWndDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)(int)ctx->label.edge.font - 4, (LPARAM)0);
-			SendDlgItemMessage(hWndDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)(int)ctx->label.vertex.font - 4, (LPARAM)0);
-
-			// Drawing Adjustments - version 2 (Check Boxes)
-			SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_SETCHECK, (ctx->drawAdj.projection == GEOMETRY_PROJECTION_PERPSECTIVE ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK2, BM_SETCHECK, (ctx->drawAdj.normalizeFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_SETCHECK, (ctx->drawAdj.circleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_SETCHECK, (ctx->drawAdj.fogFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_SETCHECK, (ctx->drawAdj.axiiFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK24,BM_SETCHECK, (ctx->drawAdj.axiiLabelFlag ? BST_CHECKED : BST_UNCHECKED), 0); // label 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_SETCHECK, (ctx->drawAdj.clipFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_SETCHECK, (ctx->drawAdj.spin.spinState ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->drawAdj.clipVisibleFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_SETCHECK, (ctx->drawAdj.stereoCrossEyeFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_SETCHECK, (ctx->drawAdj.stereoFlag ? BST_CHECKED : BST_UNCHECKED), 0); // normalize 
-			SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_SETCHECK, (ctx->drawAdj.hiResFlag ? BST_CHECKED : BST_UNCHECKED), 0); // quality 
-			sprintf(buffer, "%.4f", ctx->drawAdj.clipZIncrement); SetDlgItemText(hWndDlg, IDC_EDIT1, buffer);
-			sprintf(buffer, "%.4f", ctx->drawAdj.clipZValue); SetDlgItemText(hWndDlg, IDC_EDIT17, buffer);
-			sprintf(buffer, "%d", (int)ctx->drawAdj.spin.timerMSec);  SetDlgItemText(hWndDlg, IDC_EDIT2, buffer);
-			sprintf(buffer, "%.3f", ctx->drawAdj.spin.dx);  SetDlgItemText(hWndDlg, IDC_EDIT7, buffer);
-			sprintf(buffer, "%.3f", ctx->drawAdj.spin.dy);  SetDlgItemText(hWndDlg, IDC_EDIT8, buffer);
-			sprintf(buffer, "%.3f", ctx->drawAdj.spin.dz);  SetDlgItemText(hWndDlg, IDC_EDIT23, buffer);
-			sprintf(buffer, "%.3f", ctx->drawAdj.eyeSeparation);  SetDlgItemText(hWndDlg, IDC_EDIT25, buffer);
-			GetWindowRect(pWnd, &window);
-			{
-				int	w, h;
-				w = window.right - window.left - WINDOW_SIZE_OFFSET_WIDTH;
-				h = window.bottom - window.top - WINDOW_SIZE_OFFSET_HEIGHT;
-				sprintf(buffer, "%d", w);  SetDlgItemText(hWndDlg, IDC_EDIT9, buffer);
-				sprintf(buffer, "%d", h);  SetDlgItemText(hWndDlg, IDC_EDIT10, buffer);
-			}
-
-			// Color Adjustments 
-			sprintf(buffer, "%.2f", ctx->clrCtl.face.defaultColor.a);  SetDlgItemText(hWndDlg, IDC_EDIT54, buffer);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			sprintf(buffer, "%.3f", ctx->lighting.position.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
-			sprintf(buffer, "%.3f", ctx->lighting.position.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
-			sprintf(buffer, "%.3f", ctx->lighting.position.z);  SetDlgItemText(hWndDlg, IDC_EDIT22, buffer);
-
-			// Input Modifications - init
-			SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->inputTrans.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK12, BM_SETCHECK, (ctx->inputTrans.replicateFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK21, BM_SETCHECK, (ctx->inputTrans.transformFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK13, BM_SETCHECK, (ctx->inputTrans.guaFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK16, BM_SETCHECK, (ctx->inputTrans.guaResultsFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK25, BM_SETCHECK, (ctx->inputTrans.centerAndScaleFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-
-			sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.x);  SetDlgItemText(hWndDlg, IDC_EDIT11, buffer);
-			sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.y);  SetDlgItemText(hWndDlg, IDC_EDIT12, buffer);
-			sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT13, buffer);
-			sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.x);  SetDlgItemText(hWndDlg, IDC_EDIT14, buffer);
-			sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.y);  SetDlgItemText(hWndDlg, IDC_EDIT15, buffer);
-			sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT16, buffer);
-
-			// Image Capture 
-			SetDlgItemText(hWndDlg, IDC_STATIC49, ctx->captureDir); // ctx->imageCapture.directory);
-			SetDlgItemText(hWndDlg, IDC_EDIT6, ctx->png.basename);
-			sprintf(buffer, "index: %05d", ctx->png.curFrame);     
-			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);		
-			SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->png.stateSaveFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_SETCHECK, (ctx->png.bwFlag ? BST_CHECKED : BST_UNCHECKED), 0);
-			
-			// lighting information
-			SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->lighting.ambientEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->lighting.diffuseEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->lighting.specularEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
-			sprintf(buffer, "%.2f", ctx->lighting.ambientPercent);	SetDlgItemText(hWndDlg, IDC_EDIT55, buffer);
-			sprintf(buffer, "%.2f", ctx->lighting.diffusePercent);	SetDlgItemText(hWndDlg, IDC_EDIT56, buffer);
-			sprintf(buffer, "%.2f", ctx->lighting.specularPercent);	SetDlgItemText(hWndDlg, IDC_EDIT57, buffer);
-			sprintf(buffer, "%.0f", ctx->lighting.matShininess);	SetDlgItemText(hWndDlg, IDC_EDIT58, buffer);
-			sprintf(buffer, "%.0f", ctx->lighting.matSpecular);		SetDlgItemText(hWndDlg, IDC_EDIT59, buffer);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_SETCHECK, (ctx->geomAdj.cull[0] ? BST_CHECKED : BST_UNCHECKED), 0);
-			SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_SETCHECK, (ctx->geomAdj.cull[1] ? BST_CHECKED : BST_UNCHECKED), 0);
-
+			int	w, h;
+			w = window.right - window.left - WINDOW_SIZE_OFFSET_WIDTH;
+			h = window.bottom - window.top - WINDOW_SIZE_OFFSET_HEIGHT;
+			sprintf(buffer, "%d", w);  SetDlgItemText(hWndDlg, IDC_EDIT9, buffer);
+			sprintf(buffer, "%d", h);  SetDlgItemText(hWndDlg, IDC_EDIT10, buffer);
 		}
-		break;
+
+		// Color Adjustments 
+		sprintf(buffer, "%.2f", ctx->clrCtl.face.defaultColor.a);  SetDlgItemText(hWndDlg, IDC_EDIT54, buffer);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_SETCHECK, (ctx->clrCtl.useLightingFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		sprintf(buffer, "%.3f", ctx->lighting.position.x);  SetDlgItemText(hWndDlg, IDC_EDIT20, buffer);
+		sprintf(buffer, "%.3f", ctx->lighting.position.y);  SetDlgItemText(hWndDlg, IDC_EDIT21, buffer);
+		sprintf(buffer, "%.3f", ctx->lighting.position.z);  SetDlgItemText(hWndDlg, IDC_EDIT22, buffer);
+
+		// Input Modifications - init
+		SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_SETCHECK, (ctx->inputTrans.mirrorFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK12, BM_SETCHECK, (ctx->inputTrans.replicateFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK21, BM_SETCHECK, (ctx->inputTrans.transformFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK13, BM_SETCHECK, (ctx->inputTrans.guaFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK16, BM_SETCHECK, (ctx->inputTrans.guaResultsFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK25, BM_SETCHECK, (ctx->inputTrans.centerAndScaleFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+
+		sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.x);  SetDlgItemText(hWndDlg, IDC_EDIT11, buffer);
+		sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.y);  SetDlgItemText(hWndDlg, IDC_EDIT12, buffer);
+		sprintf(buffer, "%.4f", ctx->inputTrans.zAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT13, buffer);
+		sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.x);  SetDlgItemText(hWndDlg, IDC_EDIT14, buffer);
+		sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.y);  SetDlgItemText(hWndDlg, IDC_EDIT15, buffer);
+		sprintf(buffer, "%.4f", ctx->inputTrans.yAxis.z);  SetDlgItemText(hWndDlg, IDC_EDIT16, buffer);
+
+		// Image Capture 
+		SetDlgItemText(hWndDlg, IDC_STATIC49, ctx->captureDir); // ctx->imageCapture.directory);
+		SetDlgItemText(hWndDlg, IDC_EDIT6, ctx->png.basename);
+		sprintf(buffer, "index: %05d", ctx->png.curFrame);
+		SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_SETCHECK, (ctx->png.stateSaveFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_SETCHECK, (ctx->png.bwFlag ? BST_CHECKED : BST_UNCHECKED), 0);
+
+		// lighting information
+		SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_SETCHECK, (ctx->lighting.ambientEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_SETCHECK, (ctx->lighting.diffuseEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_SETCHECK, (ctx->lighting.specularEnabled ? BST_CHECKED : BST_UNCHECKED), 0);
+		sprintf(buffer, "%.2f", ctx->lighting.ambientPercent);	SetDlgItemText(hWndDlg, IDC_EDIT55, buffer);
+		sprintf(buffer, "%.2f", ctx->lighting.diffusePercent);	SetDlgItemText(hWndDlg, IDC_EDIT56, buffer);
+		sprintf(buffer, "%.2f", ctx->lighting.specularPercent);	SetDlgItemText(hWndDlg, IDC_EDIT57, buffer);
+		sprintf(buffer, "%.0f", ctx->lighting.matShininess);	SetDlgItemText(hWndDlg, IDC_EDIT58, buffer);
+		sprintf(buffer, "%.0f", ctx->lighting.matSpecular);		SetDlgItemText(hWndDlg, IDC_EDIT59, buffer);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_SETCHECK, (ctx->geomAdj.cull[0] ? BST_CHECKED : BST_UNCHECKED), 0);
+		SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_SETCHECK, (ctx->geomAdj.cull[1] ? BST_CHECKED : BST_UNCHECKED), 0);
+
+	}
+	break;
 
 	case WM_COMMAND:
-		{
-			UINT uiID = LOWORD(wParam);
-			UINT uiCode = HIWORD(wParam);   // spin_update ( ctx, what, buffer )  what = 0,1,2
+	{
+		UINT uiID = LOWORD(wParam);
+		UINT uiCode = HIWORD(wParam);   // spin_update ( ctx, what, buffer )  what = 0,1,2
 
-			switch (uiCode){
-			case EN_KILLFOCUS:
-				switch (LOWORD(wParam)) {
-				case IDC_EDIT1:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT1,  buffer, (void*)&ctx->drawAdj.clipZIncrement, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT2:  ds_dlg_spin_update( ctx, hWndDlg, IDC_EDIT2, 3, buffer);
-				case IDC_EDIT3:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT3,  buffer, (void*)&ctx->eAttr.width , 1, 3, 0, 0, 0); break;
-				case IDC_EDIT4:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT4,  buffer, (void*)&ctx->eAttr.height, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT5:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT5,  buffer, (void*)&ctx->eAttr.offset, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT6:	 GetDlgItemText(hWndDlg, IDC_EDIT6, buffer, 256);  strcpy(ctx->png.basename, buffer); break;
-				case IDC_EDIT7:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT7, 0, buffer);
-				case IDC_EDIT8:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT8, 1, buffer);
-				case IDC_EDIT11: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT11, buffer, (void*)&ctx->inputTrans.zAxis.x, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT12: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT12, buffer, (void*)&ctx->inputTrans.zAxis.y, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT13: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT13, buffer, (void*)&ctx->inputTrans.zAxis.z, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT14: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT14, buffer, (void*)&ctx->inputTrans.yAxis.x, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT15: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT15, buffer, (void*)&ctx->inputTrans.yAxis.y, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT16: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT16, buffer, (void*)&ctx->inputTrans.yAxis.z, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT17: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT17, buffer, (void*)&ctx->drawAdj.clipZValue, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->lighting.position.x, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->lighting.position.y, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->lighting.position.z, 1, 3, 0, 0, 0); break;
-				case IDC_EDIT23:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT23, 2, buffer);
-				case IDC_EDIT24: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT24, buffer, (void*)&ctx->renderVertex.scale, 1, 4, 0, 0, 0); break;
-				case IDC_EDIT25: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT25, buffer, (void*)&ctx->drawAdj.eyeSeparation, 0, 3, 0, 0, 0); break;
-				case IDC_EDIT54: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT54, buffer, (void*)&ctx->clrCtl.face.defaultColor.a, 0, 2, 1, 0.0, 1.0); break;
-//				void ds_edit_text_update(HWND pWnd, HWND dlg, int control, char *buffer, void *vPtr, int doubleFlag, int nDigits, int clamp, double min, double max)
-				case IDC_EDIT55: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT55, buffer, (void*)&ctx->lighting.ambientPercent,  1, 2, 1, 0.0,   1.0); break;
-				case IDC_EDIT56: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT56, buffer, (void*)&ctx->lighting.diffusePercent,  1, 2, 1, 0.0,   1.0); break;
-				case IDC_EDIT57: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT57, buffer, (void*)&ctx->lighting.specularPercent, 1, 2, 1, 0.0,   1.0); break;
-//				case IDC_EDIT60: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT60, buffer, (void*)&ctx->lighting.cutoffAngle,     1, 1, 1, 0.0,  90.0); break;
-				case IDC_EDIT59: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT59, buffer, (void*)&ctx->lighting.matSpecular,     1, 2, 1, 0.0,   1.0); break;
-				case IDC_EDIT58: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT58, buffer, (void*)&ctx->lighting.matShininess,    1, 1, 1, 0.0, 128.0); break;
-				}
-				break;
-			}
-		}
-		if (HIWORD(wParam) == CBN_SELCHANGE)
-		{
-			i = SendDlgItemMessage(hWndDlg, LOWORD(wParam), (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+		switch (uiCode) {
+		case EN_KILLFOCUS:
 			switch (LOWORD(wParam)) {
-			case IDC_COMBO1: label = &ctx->label.face; break;
-			case IDC_COMBO2: label = &ctx->label.edge; break;
-			case IDC_COMBO3: label = &ctx->label.vertex; break;
+			case IDC_EDIT1:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT1, buffer, (void*)&ctx->drawAdj.clipZIncrement, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT2:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT2, 3, buffer);
+//			case IDC_EDIT3:  ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT3, buffer, (void*)&ctx->eAttr.width, 1, 3, 0, 0, 0); break;
+//			case IDC_EDIT4:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT4, buffer, (void*)&ctx->eAttr.height, 1, 3, 0, 0, 0); break;
+//			case IDC_EDIT5:	 ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT5, buffer, (void*)&ctx->eAttr.offset, 1, 3, 0, 0, 0); break;
+			case IDC_EDIT6:	 GetDlgItemText(hWndDlg, IDC_EDIT6, buffer, 256);  strcpy(ctx->png.basename, buffer); break;
+			case IDC_EDIT7:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT7, 0, buffer);
+			case IDC_EDIT8:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT8, 1, buffer);
+			case IDC_EDIT11: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT11, buffer, (void*)&ctx->inputTrans.zAxis.x, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT12: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT12, buffer, (void*)&ctx->inputTrans.zAxis.y, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT13: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT13, buffer, (void*)&ctx->inputTrans.zAxis.z, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT14: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT14, buffer, (void*)&ctx->inputTrans.yAxis.x, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT15: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT15, buffer, (void*)&ctx->inputTrans.yAxis.y, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT16: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT16, buffer, (void*)&ctx->inputTrans.yAxis.z, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT17: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT17, buffer, (void*)&ctx->drawAdj.clipZValue, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT20: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT20, buffer, (void*)&ctx->lighting.position.x, 1, 3, 0, 0, 0); break;
+			case IDC_EDIT21: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT21, buffer, (void*)&ctx->lighting.position.y, 1, 3, 0, 0, 0); break;
+			case IDC_EDIT22: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT22, buffer, (void*)&ctx->lighting.position.z, 1, 3, 0, 0, 0); break;
+			case IDC_EDIT23:  ds_dlg_spin_update(ctx, hWndDlg, IDC_EDIT23, 2, buffer);
+			case IDC_EDIT24: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT24, buffer, (void*)&ctx->renderVertex.scale, 1, 4, 0, 0, 0); break;
+			case IDC_EDIT25: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT25, buffer, (void*)&ctx->drawAdj.eyeSeparation, 0, 3, 0, 0, 0); break;
+			case IDC_EDIT54: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT54, buffer, (void*)&ctx->clrCtl.face.defaultColor.a, 0, 2, 1, 0.0, 1.0); break;
+				//				void ds_edit_text_update(HWND pWnd, HWND dlg, int control, char *buffer, void *vPtr, int doubleFlag, int nDigits, int clamp, double min, double max)
+			case IDC_EDIT55: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT55, buffer, (void*)&ctx->lighting.ambientPercent, 1, 2, 1, 0.0, 1.0); break;
+			case IDC_EDIT56: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT56, buffer, (void*)&ctx->lighting.diffusePercent, 1, 2, 1, 0.0, 1.0); break;
+			case IDC_EDIT57: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT57, buffer, (void*)&ctx->lighting.specularPercent, 1, 2, 1, 0.0, 1.0); break;
+				//				case IDC_EDIT60: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT60, buffer, (void*)&ctx->lighting.cutoffAngle,     1, 1, 1, 0.0,  90.0); break;
+			case IDC_EDIT59: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT59, buffer, (void*)&ctx->lighting.matSpecular, 1, 2, 1, 0.0, 1.0); break;
+			case IDC_EDIT58: ds_edit_text_update(pWnd, hWndDlg, IDC_EDIT58, buffer, (void*)&ctx->lighting.matShininess, 1, 1, 1, 0.0, 128.0); break;
 			}
-			if (label)
-			{
-				switch (i) {
-				case 0:	label->font = GLUT_BITMAP_TIMES_ROMAN_10; break;
-				case 1:	label->font = GLUT_BITMAP_TIMES_ROMAN_24; break;
-				case 2:	label->font = GLUT_BITMAP_HELVETICA_10;	  break;
-				case 3:	label->font = GLUT_BITMAP_HELVETICA_12;	  break;
-				case 4:	label->font = GLUT_BITMAP_HELVETICA_18;	  break;
-				}
-				ds_label_update(label);
-				InvalidateRect(pWnd, 0, 0);
-			}
+			break;
 		}
-		switch (wParam) { // on command 
-		case IDC_RADIO1: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO1, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;//; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO2: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO2, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO3: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO3, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO4: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO4, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO5: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO5, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE  : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO6: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO6, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
+	}
+	switch (wParam) { // on command 
+	case IDC_RADIO1: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO1, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;//; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_RADIO2: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO2, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_RADIO3: ctx->geomAdj.polymode[0] = SendDlgItemMessage(hWndDlg, IDC_RADIO3, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_RADIO4: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO4, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_FILL : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_RADIO5: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO5, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_LINE : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_RADIO6: ctx->geomAdj.polymode[1] = SendDlgItemMessage(hWndDlg, IDC_RADIO6, BM_GETCHECK, 0, 0) ? GEOMETRY_POLYMODE_POINT : GEOMETRY_POLYMODE_FILL; InvalidateRect(pWnd, 0, 0); break;
 
-		case IDC_RADIO21: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO21, BM_GETCHECK, 1, 0) ? 0 : 1; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_RADIO22: ctx->eAttr.type = SendDlgItemMessage(hWndDlg, IDC_RADIO22, BM_GETCHECK, 1, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.face.defaultColor); break;
+	case IDC_BUTTON5: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.bkgClear); break;
 
-		case IDC_BUTTON4: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.face.defaultColor); break;
-		case IDC_BUTTON5: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->clrCtl.bkgClear); break;
-
-		case IDC_CHECK1: ctx->drawAdj.projection = SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_GETCHECK, 0, 0) ? GEOMETRY_PROJECTION_PERPSECTIVE : GEOMETRY_PROJECTION_ORTHOGRAPHIC; ds_reshape(pWnd, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK2: ctx->drawAdj.normalizeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK2, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK3: ctx->drawAdj.circleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK4: ctx->drawAdj.fogFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK5: ctx->drawAdj.axiiFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK24: ctx->drawAdj.axiiLabelFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK6: ctx->drawAdj.clipFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK7: ctx->drawAdj.spin.spinState = SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_GETCHECK, 0, 0) ? ROTATE : 0; InvalidateRect(pWnd, 0, 0); 
-			if (!ctx->drawAdj.spin.spinState ) KillTimer(pWnd, 0);
-			else SetTimer(pWnd, 0, (int)ctx->drawAdj.spin.timerMSec, 0);
-			break; 
-		case IDC_CHECK8:  ctx->inputTrans.mirrorFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK9:  ctx->drawAdj.stereoCrossEyeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_GETCHECK, 0, 0) ? 1 : 0; ctx->drawAdj.stereoFlag ? InvalidateRect(pWnd, 0, 0) : 0; break;
-
-		case IDC_CHECK10:  ctx->png.stateSaveFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK76:  ctx->png.bwFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-
-		case IDC_CHECK12: ctx->inputTrans.replicateFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK12, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK21: ctx->inputTrans.transformFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK21, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK13: ctx->inputTrans.guaFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK13, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK16: ctx->inputTrans.guaResultsFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK16, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-		case IDC_CHECK25: ctx->inputTrans.centerAndScaleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK25, BM_GETCHECK, 0, 0) ? 1 : 0; break;
-
-		case IDC_CHECK14: ctx->drawAdj.stereoFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0);ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); break;
-		case IDC_CHECK15: ctx->clrCtl.useLightingFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK17: ctx->lighting.ambientEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK18: ctx->lighting.diffuseEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK19: ctx->lighting.specularEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK43:
-			ctx->drawAdj.hiResFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_GETCHECK, 0, 0) ? 1 : 0; 
-			if (ctx->drawAdj.hiResFlag)
-			{
-				ctx->drawAdj.quality = &ctx->drawAdj.hiRes;
-				ctx->renderVertex.vtxObj = &ctx->renderVertex.vtxObjHiRes;
-			}
-			else
-			{
-				ctx->drawAdj.quality = &ctx->drawAdj.loRes;
-				ctx->renderVertex.vtxObj = &ctx->renderVertex.vtxObjLoRes;
-			}
-			InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK77: ctx->geomAdj.cull[0] = SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-		case IDC_CHECK78: ctx->geomAdj.cull[1] = SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
-
-		case IDCANCEL:
-			DestroyWindow(hWndDlg);
-			break;
-
-		case IDC_BUTTON1: ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0; ctx->rot[0] = ctx->rot[1] = ctx->rot[2] = 0; mtx_set_unity(&ctx->matrix);ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break; // reset rotation/translation
-		case IDC_BUTTON7: ds_capture_image(ctx->mainWindow); InvalidateRect(hWndDlg, 0, 0);
-			sprintf(buffer, "index: %05d", ctx->png.curFrame); SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);break;
-
-		case IDC_BUTTON6:
-			{
-				//Default folder set
-				TCHAR szDir[MAX_PATH];
-				BROWSEINFO bInfo;
-				bInfo.hwndOwner = hWndDlg;
-				bInfo.pidlRoot = NULL;
-				bInfo.pszDisplayName = szDir; // Address of a buffer to receive the display name of the folder selected by the user
-				bInfo.lpszTitle = "Select image capture folder"; // Title of the dialog
-				bInfo.lParam = 0;
-				bInfo.ulFlags = 0;
-				bInfo.lpfn = NULL;
-				bInfo.iImage = -1;
-
-				LPITEMIDLIST lpItem = SHBrowseForFolder(&bInfo);
-				if (lpItem != NULL)
-				{
-					SHGetPathFromIDList(lpItem, szDir);
-					SetDlgItemText(hWndDlg, IDC_STATIC49, szDir);
-//					strcpy(ctx->curWorkingDir, szDir); // save new current working directory
-					strcpy(ctx->captureDir, szDir); // save new current working directory
-					ds_build_dsf(&ctx->capDir, ctx->captureDir, 0); // update capture directory
-//					SetCurrentDirectory(szDir);
-				}
-			}
-			break;
-
-		case IDC_BUTTON8:
-			{
-				GetWindowRect(pWnd, &window);
-				int  w, h;
-				GetDlgItemText(hWndDlg, IDC_EDIT9, buffer, 256); sscanf(buffer, "%d", &w);
-				GetDlgItemText(hWndDlg, IDC_EDIT10, buffer, 256); sscanf(buffer, "%d", &h);
-				w += WINDOW_SIZE_OFFSET_WIDTH;
-				h += WINDOW_SIZE_OFFSET_HEIGHT;
-				MoveWindow(pWnd, window.left, window.top, w, h, 1);// need to add extra
-			}
-			break;
-
-		case IDC_BUTTON9: // reset frame counter
-			ctx->png.curFrame = 0;
-			sprintf(buffer, "index: %05d", ctx->png.curFrame);
-			SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);
-			break;
-
-		case IDC_BUTTON13: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.face.color); break;
-		case IDC_BUTTON14: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.edge.color); break;
-		case IDC_BUTTON15: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.vertex.color); break;
-		}
-		if (clrUpdate)
+	case IDC_CHECK1: ctx->drawAdj.projection = SendDlgItemMessage(hWndDlg, IDC_CHECK1, BM_GETCHECK, 0, 0) ? GEOMETRY_PROJECTION_PERSPECTIVE : GEOMETRY_PROJECTION_ORTHOGRAPHIC; ds_reshape(pWnd, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK2: ctx->drawAdj.normalizeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK2, BM_GETCHECK, 0, 0) ? 1 : 0; 
 		{
-			clrUpdate = 0;
-			++ctx->clrCtl.updateFlag;
-			InvalidateRect(ctx->mainWindow, 0, 0);
-			LPDRAWITEMSTRUCT lpdis = (DRAWITEMSTRUCT*)lParam;
-			InvalidateRect((HWND)lParam, 0, 0);
+			DS_GEO_OBJECT	*gobj;
+			LL_SetHead(ctx->gobjectq);
+			while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+			{
+				ds_face_update(ctx, gobj);
+				ds_edge_update(ctx, gobj);
+			}
 		}
+		// update all objects
+		InvalidateRect(pWnd, 0, 0); 
 		break;
+	case IDC_CHECK3: ctx->drawAdj.circleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK3, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK4: ctx->drawAdj.fogFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK4, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK5: ctx->drawAdj.axiiFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK5, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK24: ctx->drawAdj.axiiLabelFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK24, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK6: ctx->drawAdj.clipFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK6, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK7: ctx->drawAdj.spin.spinState = SendDlgItemMessage(hWndDlg, IDC_CHECK7, BM_GETCHECK, 0, 0) ? ROTATE : 0; InvalidateRect(pWnd, 0, 0);
+		if (!ctx->drawAdj.spin.spinState) KillTimer(pWnd, 0);
+		else SetTimer(pWnd, 0, (int)ctx->drawAdj.spin.timerMSec, 0);
+		break;
+	case IDC_CHECK8:  ctx->inputTrans.mirrorFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK8, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK9:  ctx->drawAdj.stereoCrossEyeFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK9, BM_GETCHECK, 0, 0) ? 1 : 0; ctx->drawAdj.stereoFlag ? InvalidateRect(pWnd, 0, 0) : 0; break;
+
+	case IDC_CHECK10:  ctx->png.stateSaveFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK10, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK76:  ctx->png.bwFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK76, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+
+	case IDC_CHECK12: ctx->inputTrans.replicateFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK12, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK21: ctx->inputTrans.transformFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK21, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK13: ctx->inputTrans.guaFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK13, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK16: ctx->inputTrans.guaResultsFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK16, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+	case IDC_CHECK25: ctx->inputTrans.centerAndScaleFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK25, BM_GETCHECK, 0, 0) ? 1 : 0; break;
+
+	case IDC_CHECK14: ctx->drawAdj.stereoFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK14, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); break;
+	case IDC_CHECK15: ctx->clrCtl.useLightingFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK15, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK17: ctx->lighting.ambientEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK17, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK18: ctx->lighting.diffuseEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK18, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK19: ctx->lighting.specularEnabled = SendDlgItemMessage(hWndDlg, IDC_CHECK19, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK43:
+		ctx->drawAdj.hiResFlag = SendDlgItemMessage(hWndDlg, IDC_CHECK43, BM_GETCHECK, 0, 0) ? 1 : 0;
+		if (ctx->drawAdj.hiResFlag)
+		{
+			ctx->drawAdj.quality = &ctx->drawAdj.hiRes;
+			ctx->renderVertex.vtxObj = &ctx->renderVertex.vtxObjHiRes;
+		}
+		else
+		{
+			ctx->drawAdj.quality = &ctx->drawAdj.loRes;
+			ctx->renderVertex.vtxObj = &ctx->renderVertex.vtxObjLoRes;
+		}
+		{
+			DS_GEO_OBJECT	*gobj;
+			LL_SetHead(ctx->gobjectq);
+			while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
+			{
+				ds_face_update(ctx, gobj);
+				ds_edge_update(ctx, gobj);
+			}
+		}
+		InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK77: ctx->geomAdj.cull[0] = SendDlgItemMessage(hWndDlg, IDC_CHECK77, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+	case IDC_CHECK78: ctx->geomAdj.cull[1] = SendDlgItemMessage(hWndDlg, IDC_CHECK78, BM_GETCHECK, 0, 0) ? 1 : 0; InvalidateRect(pWnd, 0, 0); break;
+
+	case IDCANCEL:
+		DestroyWindow(hWndDlg);
+		break;
+
+	case IDC_BUTTON1: ctx->trans[0] = ctx->trans[1] = ctx->trans[2] = 0; ctx->rot[0] = ctx->rot[1] = ctx->rot[2] = 0; mtx_set_unity(&ctx->matrix); ds_reshape(ctx->mainWindow, ctx->window.width, ctx->window.height); InvalidateRect(pWnd, 0, 0); break; // reset rotation/translation
+	case IDC_BUTTON7: ds_capture_image(ctx->mainWindow); InvalidateRect(hWndDlg, 0, 0);
+		sprintf(buffer, "index: %05d", ctx->png.curFrame); SetDlgItemText(hWndDlg, IDC_STATIC51, buffer); break;
+
+	case IDC_BUTTON6:
+	{
+		//Default folder set
+		TCHAR szDir[MAX_PATH];
+		BROWSEINFO bInfo;
+		bInfo.hwndOwner = hWndDlg;
+		bInfo.pidlRoot = NULL;
+		bInfo.pszDisplayName = szDir; // Address of a buffer to receive the display name of the folder selected by the user
+		bInfo.lpszTitle = "Select image capture folder"; // Title of the dialog
+		bInfo.lParam = 0;
+		bInfo.ulFlags = 0;
+		bInfo.lpfn = NULL;
+		bInfo.iImage = -1;
+
+		LPITEMIDLIST lpItem = SHBrowseForFolder(&bInfo);
+		if (lpItem != NULL)
+		{
+			SHGetPathFromIDList(lpItem, szDir);
+			SetDlgItemText(hWndDlg, IDC_STATIC49, szDir);
+			//					strcpy(ctx->curWorkingDir, szDir); // save new current working directory
+			strcpy(ctx->captureDir, szDir); // save new current working directory
+			ds_build_dsf(&ctx->capDir, ctx->captureDir, 0); // update capture directory
+															//					SetCurrentDirectory(szDir);
+		}
+	}
+	break;
+
+	case IDC_BUTTON8:
+	{
+		GetWindowRect(pWnd, &window);
+		int  w, h;
+		GetDlgItemText(hWndDlg, IDC_EDIT9, buffer, 256); sscanf(buffer, "%d", &w);
+		GetDlgItemText(hWndDlg, IDC_EDIT10, buffer, 256); sscanf(buffer, "%d", &h);
+		w += WINDOW_SIZE_OFFSET_WIDTH;
+		h += WINDOW_SIZE_OFFSET_HEIGHT;
+		MoveWindow(pWnd, window.left, window.top, w, h, 1);// need to add extra
+	}
+	break;
+
+	case IDC_BUTTON9: // reset frame counter
+		ctx->png.curFrame = 0;
+		sprintf(buffer, "index: %05d", ctx->png.curFrame);
+		SetDlgItemText(hWndDlg, IDC_STATIC51, buffer);
+		break;
+
+//	case IDC_BUTTON13: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.face.color); break;
+//	case IDC_BUTTON14: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.edge.color); break;
+//	case IDC_BUTTON15: clrUpdate = ds_general_color_dialog(hWndDlg, ctx, &ctx->label.vertex.color); break;
+	}
+	if (clrUpdate)
+	{
+		clrUpdate = 0;
+		++ctx->clrCtl.updateFlag;
+		InvalidateRect(ctx->mainWindow, 0, 0);
+		LPDRAWITEMSTRUCT lpdis = (DRAWITEMSTRUCT*)lParam;
+		InvalidateRect((HWND)lParam, 0, 0);
+	}
+	break;
 
 	case WM_DRAWITEM: // owner drawn 
-		{
-			LPDRAWITEMSTRUCT	lpdis = (DRAWITEMSTRUCT*)lParam;
-			RECT				lpr;
-			HBRUSH				hColorBrush;
-			DS_COLOR			*clr;
-			int					flag = 0;
+	{
+		LPDRAWITEMSTRUCT	lpdis = (DRAWITEMSTRUCT*)lParam;
+		RECT				lpr;
+		HBRUSH				hColorBrush;
+		DS_COLOR			*clr;
+		int					flag = 0;
 
-			switch ((UINT)wParam) {
-			case IDC_BUTTON2:  flag = 1;  clr = &ctx->clrCtl.line.override;			break;
-			case IDC_BUTTON3:  flag = 1;  clr = &ctx->clrCtl.face.override;			break;
-			case IDC_BUTTON4:  flag = 1;  clr = &ctx->clrCtl.face.defaultColor;		break;
-			case IDC_BUTTON5:  flag = 1;  clr = &ctx->clrCtl.bkgClear;				break;
-			case IDC_BUTTON12: flag = 1;  clr = &ctx->renderVertex.clr;				break;
-			case IDC_BUTTON13: flag = 1;  clr = &ctx->label.face.color;				break;
-			case IDC_BUTTON14: flag = 1;  clr = &ctx->label.edge.color;				break;
-			case IDC_BUTTON15: flag = 1;  clr = &ctx->label.vertex.color;			break;
-			}
-			if (flag)
-			{
-				hColorBrush = CreateSolidBrush(RGB((unsigned int)(clr->r * 255), (unsigned int)(clr->g * 255), (unsigned int)(clr->b * 255)));
-				GetWindowRect(lpdis->hwndItem, &lpr);
-				// convert to local coordinates
-				lpr.right = lpr.right - lpr.left;
-				lpr.left = 0;
-				lpr.bottom = lpr.bottom - lpr.top;
-				lpr.top = 0;
-				FillRect(lpdis->hDC, &lpr, hColorBrush);
-//				return TRUE;
-			}
+		switch ((UINT)wParam) {
+		case IDC_BUTTON2:  flag = 1;  clr = &ctx->clrCtl.line.override;			break;
+		case IDC_BUTTON3:  flag = 1;  clr = &ctx->clrCtl.face.override;			break;
+		case IDC_BUTTON4:  flag = 1;  clr = &ctx->clrCtl.face.defaultColor;		break;
+		case IDC_BUTTON5:  flag = 1;  clr = &ctx->clrCtl.bkgClear;				break;
+		case IDC_BUTTON12: flag = 1;  clr = &ctx->renderVertex.clr;				break;
 		}
-		break;
+		if (flag)
+		{
+			hColorBrush = CreateSolidBrush(RGB((unsigned int)(clr->r * 255), (unsigned int)(clr->g * 255), (unsigned int)(clr->b * 255)));
+			GetWindowRect(lpdis->hwndItem, &lpr);
+			// convert to local coordinates
+			lpr.right = lpr.right - lpr.left;
+			lpr.left = 0;
+			lpr.bottom = lpr.bottom - lpr.top;
+			lpr.top = 0;
+			FillRect(lpdis->hDC, &lpr, hColorBrush);
+			//				return TRUE;
+		}
+	}
+	break;
 
 	case WM_DESTROY:
 	case WM_CLOSE:
@@ -817,6 +783,7 @@ LRESULT CALLBACK ds_dlg_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM
 
 	return FALSE; // FALSE;
 }
+
 //-----------------------------------------------------------------------------
 char *ds_name_start(char *name)
 //-----------------------------------------------------------------------------
@@ -1150,4 +1117,153 @@ LRESULT CALLBACK _HyperlinkProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 	}
 
 	return CallWindowProc(pfnOrigProc, hwnd, message, wParam, lParam);
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK ds_dlg_object_attributes(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam, DS_GEO_OBJECT *geo)
+//-----------------------------------------------------------------------------
+{
+	HWND				pWnd, lWnd;
+	DS_CTX					*ctx;
+	int					clrUpdate = 0;
+	int					i;
+	static LVCOLUMN		column[6];
+	static LVITEM		item;
+	char				temp[256];
+	DS_GEO_OBJECT		*gobj;
+
+	pWnd = GetWindow(hWndDlg, GW_OWNER);
+	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
+	lWnd = GetDlgItem(hWndDlg, IDC_LIST2);
+
+	switch (Msg) {
+	case WM_INITDIALOG:
+		// Initialize all the controls
+
+		break;
+
+	case 12:
+		break;
+	case WM_USER + 1000:
+		break;
+
+	case WM_COMMAND:
+		switch (wParam)
+		{
+		case IDOK:
+//			ctx->objInfo = 0;
+			DestroyWindow(hWndDlg);
+			InvalidateRect(pWnd, 0, 0);
+		case IDCANCEL:
+			// restore information to original 
+//			ctx->objInfo = 0;
+			DestroyWindow(hWndDlg);
+		}
+		break;
+
+	case WM_QUIT:
+	case WM_DESTROY:
+	case WM_CLOSE:
+		if (ctx->objInfo)
+		{
+			ctx->objInfo = 0;
+			DestroyWindow(hWndDlg);
+		}
+		break;
+	}
+
+	return FALSE;
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK ds_dlg_state_recorder(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+{
+	HWND				pWnd;
+	DS_CTX				*ctx;
+	DS_GEO_OBJECT		*gobj;
+
+	pWnd = GetWindow(hWndDlg, GW_OWNER);
+	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
+
+	switch (Msg) {
+	case WM_INITDIALOG:
+		// Initialize all the controls
+		break;
+
+	case WM_COMMAND:
+		switch (wParam)
+		{
+		case IDOK:
+			DestroyWindow(hWndDlg);
+			InvalidateRect(pWnd, 0, 0);
+			break;
+		case IDCANCEL:
+			// restore information to original 
+			DestroyWindow(hWndDlg);
+			break;
+		}
+		break;
+
+	case WM_QUIT:
+	case WM_DESTROY:
+	case WM_CLOSE:
+		if (ctx->stateRecorderWin)
+		{
+			ctx->stateRecorderWin = 0;
+			DestroyWindow(hWndDlg);
+		}
+		break;
+	}
+
+	return FALSE;
+}
+
+//-----------------------------------------------------------------------------
+LRESULT CALLBACK ds_dlg_state_playback(HWND hWndDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
+//-----------------------------------------------------------------------------
+{
+	HWND				pWnd;
+	DS_CTX				*ctx;
+	DS_GEO_OBJECT		*gobj;
+
+	pWnd = GetWindow(hWndDlg, GW_OWNER);
+	ctx = (DS_CTX*)GetWindowLong(pWnd, GWL_USERDATA);
+
+	switch (Msg) {
+	case WM_INITDIALOG:
+		SetDlgItemText(hWndDlg, IDC_EDIT1, ctx->stateRead.description);
+		break;
+
+	case WM_COMMAND:
+		switch (wParam)
+		{
+		case IDOK:
+			DestroyWindow(hWndDlg);
+			InvalidateRect(pWnd, 0, 0);
+			break;
+		case IDCANCEL:
+			// restore information to original 
+			DestroyWindow(hWndDlg);
+			break;
+		case IDC_BUTTON1:
+			ds_process_restore_file(ctx, ctx->stateRead.filename);
+			break;
+		case IDC_BUTTON16:
+			break;
+		}
+		break;
+
+	case WM_QUIT:
+	case WM_DESTROY:
+	case WM_CLOSE:
+		if (ctx->statePlaybackWin)
+		{
+			ctx->statePlaybackWin = 0;
+			DestroyWindow(hWndDlg);
+		}
+		break;
+	}
+
+	return FALSE;
 }
