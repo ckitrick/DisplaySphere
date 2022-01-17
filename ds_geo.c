@@ -424,6 +424,7 @@ int ds_render_edge(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_POINT *a, GUT_POI
 		// set up 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
+//	mid.x -= offsetVec.i * eAttr->heighta
 	if (eAttr->offset.enable && eAttr->offset.factor != 0.0)
 	{
 		offset = ctx->eAttr.maxLength * eAttr->offset.factor;

@@ -1832,23 +1832,25 @@ void ds_edge_draw(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_EDGE *edge, DS_COLOR *clr
 		}
 		else if (ctx->eAttr.height != 0.0)
 		{
-			ds_render_edge(ctx, &gobj->eAttr, &gobj->vtx[edge->vtx[0]], &gobj->vtx[edge->vtx[1]], clr);
-//			static int	i, j, k, l, m;
-//			int			nSeg = 4;
-//
-//			for (i = 0, j = nSeg; i < nSeg; ++i, ++j)
-//			{
-//				glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
-//				glNormal3f((float)edge->draw.n[i % nSeg].i, (float)edge->draw.n[i % nSeg].j, (float)edge->draw.n[i % nSeg].k);
-//				glVertex3f((float)edge->draw.v[i].x, (float)edge->draw.v[i].y, (float)edge->draw.v[i].z);
-//				glVertex3f((float)edge->draw.v[j].x, (float)edge->draw.v[j].y, (float)edge->draw.v[j].z);
-//				k = ( j + 1 ) % nSeg + nSeg;
-//				l = (i + 1) % nSeg;
-//				glVertex3f((float)edge->draw.v[k].x, (float)edge->draw.v[k].y, (float)edge->draw.v[k].z);
-//				glVertex3f((float)edge->draw.v[k].x, (float)edge->draw.v[k].y, (float)edge->draw.v[k].z);
-//				glVertex3f((float)edge->draw.v[l].x, (float)edge->draw.v[l].y, (float)edge->draw.v[l].z);
-//				glVertex3f((float)edge->draw.v[i].x, (float)edge->draw.v[i].y, (float)edge->draw.v[i].z);
-//			}
+//			ds_render_edge(ctx, &gobj->eAttr, &gobj->vtx[edge->vtx[0]], &gobj->vtx[edge->vtx[1]], clr);
+			static int	i, j, k, l, m;
+			int			nSeg = 4;
+
+			glBegin(GL_TRIANGLES);
+			for (i = 0, j = nSeg; i < nSeg; ++i, ++j)
+			{
+				glColor3f((float)clr->r, (float)clr->g, (float)clr->b);
+				glNormal3f((float)edge->draw.n[i % nSeg].i, (float)edge->draw.n[i % nSeg].j, (float)edge->draw.n[i % nSeg].k);
+				glVertex3f((float)edge->draw.v[i].x, (float)edge->draw.v[i].y, (float)edge->draw.v[i].z);
+				glVertex3f((float)edge->draw.v[j].x, (float)edge->draw.v[j].y, (float)edge->draw.v[j].z);
+				k = ( j + 1 ) % nSeg + nSeg;
+				l = (i + 1) % nSeg;
+				glVertex3f((float)edge->draw.v[k].x, (float)edge->draw.v[k].y, (float)edge->draw.v[k].z);
+				glVertex3f((float)edge->draw.v[k].x, (float)edge->draw.v[k].y, (float)edge->draw.v[k].z);
+				glVertex3f((float)edge->draw.v[l].x, (float)edge->draw.v[l].y, (float)edge->draw.v[l].z);
+				glVertex3f((float)edge->draw.v[i].x, (float)edge->draw.v[i].y, (float)edge->draw.v[i].z);
+			}
+			glEnd();
 		}
 	}
 	else
@@ -1928,10 +1930,18 @@ ds_find_great_circle_matrix(DS_CTX *ctx, GUT_POINT *p, GUT_VECTOR *n, double *m,
 
 	if (i == 1 && j == 0 && k == 0)
 	{
-		x.i = 0, x.j = 1, x.k = 0;
-		y.i = 0, y.j = 0, y.k = 1;
-		z.i = 1, z.j = 0, z.k = 0;
-
+		if (nn.i > 0)
+		{
+			x.i = 0, x.j = 1, x.k = 0;
+			y.i = 0, y.j = 0, y.k = 1;
+			z.i = 1, z.j = 0, z.k = 0;
+		}
+		else
+		{
+			x.i = 0, x.j = 0, x.k = -1;
+			y.i = 0, y.j = -1, y.k = 0;
+			z.i = -1, z.j = 0, z.k = 0;
+		}
 	}
 	else if (i == -1 && j == 0 && k == 0)
 	{
@@ -2028,8 +2038,9 @@ ds_gl_render_great_circle(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_COLOR *clr, GUT_P
 	// geometry of circle belongs to object (one copy)
 	// only generate the data once
 	//
-	static GUT_POINT	v[720], vtx;
+	static GUT_POINT	v[720], vtx, origin = { 0,0,0,1 };
 	static GUT_VECTOR	n[720], nml;
+	GUT_PLANE			pl;
 	double				depth1 = gobj->fAttr.orthodrome.depth1, depth2 = gobj->fAttr.orthodrome.depth2, height = gobj->fAttr.orthodrome.height, ainc, h;
 	int					i, j, k, l, kk, ll, kbase, lbase, q; //, nseg, NSEG
 	int					nseg = 5, NSEG = 144;
@@ -2049,6 +2060,26 @@ ds_gl_render_great_circle(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_COLOR *clr, GUT_P
 		vtx.y += nml.j * gobj->fAttr.offset.factor;
 		vtx.z += nml.k * gobj->fAttr.offset.factor;
 	}
+	// determine plane equation at vertex with given normal
+	gut_plane_from_point_normal(&vtx, &nml, &pl);
+
+	// determine the point on the plane closest to the origin
+	// it may be different than the user provided point
+	gut_find_point_plane_intersection(&pl, &origin, &v[0]);
+	// copy back corrected vertex at center of circle
+	vtx = v[0];
+
+	// determine plane equation at vertex with given normal
+	ds_find_great_circle_matrix(ctx, &vtx, &nml, &orientation, 1.0);
+
+//	// determine the point on the plane closest to the origin
+//	// it may be different than the user provided point
+//	gut_find_point_plane_intersection(&orientation, &vtx, &v[0]);
+//	// copy back && reset the orientation matrix
+//	vtx = v[0];
+//	orientation.data.array[12] = vtx.x;
+//	orientation.data.array[13] = vtx.y;
+//	orientation.data.array[14] = vtx.z;
 
 	distance = sqrt(vtx.x * vtx.x + vtx.y * vtx.y + vtx.z * vtx.z);
 	radius = sqrt(1.0 - vtx.x * vtx.x - vtx.y * vtx.y - vtx.z * vtx.z);
@@ -2081,6 +2112,18 @@ ds_gl_render_great_circle(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_COLOR *clr, GUT_P
 	if (ainc != 0.0)
 	{
 		double	s = sin(ainc), c = cos(ainc), x, z;
+		GUT_POINT	t = *vertex;
+		gut_normalize_point(&t);
+		// need to compare the distance from point to origin versus the point with the normal added
+		t.x += normal->i;
+		t.y += normal->j;
+		t.z += normal->k;
+
+		if (fabs(t.x) < 0.001 && fabs(t.y) < 0.001 &&fabs(t.z) < 0.001)
+		{
+			s = sin(-ainc);
+			c = cos(-ainc);
+		}
 		for (i = 0; i < 5; ++i)
 		{
 			x = v[i].x*c - v[i].z*s;
@@ -2108,7 +2151,7 @@ ds_gl_render_great_circle(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_COLOR *clr, GUT_P
 		mtx_vector_multiply(nseg, (MTX_VECTOR*)&n[j], (MTX_VECTOR*)&n[k], &m);
 	}
 //	ds_find_great_circle_matrix(ctx, vertex, normal, &orientation, 1.0);
-	ds_find_great_circle_matrix(ctx, &vtx, &nml, &orientation, 1.0);
+//	ds_find_great_circle_matrix(ctx, &vtx, &nml, &orientation, 1.0);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glMultMatrixd((GLdouble*)&orientation);
@@ -2576,13 +2619,13 @@ void ds_geo_edge_to_triangles_hex_arc(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GU
 int ds_gl_spherical_section(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, DS_COLOR *clr)
 //-----------------------------------------------------------------------------
 {
-	GUT_POINT	vtx, v[360], origin = { 0,0,0,1 };
+	GUT_POINT	vtx, v[360], origin = { 0,0,0,1 }, v2;
 	GUT_VECTOR	n, nml;
 	GUT_PLANE	pl;
 	int			i, j;
 	int			planeID[6] = { GL_CLIP_PLANE1, GL_CLIP_PLANE2, GL_CLIP_PLANE3, GL_CLIP_PLANE4, GL_CLIP_PLANE5 };
 	int			nseg = 180, nPlanes = 0;
-	double		d[4], distance, radius, ainc;
+	double		d[4], distance, radius[6], ainc;
 	double		s, c, x, y;
 	double		orientation[16];
 
@@ -2613,11 +2656,25 @@ int ds_gl_spherical_section(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, DS_
 			vtx.y *= gobj->fAttr.scale.factor;
 			vtx.z *= gobj->fAttr.scale.factor;
 		}
-			// determine size of clip radius
+		// determine plane equation at vertex with given normal
+		gut_plane_from_point_normal(&vtx, &n, &pl);
+
+//		ds_find_great_circle_matrix(ctx, &vtx, &nml, &orientation, 1.0);
+
+		// determine the point on the plane closest to the origin
+		// it may be different than the user provided point
+		gut_find_point_plane_intersection(&pl, &origin, &v2);
+		// copy back && reset the orientation matrix
+		vtx = v2;
+//		orientation[12] = vtx.x;
+//		orientation[13] = vtx.y;
+//		orientation[14] = vtx.z;
+
+		// determine size of clip radius
 		// radius modified by scale 
 		distance = sqrt(vtx.x * vtx.x + vtx.y * vtx.y + vtx.z * vtx.z);
-		radius = gobj->fAttr.scale.enable ? gobj->fAttr.scale.factor : 1;
-		radius = sqrt(radius * radius - distance * distance);
+		radius[i] = gobj->fAttr.scale.enable ? gobj->fAttr.scale.factor : 1;
+		radius[i] = sqrt(radius[i] * radius[i] - distance * distance);
 //		radius = sqrt(1.0 - distance * distance);
 		ainc = asin(distance);
 
@@ -2671,6 +2728,18 @@ int ds_gl_spherical_section(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, DS_
 			vtx.y *= gobj->fAttr.scale.factor;
 			vtx.z *= gobj->fAttr.scale.factor;
 		}
+		// determine plane equation at vertex with given normal
+		gut_plane_from_point_normal(&vtx, &n, &pl);
+//		ds_find_great_circle_matrix(ctx, &vtx, &nml, &orientation, 1.0);
+
+		// determine the point on the plane closest to the origin
+		// it may be different than the user provided point
+		gut_find_point_plane_intersection(&pl, &origin, &v2);
+		// copy back && reset the orientation matrix
+		vtx = v2;
+//		orientation[12] = vtx.x;
+//		orientation[13] = vtx.y;
+//		orientation[14] = vtx.z;
 
 		glDisable(planeID[i]);
 		// create orientation based on vertex & normal
@@ -2678,7 +2747,7 @@ int ds_gl_spherical_section(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, DS_
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
 		glMultMatrixd((GLdouble*)&orientation);
-		glScalef((float)radius, (float)radius, (float)1.0);
+		glScalef((float)radius[i], (float)radius[i], (float)1.0);
 		glBegin(GL_POLYGON);
 		glNormal3f((float)0, (float)0, (float)1.0);
 		if(gobj->fAttr.orthodrome.cutColorEnable)
@@ -2695,8 +2764,8 @@ int ds_gl_spherical_section(DS_CTX *ctx, DS_GEO_OBJECT *gobj, DS_FACE *face, DS_
 	}
 
 	// render sphere
-	radius = gobj->fAttr.scale.enable ? gobj->fAttr.scale.factor : 1;
-	ds_gl_render_vertex(ctx, gobj, &origin, ctx->renderVertex.vtxObj->vtx, (GUT_POINT*)ctx->renderVertex.vtxObj->v_out, ctx->renderVertex.vtxObj->tri, ctx->renderVertex.vtxObj->nVtx, ctx->renderVertex.vtxObj->nTri, radius, clr, 0);
+	radius[0] = gobj->fAttr.scale.enable ? gobj->fAttr.scale.factor : 1;
+	ds_gl_render_vertex(ctx, gobj, &origin, ctx->renderVertex.vtxObj->vtx, (GUT_POINT*)ctx->renderVertex.vtxObj->v_out, ctx->renderVertex.vtxObj->tri, ctx->renderVertex.vtxObj->nVtx, ctx->renderVertex.vtxObj->nTri, radius[0], clr, 0);
 
 	// disable all the clip planes
 	for (i = 0; i < nPlanes; ++i)

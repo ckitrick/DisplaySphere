@@ -220,7 +220,7 @@ CAPTION "About"
 FONT 8, "Microsoft Sans Serif", 400, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,127,204,41,17
-    LTEXT           "Version 0.95",IDC_STATIC91,11,22,48,11
+    LTEXT           "Version 0.95",IDC_STATIC91,11,22,64,11
     LTEXT           "Copyright © 2004-2021 Christopher Kitrick",IDC_STATIC93,11,33,155,11
     LTEXT           "Copyright © 1995-2019 The PNG Reference Library Authors",IDC_STATIC94,29,114,196,11
     LTEXT           "DisplaySphere®",IDC_STATIC95,11,11,56,11
@@ -234,7 +234,7 @@ BEGIN
     LTEXT           "SPP:",IDC_STATIC102,11,65,19,11
     LTEXT           "8",IDC_STATIC103,34,65,61,11
     LTEXT           "DisplaySphere",IDC_STATIC105,34,53,251,11
-    LTEXT           "Documentation",IDC_STATIC104,66,22,115,10
+    LTEXT           "Documentation",IDC_STATIC104,75,22,115,10
 END
 
 IDD_DIALOG6 DIALOGEX 0, 0, 309, 93

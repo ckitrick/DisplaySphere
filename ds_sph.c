@@ -802,22 +802,24 @@ int ds_command_line_options (DS_CTX *ctx, LPSTR lpszCmdLine)
 	return 0;
 }
 
-int checkObjWindows(DS_CTX *ctx, MSG *msg)
+//-----------------------------------------------------------------------------
+BOOL checkObjWindows(DS_CTX *ctx, MSG *msg)
+//-----------------------------------------------------------------------------
 {
 	DS_GEO_OBJECT	*gobj = &ctx->defInputObj;
 
+	int status = 0;
 	if (gobj->attrDialog)
-		if (IsDialogMessage(gobj->attrDialog, &msg))
-			return TRUE;
-	
+		status += IsDialogMessageA(gobj->attrDialog, msg);
+
 	LL_SetHead(ctx->gobjectq);
 	while (gobj = (DS_GEO_OBJECT*)LL_GetNext(ctx->gobjectq))
 	{
 		if (gobj->attrDialog)
-			if (IsDialogMessage(gobj->attrDialog, &msg))
-				return TRUE;
+			status += (int)IsDialogMessageA(gobj->attrDialog, msg);
 	}
-	return FALSE;
+
+	return status ? (BOOL)1 : (BOOL)0;
 }
 
 //-----------------------------------------------------------------------------
@@ -850,7 +852,7 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 	hRC = wglCreateContext (ctx.hDC );
     wglMakeCurrent (ctx.hDC, hRC);
 
-	ds_post_init(&ctx);// , polyhedron); // re-initialize neccessary items after window is created and command line is processed 
+	ds_post_init(&ctx);// re-initialize neccessary items after window is created and command line is processed 
 
 	if ( !ctx.ac && ctx.internalDSS )
 		ds_process_restore_file(&ctx, ctx.internalDSS);
@@ -861,12 +863,12 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
-		if (   !IsDialogMessage(ctx.kbdToggle, &msg)
-			&& !IsDialogMessage(ctx.attrControl, &msg)
-			&& !IsDialogMessage(ctx.objDashboard, &msg)
-			&& !IsDialogMessage(ctx.stateRecorderWin, &msg)
-			&& !IsDialogMessage(ctx.statePlaybackWin, &msg)
-			&& !checkObjWindows(&ctx,&msg)
+		if (   !IsDialogMessageA(ctx.kbdToggle, &msg)
+				&& !IsDialogMessageA(ctx.attrControl, &msg)
+				&& !IsDialogMessageA(ctx.objDashboard, &msg)
+				&& !IsDialogMessageA(ctx.stateRecorderWin, &msg)
+				&& !IsDialogMessageA(ctx.statePlaybackWin, &msg)
+				&& !checkObjWindows(&ctx,&msg)
 			)
 		{
 			TranslateMessage(&msg);
@@ -874,7 +876,6 @@ int APIENTRY WinMain ( HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lp
 		}
 	}
 
-//	ReleaseDC ( ctx.hDC, hWnd );
 	ReleaseDC ( hWnd, ctx.hDC );
 	wglDeleteContext ( hRC );
     DestroyWindow ( hWnd );
@@ -915,7 +916,6 @@ void label(float x, float y, float z, float nz, char *string)
 	for (i = 0; i < len; i++)
 	{
 		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
-//		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
 	}
 }
 
@@ -960,7 +960,7 @@ void textout ( float offset, float x, float y, float z, char *string )
 
 }
 
-//--------------------------------------  ---------------------------------------
+//-----------------------------------------------------------------------------
 static int ds_file_drag_and_drop ( HWND hWnd, HDROP hdrop )
 //-----------------------------------------------------------------------------
 {
