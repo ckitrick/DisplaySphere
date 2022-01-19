@@ -2340,11 +2340,12 @@ void ds_geo_edge_to_triangles_arc(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 	int					nArcSeg, offsetFlag=0;
 
 	// copy input vertices
-	aa0 = aa = *a;
+	aa = *a;
 	bb = *b;
 	// normalizing is a requirement for the arc
 	gut_normalize_point(&aa);
 	gut_normalize_point(&bb);
+	aa0 = aa;
 	// the line will be used to generate intermediate vertices
 	gut_vector(&aa, &bb, &line);
 	// distance is used to determine the angle of the line and how many intermediate vertices required
@@ -2377,6 +2378,20 @@ void ds_geo_edge_to_triangles_arc(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 		f.x = c.x * ctx->eAttr.maxLength * eAttr->offset.factor;
 		f.y = c.y * ctx->eAttr.maxLength * eAttr->offset.factor;
 		f.z = c.z * ctx->eAttr.maxLength * eAttr->offset.factor;
+	}
+	if (eAttr->scale.enable && eAttr->scale.factor != 0.0)
+	{
+		GUT_POINT	ta, tb;
+		double		f = 1 - eAttr->scale.factor;
+		gut_parametric_point(&aa, &bb, &ta, f / 2.0);
+		gut_parametric_point(&aa, &bb, &tb, 1 - f / 2.0);
+		aa = ta;
+		bb = tb;
+		gut_normalize_point(&aa);
+		gut_normalize_point(&bb);
+		// the line will be used to generate intermediate vertices
+		gut_vector(&aa, &bb, &line);
+		aa0 = aa;
 	}
 
 	// create first set of vertices
@@ -2531,6 +2546,20 @@ void ds_geo_edge_to_triangles_hex_arc(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GU
 		f.x = c.x * ctx->eAttr.maxLength * eAttr->offset.factor;
 		f.y = c.y * ctx->eAttr.maxLength * eAttr->offset.factor;
 		f.z = c.z * ctx->eAttr.maxLength * eAttr->offset.factor;
+	}
+	if (eAttr->scale.enable && eAttr->scale.factor != 0.0)
+	{
+		GUT_POINT	ta, tb;
+		double		f = 1 - eAttr->scale.factor;
+		gut_parametric_point(&aa, &bb, &ta, f / 2.0);
+		gut_parametric_point(&aa, &bb, &tb, 1 - f / 2.0);
+		aa = ta;
+		bb = tb;
+		gut_normalize_point(&aa);
+		gut_normalize_point(&bb);
+		// the line will be used to generate intermediate vertices
+		gut_vector(&aa, &bb, &line);
+		aa0 = aa;
 	}
 
 	// create points 

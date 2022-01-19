@@ -101,6 +101,15 @@ void ds_geo_edge_to_triangles_new(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 		bb.y = bb.y + c.y * ctx->eAttr.maxLength * eAttr->offset.factor;
 		bb.z = bb.z + c.z * ctx->eAttr.maxLength * eAttr->offset.factor;
 	}
+	if (eAttr->scale.enable && eAttr->scale.factor != 0.0)
+	{
+		GUT_POINT	ta, tb;
+		double		f = 1 - eAttr->scale.factor;
+		gut_parametric_point(&aa, &bb, &ta, f / 2.0);
+		gut_parametric_point(&aa, &bb, &tb, 1 - f / 2.0);
+		aa = ta;
+		bb = tb;
+	}
 	gut_point_plus_vector(&aa, &v, &out[0]);
 	gut_point_plus_vector(&bb, &v, &out[4]);
 	v.i *= -1; // reverse the direction
@@ -196,10 +205,13 @@ void ds_geo_edge_to_triangles_hex(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 	//
 	// create normals
 	GUT_VECTOR	z, x, y, h, w, tmp; //  r, tmp;
-	GUT_POINT	m, c, f, o = { 0,0,0,1 };
+	GUT_POINT	aa, bb, ta, tb, m, c, f, o = { 0,0,0,1 };
 	double		rad, d; // , t;
 	int			i, offsetFlag=0;
 	double		angle, aInc;
+
+	aa = *a;
+	bb = *b;
 
 	gut_vector((GUT_POINT*)a, (GUT_POINT*)b, &y);
 	gut_normalize_vector(&y);
@@ -236,6 +248,15 @@ void ds_geo_edge_to_triangles_hex(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 		f.y = c.y * ctx->eAttr.maxLength * eAttr->offset.factor;
 		f.z = c.z * ctx->eAttr.maxLength * eAttr->offset.factor;
 	}
+	if (eAttr->scale.enable && eAttr->scale.factor != 0.0)
+	{
+		GUT_POINT	ta, tb;
+		double		f = 1 - eAttr->scale.factor;
+		gut_parametric_point(&aa, &bb, &ta, f / 2.0);
+		gut_parametric_point(&aa, &bb, &tb, 1 - f / 2.0);
+		aa = ta;
+		bb = tb;
+	}
 
 	// create points 
 	d = ctx->eAttr.maxLength;
@@ -246,8 +267,8 @@ void ds_geo_edge_to_triangles_hex(DS_CTX *ctx, DS_EDGE_ATTRIBUTES *eAttr, GUT_PO
 		gut_scale_vector(&z, rad * sin(DTR(angle)), &h);
 		gut_scale_vector(&x, rad * cos(DTR(angle)), &w);
 		gut_add_vector(&h, &w, &tmp);
-		gut_point_plus_vector((GUT_POINT*)a, &tmp, &pa[i]);
-		gut_point_plus_vector((GUT_POINT*)b, &tmp, &pb[i]);
+		gut_point_plus_vector(&aa, &tmp, &pa[i]);
+		gut_point_plus_vector(&bb, &tmp, &pb[i]);
 		if (offsetFlag)
 		{
 			pa[i].x += f.x;
